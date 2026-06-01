@@ -1,0 +1,38 @@
+# Node / Bun
+**/node_modules/
+**/dist/
+**/build/
+**/release/
+
+# Logs / caches
+**/*.log
+**/.cache/
+**/.eslintcache
+**/coverage/
+**/.devtools
+
+# OS / editor
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+
+# Generated
+**/src/version.ts
+**/storybook-static/
+**/.mux/
+
+# Test outputs
+**/test-temp-*/
+**/test-workspaces/
+**/runs/
+**/jobs/
+**/artifacts/
+**/tmpfork/
