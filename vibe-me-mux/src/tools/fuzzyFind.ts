@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 
 import {
   fileAnnotation as fffFileAnnotation,
@@ -41,7 +41,7 @@ const FuzzyFindInputSchema = z.object({
 
 // ── Tool factory ──
 
-export const createFuzzyFindTool: ToolFactory = (config: ToolConfiguration) => {
+export const createFuzzyFindTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Search for files by fuzzy path text matching. Returns file paths ranked by relevance and frecency. Supports partial matches on file names and directory paths. Regex and glob syntax are not supported.\n\nFirst call: provide pattern and optional path.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",

@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 import {
   isForegroundWaitBackgroundedError,
   requireTaskService,
@@ -53,7 +53,7 @@ Review the above changes against the criteria. Examine the affected files and ev
 Call agent_report with your structured verdict when done.`;
 }
 
-export const createSubmitReviewTool: ToolFactory = (config: ToolConfiguration) => {
+export const createSubmitReviewTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and provides structured feedback. Only works when session is in active loop mode.",

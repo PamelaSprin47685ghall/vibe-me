@@ -1,5 +1,5 @@
 {
-  "name": "mux-kunwei",
+  "name": "vibe-me-mux",
   "version": "0.1.0",
   "description": "Mux plugin: kunwei addon as a standalone repo (editor, greper, runner, reverie, browser, fuzzy, review-loop, caps, syntax-check)",
   "type": "module",

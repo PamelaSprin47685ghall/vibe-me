@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 import {
   isForegroundWaitBackgroundedError,
   requireTaskService,
@@ -12,7 +12,7 @@ const BrowserToolInputSchema = z.object({
   intent: z.string().describe("Natural-language description of the web task to perform"),
 });
 
-export const createBrowserTool: ToolFactory = (config: ToolConfiguration) => {
+export const createBrowserTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Receive a natural-language intent for a web task and delegate to the browser agent. IMPORTANT: Do NOT assume the browser agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent. Failure to do so will cause severe confusion.",

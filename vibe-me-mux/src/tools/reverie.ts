@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 import {
   isForegroundWaitBackgroundedError,
   requireTaskService,
@@ -15,7 +15,7 @@ const ReverieToolInputSchema = z.object({
   files: z.array(z.string()).describe("File paths to provide as context..."),
 });
 
-export const createReverieTool: ToolFactory = (config: ToolConfiguration) => {
+export const createReverieTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Receive a natural-language intent or question for deep reasoning and delegate to the reverie agent. IMPORTANT: Do NOT assume the reverie agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent and files. Failure to do so will cause severe confusion.",

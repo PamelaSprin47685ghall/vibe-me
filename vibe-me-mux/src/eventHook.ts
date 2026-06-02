@@ -1,9 +1,9 @@
 import { createAbortSuppressor } from "engine/util";
 import { deactivateReview } from "engine/review";
 import { cleanupJob, getActiveJobs } from "engine/runner";
-import type { AddonEventHook } from "./types/tool";
+import type { PluginEventHook } from "./types/tool";
 
-export function createEventHook(): AddonEventHook {
+export function createEventHook(): PluginEventHook {
   const abortSuppressors = new Map<
     string,
     ReturnType<typeof createAbortSuppressor>

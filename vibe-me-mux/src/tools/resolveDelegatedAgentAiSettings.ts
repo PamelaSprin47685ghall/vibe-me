@@ -1,21 +1,20 @@
-import type { ConfigFile } from "../types/deps";
-import type { ToolConfiguration } from "../types/tool";
-import type { MuxDeps } from "../types/deps";
+import type { ConfigFile, HostDependencies } from "../types/deps";
+import type { PluginToolConfiguration } from "../types/tool";
 
 declare global {
   // eslint-disable-next-line no-var
-  var __kunweiDeps: MuxDeps | undefined;
+  var __vibeMeMuxDeps: HostDependencies | undefined;
 }
 
-export function bindResolveDeps(deps: MuxDeps): void {
-  globalThis.__kunweiDeps = deps;
+export function bindResolveDeps(deps: HostDependencies): void {
+  globalThis.__vibeMeMuxDeps = deps;
 }
 
-function requireDeps(): MuxDeps {
-  const deps = globalThis.__kunweiDeps;
+function requireDeps(): HostDependencies {
+  const deps = globalThis.__vibeMeMuxDeps;
   if (!deps) {
     throw new Error(
-      "mux-kunwei: deps not bound. Call createRegistration(deps) before using any kunwei tool.",
+      "vibe-me-mux: deps not bound. Call createRegistration(deps) before using any plugin tool.",
     );
   }
   return deps;
@@ -79,7 +78,7 @@ function resolveInheritedWorkspaceAiSettings(
   return { modelString, thinkingLevel };
 }
 
-async function resolveAgentInheritance(config: ToolConfiguration, agentId: string): Promise<string[]> {
+async function resolveAgentInheritance(config: PluginToolConfiguration, agentId: string): Promise<string[]> {
   const deps = requireDeps();
   const workspaceId = config.workspaceId ?? config.cwd;
 
@@ -99,7 +98,7 @@ async function resolveAgentInheritance(config: ToolConfiguration, agentId: strin
 }
 
 async function resolveDescriptorAiSettings(
-  config: ToolConfiguration,
+  config: PluginToolConfiguration,
   agentId: string
 ): Promise<PartialAiSettings> {
   const deps = requireDeps();
@@ -115,7 +114,7 @@ async function resolveDescriptorAiSettings(
 }
 
 export async function resolveDelegatedAgentAiSettings(
-  config: ToolConfiguration,
+  config: PluginToolConfiguration,
   agentId: string
 ): Promise<ResolvedDelegatedAgentAiSettings> {
   const deps = requireDeps();

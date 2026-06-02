@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { ollamaPost, formatSearchResults } from "engine/ollama";
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 
 const WebsearchToolInputSchema = z.object({
   query: z.string().describe("Natural language search query..."),
@@ -14,7 +14,7 @@ interface SearchResultItem {
   content?: string;
 }
 
-export const createWebsearchTool: ToolFactory = (_config: ToolConfiguration) => {
+export const createWebsearchTool: ToolFactory = (_config: PluginToolConfiguration) => {
   return tool({
     description:
       "Search the web for any topic and get clean, ready-to-use content.\n\nBest for: Finding current information, news, facts, people, companies, or answering questions about any topic.\nReturns: Clean text content from top search results.\n\nQuery tips:\ndescribe the ideal page, not keywords. \"blog post comparing React and Vue performance\" not \"React vs Vue\".\nUse category:people / category:company to search through Linkedin profiles / companies respectively.",

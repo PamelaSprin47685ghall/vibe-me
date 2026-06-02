@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { validateFetchUrl, ollamaPost } from "engine/ollama";
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 
 const WebfetchToolInputSchema = z.object({
   url: z.string().describe("The URL to fetch"),
@@ -11,7 +11,7 @@ const WebfetchToolInputSchema = z.object({
   timeout: z.number().nullish().describe("Timeout in seconds (max: 120)"),
 });
 
-export const createWebfetchTool: ToolFactory = (_config: ToolConfiguration) => {
+export const createWebfetchTool: ToolFactory = (_config: PluginToolConfiguration) => {
   return tool({
     description:
       "Fetch a URL with better extraction for static/docs pages. Supports llms.txt probing, content-focused HTML extraction, metadata, redirects, and an optional prompt processed by a cheap secondary model.",

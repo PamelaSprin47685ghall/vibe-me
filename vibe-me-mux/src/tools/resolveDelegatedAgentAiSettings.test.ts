@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { ToolConfiguration } from "../types/tool";
+import type { PluginToolConfiguration } from "../types/tool";
 import type {
-  MuxDeps,
-  AgentDefinition,
-  AgentFrontmatter,
+  HostDependencies,
+  AgentDefinitionPackage,
+  AgentFrontmatterPackage,
   ConfigFile,
-  AgentInheritanceArgs,
+  AgentInheritanceRequest,
   AgentInheritanceEntry,
 } from "../types/deps";
 
@@ -14,20 +14,21 @@ const mockLoadConfigOrDefault = mock<() => ConfigFile>(() => ({
   agentAiDefaults: {},
   subagentAiDefaults: {},
 }));
-const mockReadAgentDefinition = mock(
-  (_runtime: unknown, _workspacePath: string, agentId: string) =>
-    Promise.resolve({
-      id: agentId,
-      scope: "built-in",
-      frontmatter: { name: agentId },
-      body: "",
-    } satisfies AgentDefinition),
+const mockReadAgentDefinition = mock<
+  (runtime: unknown, workspacePath: string, agentId: string) => Promise<AgentDefinitionPackage>
+>((_runtime, _workspacePath, agentId) =>
+  Promise.resolve({
+    id: agentId,
+    scope: "built-in",
+    frontmatter: { name: agentId },
+    body: "",
+  }),
 );
-const mockResolveAgentFrontmatter = mock<() => Promise<AgentFrontmatter>>(() =>
-  Promise.resolve({ name: "" }),
-);
+const mockResolveAgentFrontmatter = mock<
+  (runtime: unknown, workspacePath: string, agentId: string) => Promise<AgentFrontmatterPackage>
+>(() => Promise.resolve({ name: "" }));
 const mockResolveAgentInheritanceChain = mock<
-  (args: AgentInheritanceArgs) => Promise<AgentInheritanceEntry[]>
+  (args: AgentInheritanceRequest) => Promise<AgentInheritanceEntry[]>
 >((args) => Promise.resolve([{ id: args.agentId }]));
 
 function findWorkspaceEntryMock(
@@ -41,20 +42,22 @@ function findWorkspaceEntryMock(
   return undefined;
 }
 
-const mockDeps: MuxDeps = {
+const mockDeps: HostDependencies = {
   log: { debug: () => undefined },
   defaultModel: "anthropic:claude-sonnet-4-5",
-  loadConfigOrDefault: mockLoadConfigOrDefault as unknown as MuxDeps["loadConfigOrDefault"],
-  readAgentDefinition: mockReadAgentDefinition as unknown as MuxDeps["readAgentDefinition"],
-  resolveAgentFrontmatter: mockResolveAgentFrontmatter as unknown as MuxDeps["resolveAgentFrontmatter"],
-  resolveAgentInheritanceChain: mockResolveAgentInheritanceChain as unknown as MuxDeps["resolveAgentInheritanceChain"],
+  loadConfigOrDefault: () => mockLoadConfigOrDefault(),
+  readAgentDefinition: (runtime, workspacePath, agentId) =>
+    mockReadAgentDefinition(runtime, workspacePath, agentId),
+  resolveAgentFrontmatter: (runtime, workspacePath, agentId) =>
+    mockResolveAgentFrontmatter(runtime, workspacePath, agentId),
+  resolveAgentInheritanceChain: (args) => mockResolveAgentInheritanceChain(args),
   findWorkspaceEntry: findWorkspaceEntryMock,
 };
 
 import { createRegistration } from "../index";
 import { resolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
 
-function createToolConfig(): ToolConfiguration {
+function createToolConfig(): PluginToolConfiguration {
   return {
     cwd: "/repo/workspace",
     runtime: null,

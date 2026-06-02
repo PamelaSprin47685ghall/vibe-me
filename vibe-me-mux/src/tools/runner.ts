@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { randomUUID } from "node:crypto";
 
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 import {
   isForegroundWaitBackgroundedError,
   requireTaskService,
@@ -27,7 +27,7 @@ const RunnerToolInputSchema = z.object({
     .describe("What to look for in the output. Be specific."),
 });
 
-export const createRunnerTool: ToolFactory = (config: ToolConfiguration) => {
+export const createRunnerTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Execute a shell command or Python program and delegate output summarization to a sub-agent. " +

@@ -1,1 +1,0 @@
-../../.mux/skills/tbench/SKILL.md

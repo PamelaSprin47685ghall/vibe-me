@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { ToolConfiguration, TaskServiceLike, TaskCreateInput, TaskCreateResult, TaskWaitResult } from "../types/tool";
-import type { ToolExecutionOptions } from "ai";
+import type { PluginToolConfiguration } from "../types/tool";
 import { FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME } from "../types/tool";
-import type { MuxDeps } from "../types/deps";
+import type { ToolExecutionOptions } from "ai";
+import type { HostDependencies, TaskCreateInput, TaskCreateResult, TaskServiceLike, TaskWaitResult } from "../types/deps";
 import { createRegistration } from "../index";
 
 class ForegroundWaitBackgroundedError extends Error {
@@ -20,7 +20,7 @@ const mockTaskService: {
   waitForAgentReport: mock<(taskId: string, opts: { requestingWorkspaceId: string; abortSignal?: AbortSignal }) => Promise<TaskWaitResult>>(),
 };
 
-const mockDeps: MuxDeps = {
+const mockDeps: HostDependencies = {
   log: { debug: () => undefined },
   defaultModel: "anthropic:claude-sonnet-4-5",
   loadConfigOrDefault: () => ({
@@ -36,7 +36,7 @@ const mockDeps: MuxDeps = {
 
 function bootstrap() {
   const registration = createRegistration(mockDeps);
-  const greperEntry = registration.tools?.find((t: { name: string }) => t.name === "greper");
+  const greperEntry = registration.tools.find((t) => t.name === "greper");
   if (!greperEntry) throw new Error("greper tool missing");
   return greperEntry.factory;
 }
@@ -46,7 +46,7 @@ const mockToolCallOptions: ToolExecutionOptions = {
   messages: [],
 };
 
-function createToolConfig(): ToolConfiguration {
+function createToolConfig(): PluginToolConfiguration {
   return {
     cwd: "/repo/workspace",
     runtime: null,

@@ -1,5 +1,5 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test";
-import type { AddonEvent } from "./types/tool";
+import type { PluginEvent } from "./types/tool";
 
 const mockGetActiveJobs = mock<() => Map<string, unknown>>(() => new Map());
 const mockCleanupJob = mock<(id: string) => void>(() => undefined);
@@ -38,7 +38,7 @@ beforeEach(() => {
 
 describe("createEventHook", () => {
   test("stream-abort cleans up jobs scoped by workspaceId", () => {
-    const event: AddonEvent = { type: "stream-abort", workspaceId: "ws1" };
+    const event: PluginEvent = { type: "stream-abort", workspaceId: "ws1" };
     mockGetActiveJobs.mockReturnValue(
       new Map([["ws1/job1", {}], ["ws2/job2", {}]]),
     );
@@ -53,7 +53,7 @@ describe("createEventHook", () => {
   });
 
   test("stream-abort with no active jobs", () => {
-    const event: AddonEvent = { type: "stream-abort", workspaceId: "ws1" };
+    const event: PluginEvent = { type: "stream-abort", workspaceId: "ws1" };
 
     const hook = createEventHook();
     void hook(event);
@@ -63,7 +63,7 @@ describe("createEventHook", () => {
   });
 
   test("error with abort errorType", () => {
-    const event: AddonEvent = {
+    const event: PluginEvent = {
       type: "error",
       workspaceId: "err-ws",
       properties: { errorType: "aborted" },

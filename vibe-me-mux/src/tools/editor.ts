@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 import {
   isForegroundWaitBackgroundedError,
   requireTaskService,
@@ -12,7 +12,7 @@ const EditorToolInputSchema = z.object({
   intent: z.string().describe("Natural-language description of the code changes to make"),
 });
 
-export const createEditorTool: ToolFactory = (config: ToolConfiguration) => {
+export const createEditorTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Receive a natural-language intent for code changes and delegate to the editor agent. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent. Failure to do so will cause severe confusion.",

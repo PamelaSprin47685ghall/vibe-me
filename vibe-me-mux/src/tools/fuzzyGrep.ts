@@ -3,7 +3,7 @@ import path from "node:path";
 import { tool } from "ai";
 import { z } from "zod";
 
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 import type { GrepCursor, GrepMode, GrepResult } from "@ff-labs/fff-node";
 
 import {
@@ -149,7 +149,7 @@ const FuzzyGrepInputSchema = z.object({
 
 // ── Tool factory ──
 
-export const createFuzzyGrepTool: ToolFactory = (config: ToolConfiguration) => {
+export const createFuzzyGrepTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Search file contents using fuzzy-aware content search. Smart-case, git-aware, frecency-ranked. Supports automatic regex mode for regex-like patterns and automatic fuzzy fallback when no exact matches are found.\n\nFirst call: provide pattern and optional filters.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",

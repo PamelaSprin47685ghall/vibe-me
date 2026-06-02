@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import type { ToolConfiguration, ToolFactory } from "../types/tool";
+import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 import { requireWorkspaceId } from "../types/tool";
 import { activateReview } from "engine/review";
 
@@ -8,7 +8,7 @@ const StartReviewLoopInputSchema = z.object({
   task: z.string().min(1).describe("Description of the task/reason for entering review loop mode. This is recorded as the original task for review context."),
 });
 
-export const createStartReviewLoopTool: ToolFactory = (config: ToolConfiguration) => {
+export const createStartReviewLoopTool: ToolFactory = (config: PluginToolConfiguration) => {
   return tool({
     description:
       "Activate review loop mode for the current session. " +

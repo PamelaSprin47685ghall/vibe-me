@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { Tool } from "ai";
 import { checkSyntax, extractFilePath, isFileEditTool } from "engine/tree-sitter";
-import type { ToolConfiguration, ToolWrapperRegistration } from "../types/tool";
+import type { PluginToolConfiguration, ToolWrapperRegistration } from "../types/tool";
 import type { LoggerLike } from "../types/deps";
 
 const SYNTAX_CHECK_MARKER = "[syntax-check]";
@@ -24,7 +24,7 @@ function formatSyntaxErrors(result: SyntaxCheckOk, filePath: string): string {
   return `${SYNTAX_CHECK_MARKER} ${filePath}: ${result.errors.length} error(s) in ${result.lang}\n${lines.join("\n")}`;
 }
 
-function wrapFileEditTool(baseTool: Tool, config: ToolConfiguration, log: LoggerLike): Tool {
+function wrapFileEditTool(baseTool: Tool, config: PluginToolConfiguration, log: LoggerLike): Tool {
   const baseToolRecord = baseTool as unknown as Record<string, unknown>;
   const originalExecute = baseToolRecord.execute;
 
