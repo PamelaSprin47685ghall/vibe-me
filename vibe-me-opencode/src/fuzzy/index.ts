@@ -43,7 +43,15 @@ export function createFuzzyFindTool(): ToolDefinition {
     },
     execute: async (args, context) => {
       const activeCwd = context.directory;
-      const result = await FuzzySearchCoordinator.fuzzyFind(args, { cwd: activeCwd });
+      const scopeId = context.sessionID;
+      if (!scopeId) throw new Error("fuzzy_find requires an active session");
+      const cleanArgs = {
+        pattern: args.pattern ?? undefined,
+        path: args.path ?? undefined,
+        limit: args.limit ?? undefined,
+        iterator: args.iterator ?? undefined,
+      };
+      const result = await FuzzySearchCoordinator.fuzzyFind(cleanArgs, { cwd: activeCwd, scopeId });
       return result.output;
     },
   });
@@ -105,15 +113,20 @@ export function createFuzzyGrepTool(): ToolDefinition {
     },
     execute: async (args, context) => {
       const activeCwd = context.directory;
+      const scopeId = context.sessionID;
+      if (!scopeId) throw new Error("fuzzy_grep requires an active session");
+      const cleanArgs = {
+        pattern: args.pattern ?? undefined,
+        path: args.path ?? undefined,
+        exclude: args.exclude ?? undefined,
+        caseSensitive: args.caseSensitive ?? undefined,
+        context: args.context ?? undefined,
+        limit: args.limit ?? undefined,
+        iterator: args.iterator ?? undefined,
+      };
       const result = await FuzzySearchCoordinator.fuzzyGrep(
-        {
-          ...args,
-          exclude: args.exclude ?? undefined,
-          caseSensitive: args.caseSensitive ?? undefined,
-          context: args.context ?? undefined,
-          limit: args.limit ?? undefined,
-        },
-        { cwd: activeCwd }
+        cleanArgs,
+        { cwd: activeCwd, scopeId }
       );
       return result.output;
     },

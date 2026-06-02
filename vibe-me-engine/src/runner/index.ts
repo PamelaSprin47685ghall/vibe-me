@@ -4,5 +4,6 @@ export * from './paths.js';
 export * from './process.js';
 export * from './javascript.js';
 export * from './jobs.js';
+export { ActiveJob, JobRegistry } from './job-unified.js';
 export * from './nudge.js';
 export * from './prompts.js';

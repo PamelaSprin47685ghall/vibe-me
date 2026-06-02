@@ -1,65 +1,25 @@
-import { chmodSync, createWriteStream, existsSync, readFileSync, unlinkSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { getRunnerLogPath, getRunnerProjectDir, RUNNER_EARLY_TIMEOUT_MS } from './paths.js';
 import { killTree } from './process.js';
 import { stripHeadTailPipes } from './no-head-tail.js';
 import { createJavascriptPrelude, rewriteJavascriptModuleSpecifiers } from './javascript.js';
 import { runChildProcess } from './process.js';
-import type { ActiveJob, ExecuteOptions, ExecuteResult, WaitOptions, WaitResult, RunnerLanguage } from './types.js';
+import { ActiveJob, JobRegistry, createTempScript, getTempScriptPath } from './job-registry.js';
 
-const activeJobs = new Map<string, ActiveJob>();
-
-function createTempScript(scriptPath: string, program: string): string {
-  writeFileSync(scriptPath, program, 'utf-8');
-  if (process.platform !== 'win32') chmodSync(scriptPath, 0o755);
-  return scriptPath;
-}
-
-function getTempScriptPath(sessionId: string, extension: string): string {
-  return getRunnerProjectDir(sessionId) + `/script.${extension}`;
-}
-
-function cleanupSingleJob(job: ActiveJob): void {
-  if (job.status === 'running') {
-    try { job.abortController.abort(); } catch {}
-    killTree(job.childProcess);
-    job.status = 'aborted';
-  }
-  try { job.writeStream?.end(); } catch {}
-  job.writeStream = null;
-
-  if (existsSync(job.stdoutFile)) {
-    try { unlinkSync(job.stdoutFile); } catch {}
-  }
-
-  const sessionDir = getRunnerProjectDir(job.sessionId);
-  if (existsSync(sessionDir)) {
-    try { rmSync(sessionDir, { recursive: true, force: true }); } catch {}
-  }
-
-  if (job.projectDir && job.projectDir !== getRunnerProjectDir()) {
-    if (existsSync(job.projectDir)) {
-      try { rmSync(job.projectDir, { recursive: true, force: true }); } catch {}
-    }
-  }
-
-  activeJobs.delete(job.sessionId);
-}
+const globalJobRegistry = new JobRegistry();
+import type { ExecuteOptions, ExecuteResult, WaitOptions, WaitResult, RunnerLanguage } from './types.js';
 
 export function getActiveJobs(): Map<string, ActiveJob> {
-  return activeJobs;
+  return globalJobRegistry.getAll();
 }
 
 export function cleanupJob(sessionId: string): void {
-  const directJob = activeJobs.get(sessionId);
-  if (directJob) { cleanupSingleJob(directJob); return; }
-  for (const job of activeJobs.values()) {
-    if (job.parentSessionId === sessionId) cleanupSingleJob(job);
-  }
+  globalJobRegistry.cleanup(sessionId);
 }
 
 export async function ensureJavascriptProject(projectDir: string, dependencies: string[] | undefined): Promise<void> {
-  const { mkdirSync } = await import('node:fs');
+  const { mkdirSync, writeFileSync } = await import('node:fs');
   mkdirSync(projectDir, { recursive: true });
 
   const pkgPath = `${projectDir}/package.json`;
@@ -121,16 +81,16 @@ async function spawnRunnerProgram(
   const onAbort = () => killTree(childProcess);
   runner.abortSignal.addEventListener('abort', onAbort, { once: true });
 
-  return new Promise((resolve, reject) => {
-    childProcess.on('error', (error) => {
-      runner.abortSignal.removeEventListener('abort', onAbort);
-      reject(error);
-    });
-    childProcess.on('close', (code) => {
-      runner.abortSignal.removeEventListener('abort', onAbort);
-      resolve({ exitCode: code === null ? undefined : code, cancelled: runner.abortSignal.aborted });
-    });
+  const { promise, resolve, reject } = Promise.withResolvers<{ exitCode: number | undefined; cancelled: boolean }>();
+  childProcess.on('error', (error) => {
+    runner.abortSignal.removeEventListener('abort', onAbort);
+    reject(error);
   });
+  childProcess.on('close', (code) => {
+    runner.abortSignal.removeEventListener('abort', onAbort);
+    resolve({ exitCode: code === null ? undefined : code, cancelled: runner.abortSignal.aborted });
+  });
+  return promise;
 }
 
 async function executeShellProgram(options: InternalExecuteOptions): Promise<{ exitCode: number | undefined; cancelled: boolean }> {
@@ -154,7 +114,7 @@ async function executePythonProgram(options: InternalExecuteOptions): Promise<{ 
 
 async function executeJavascriptProgram(options: InternalExecuteOptions, projectDir: string): Promise<{ exitCode: number | undefined; cancelled: boolean }> {
   await ensureJavascriptProject(projectDir, options.dependencies);
-  const scriptBody = `${createJavascriptPrelude(options.cwd)}${rewriteJavascriptModuleSpecifiers(options.program, options.cwd)}`;
+  const scriptBody = `${createJavascriptPrelude(options.cwd)}${await rewriteJavascriptModuleSpecifiers(options.program, options.cwd)}`;
   const scriptPath = createTempScript(`${projectDir}/script.mts`, scriptBody);
   return spawnRunnerProgram(
     options.runner,
@@ -171,60 +131,42 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
   const timeoutMs = earlyTimeoutMs ?? RUNNER_EARLY_TIMEOUT_MS;
   const cwd = options.cwd ?? process.cwd();
 
-  const existingJob = activeJobs.get(sessionId);
+  const existingJob = globalJobRegistry.get(sessionId);
   if (existingJob?.status === 'running') throw new Error('A task is already running. Use wait() or abort() first.');
   if (existingJob) cleanupJob(sessionId);
 
   const logPath = getRunnerLogPath(sessionId);
-  const writeStream = createWriteStream(logPath, { flags: 'w' });
+  let projectDir: string | undefined;
+  if (language === 'javascript') projectDir = getRunnerProjectDir();
+  else if (language === 'python') projectDir = getRunnerProjectDir(sessionId);
 
-  const job: ActiveJob = {
-    sessionId,
-    parentSessionId: options.parentSessionId,
-    childProcess: null,
-    stdoutFile: logPath,
-    writeStream,
-    abortController: new AbortController(),
-    bytesRead: 0,
-    status: 'running' as const,
-    startTime: Date.now(),
-    closePromise: Promise.resolve(),
-    finalOutput: '',
-  };
-  if (language === 'javascript') job.projectDir = getRunnerProjectDir();
-  else if (language === 'python') job.projectDir = getRunnerProjectDir(sessionId);
-
-  activeJobs.set(sessionId, job);
+  const job = new ActiveJob(sessionId, logPath, projectDir, options.parentSessionId);
+  globalJobRegistry.register(job);
 
   const runner = {
     onSpawn: (child: import('node:child_process').ChildProcess) => { job.childProcess = child; },
     abortSignal: job.abortController.signal,
-    onOutput: (chunk: string) => {
-      job.finalOutput += chunk;
-      try { writeStream.write(chunk); } catch {}
-    },
+    onOutput: (chunk: string) => job.writeOutput(chunk),
   };
 
   let capturedError: unknown;
   const closePromise = (async () => {
     try {
       const result = language === 'shell'
-        ? await executeShellProgram({ program, language, dependencies, cwd, projectDir: job.projectDir, runner })
+        ? await executeShellProgram({ program, language, dependencies, cwd, projectDir, runner })
         : language === 'python'
-          ? await executePythonProgram({ program, language, dependencies, cwd, projectDir: job.projectDir, runner })
-          : await executeJavascriptProgram({ program, language, dependencies, cwd, projectDir: job.projectDir, runner }, job.projectDir!);
+          ? await executePythonProgram({ program, language, dependencies, cwd, projectDir, runner })
+          : await executeJavascriptProgram({ program, language, dependencies, cwd, projectDir, runner }, projectDir!);
       job.childProcess = null;
-      if (job.status === 'running') job.status = result.cancelled ? 'aborted' as const : 'completed' as const;
+      if (job.status === 'running') job.status = result.cancelled ? 'aborted' : 'completed';
       if (result.exitCode !== undefined && result.exitCode !== 0) {
         const msg = `\n[runner] Command exited with code ${result.exitCode}\n`;
-        job.finalOutput += msg;
-        try { writeStream.write(msg); } catch {}
+        job.writeOutput(msg);
       }
     } catch (error) {
-      if (job.status === 'running') job.status = 'aborted' as const;
+      if (job.status === 'running') job.status = 'aborted';
       const msg = `\n[runner] ${error instanceof Error ? error.message : String(error)}\n`;
-      job.finalOutput += msg;
-      try { writeStream.write(msg); } catch {}
+      job.writeOutput(msg);
       capturedError = error;
     }
   })();
@@ -264,7 +206,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
 
 export async function wait(options: WaitOptions): Promise<WaitResult> {
   const { sessionId, ms } = options;
-  const job = activeJobs.get(sessionId);
+  const job = globalJobRegistry.get(sessionId);
   if (!job) return { output: '', completed: true, message: '[System] No active job — it has already finished or was cleaned up.' };
 
   if (job.status === 'completed' || job.status === 'aborted') {
@@ -303,7 +245,7 @@ export async function wait(options: WaitOptions): Promise<WaitResult> {
 }
 
 export function abort(sessionId: string): string {
-  const job = activeJobs.get(sessionId);
+  const job = globalJobRegistry.get(sessionId);
   if (!job) return 'No active task found to abort.';
   cleanupJob(sessionId);
   return '[System] Task has been forcefully terminated.';

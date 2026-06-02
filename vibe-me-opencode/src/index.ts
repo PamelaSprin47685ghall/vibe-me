@@ -6,13 +6,12 @@ import { createGreperTool, getGreperConfig } from './greper/index.js';
 import { createCapitalsContextHook } from './inject-caps/index.js';
 import {
   createLoopCommandManager,
-  createLoopNudgeHook,
   createSubmitReviewResultTool,
   createSubmitReviewTool,
   getReviewerConfig,
 } from './loop/index.js';
 import { getMcpConfig } from './mcp/index.js';
-import { createNudgeTodoHook } from './nudge-todo/index.js';
+import { createNudgeCoordinatorHook } from './nudge/index.js';
 import {
   createOllamaWebFetchTool,
   createOllamaWebSearchTool,
@@ -24,7 +23,6 @@ import {
   createRunnerWaitTool,
   getRunnerConfig,
 } from './runner/index.js';
-import { createRunnerNudgeHook } from './runner/nudge.js';
 import { createSyntaxCheckHook } from './tree-sitter/index.js';
 
 type AgentName =
@@ -298,10 +296,8 @@ function isAgentName(name: string): name is AgentName {
 const KunweiPlugin: Plugin = async (ctx) => {
   const mcps = getMcpConfig();
   const capitalsContextHook = createCapitalsContextHook(ctx.directory);
-  const nudgeTodoHook = createNudgeTodoHook(ctx);
+  const nudgeHook = createNudgeCoordinatorHook(ctx);
   const loopCommandManager = createLoopCommandManager(ctx);
-  const loopNudgeHook = createLoopNudgeHook(ctx);
-  const runnerNudgeHook = createRunnerNudgeHook(ctx);
   const syntaxCheckHook = createSyntaxCheckHook(ctx);
 
   return {
@@ -461,9 +457,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
     event: async (input: {
       event: { type: string; properties?: Record<string, unknown> };
     }): Promise<void> => {
-      await nudgeTodoHook.handleEvent(input);
-      await loopNudgeHook.handleEvent(input);
-      await runnerNudgeHook.handleEvent(input);
+      await nudgeHook.handleEvent(input);
     },
   };
 };

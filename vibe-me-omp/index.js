@@ -1,8 +1,9 @@
 import { createChildSession, readAssistantText, runSubagent } from './agent-session.js';
 import { appendCapsContext, buildCapsContext, stripHostAgentsPrompt } from './caps.js';
+import { globalIteratorStore } from 'engine/util';
 import { _test as fuzzyTest, createFuzzyFindTool, createFuzzyGrepTool, resetFuzzyState } from './fuzzy.js';
 import { isReviewActive, LOOP_TOOL_NAMES, registerLoopFeatures, resetReviewStates, setPendingReviewStateForTest } from './loop.js';
-import { handleLoopNudge, handleRunnerNudge, handleTodoNudge, createNudgeState, TODO_NUDGE } from './nudge.js';
+import { clearNudgeSession, handleLoopNudge, handleRunnerNudge, handleTodoNudge, TODO_NUDGE } from './nudge.js';
 import { getOllamaKey, OLLAMA_TOOL_NAMES, registerOllamaTools } from './ollama.js';
 import { patchDisablePrune } from './prune.js';
 import { hasRunningRunnerJob, registerRunnerTools, resetRunnerJobs, RUNNER_TOOL_NAMES, setRunnerJobStateForTest, stripHeadTailPipes } from './runner.js';
@@ -26,7 +27,6 @@ export default async function kunweiExtension(pi) {
         runSubagent,
         stringArraySchema,
     };
-    const nudgeState = createNudgeState();
 
     pi.on('before_agent_start', (event, ctx) => ({
         systemPrompt: appendCapsContext(stripHostAgentsPrompt(event.systemPrompt), ctx.cwd),
@@ -41,31 +41,27 @@ export default async function kunweiExtension(pi) {
             content: TODO_NUDGE,
             display: false,
         }, { triggerTurn: true, deliverAs: 'nextTurn' });
-        const sessionId = getSessionIdFromContext(ctx);
-        if (sessionId) nudgeState.lastTodoReminderAt.set(sessionId, Date.now());
     });
 
     pi.on('agent_end', (_event, ctx) => {
         const sessionId = getSessionIdFromContext(ctx);
         if (!sessionId) return;
         if (hasRunningRunnerJob(sessionId)) {
-            handleRunnerNudge(pi, nudgeState, sessionId, hasRunningRunnerJob);
+            handleRunnerNudge(pi, null, sessionId, hasRunningRunnerJob);
             return;
         }
         if (isReviewActive(sessionId) && !ctx.hasPendingMessages?.()) {
-            handleLoopNudge(pi, nudgeState, sessionId, ctx.sessionManager, isReviewActive);
+            handleLoopNudge(pi, null, sessionId, ctx.sessionManager, isReviewActive);
             return;
         }
-        handleTodoNudge(pi, nudgeState, sessionId, ctx.sessionManager);
+        handleTodoNudge(pi, null, sessionId, ctx.sessionManager);
     });
 
     pi.on('session_shutdown', (_event, ctx) => {
         const sessionId = getSessionIdFromContext(ctx);
         if (!sessionId) return;
-        nudgeState.lastTodoReminderAt.delete(sessionId);
-        nudgeState.lastLoopReminderAt.delete(sessionId);
-        nudgeState.lastRunnerReminderAt.delete(sessionId);
-        nudgeState.lastNudgeEntryIndex.delete(sessionId);
+        clearNudgeSession(sessionId);
+        globalIteratorStore.clearScope(sessionId);
     });
 
     pi.on('session_start', async () => {

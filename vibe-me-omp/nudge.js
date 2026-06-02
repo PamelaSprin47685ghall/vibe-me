@@ -26,43 +26,7 @@ function flattenTodoTasks(phases) {
   return phases.flatMap((phase) => phase.tasks || []);
 }
 
-function currentEntryCount(sessionManager) {
-  return sessionManager.getEntries?.()?.length ?? 0;
-}
-
-export function createNudgeState() {
-  return {
-    lastTodoReminderAt: {
-      set(key, val) { coordinator.lastTodoReminderAt.set(key, val); },
-      get(key) { return coordinator.lastTodoReminderAt.get(key); },
-      delete(key) { coordinator.lastTodoReminderAt.delete(key); },
-    },
-    lastLoopReminderAt: {
-      set(key, val) { coordinator.lastLoopReminderAt.set(key, val); },
-      get(key) { return coordinator.lastLoopReminderAt.get(key); },
-      delete(key) { coordinator.lastLoopReminderAt.delete(key); },
-    },
-    lastRunnerReminderAt: {
-      set(key, val) { coordinator.lastRunnerReminderAt.set(key, val); },
-      get(key) { return coordinator.lastRunnerReminderAt.get(key); },
-      delete(key) { coordinator.lastRunnerReminderAt.delete(key); },
-    },
-    lastNudgeEntryIndex: {
-      set(key, val) { coordinator.lastNudgeEntryIndex.set(key, val); },
-      get(key) { return coordinator.lastNudgeEntryIndex.get(key); },
-      delete(key) { coordinator.lastNudgeEntryIndex.delete(key); },
-    }
-  };
-}
-
-function shouldThrottle(map, sessionId, now, ms = 5000) {
-  const lastAt = map.get(sessionId) || 0;
-  if (now - lastAt < ms) return true;
-  map.set(sessionId, now);
-  return false;
-}
-
-export function handleTodoNudge(pi, state, sessionId, sessionManager) {
+export function handleTodoNudge(pi, _state, sessionId, sessionManager) {
   const entries = sessionManager.getEntries?.() ?? [];
   const tasks = flattenTodoTasks(getLatestTodoPhasesFromEntries(entries));
   const lastAssistantMessage = readAssistantText(entries) ?? undefined;
@@ -83,7 +47,7 @@ export function handleTodoNudge(pi, state, sessionId, sessionManager) {
   }
 }
 
-export function handleLoopNudge(pi, state, sessionId, sessionManager, isLoopActive) {
+export function handleLoopNudge(pi, _state, sessionId, sessionManager, isLoopActive) {
   const entries = sessionManager.getEntries?.() ?? [];
   const tasks = flattenTodoTasks(getLatestTodoPhasesFromEntries(entries));
   const lastAssistantMessage = readAssistantText(entries) ?? undefined;
@@ -104,7 +68,7 @@ export function handleLoopNudge(pi, state, sessionId, sessionManager, isLoopActi
   }
 }
 
-export function handleRunnerNudge(pi, state, sessionId, hasRunningJob) {
+export function handleRunnerNudge(pi, _state, sessionId, hasRunningJob) {
   const action = coordinator.shouldNudge(sessionId, {
     todos: [],
     hasActiveRunner: hasRunningJob(sessionId),
@@ -120,12 +84,14 @@ export function handleRunnerNudge(pi, state, sessionId, hasRunningJob) {
   }
 }
 
+export function clearNudgeSession(sessionId) {
+  coordinator.clearSession(sessionId);
+}
+
 export { TODO_NUDGE_PROMPT as TODO_NUDGE, LOOP_NUDGE_PROMPT as LOOP_NUDGE, buildRunnerNudgePrompt as RUNNER_NUDGE };
 
 export const _test = {
-  createNudgeState,
   flattenTodoTasks,
-  shouldThrottle,
   isReviewActive,
   tryLockReview,
   unlockReview,

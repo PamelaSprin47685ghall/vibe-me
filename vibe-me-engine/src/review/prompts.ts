@@ -31,11 +31,6 @@ export const REVIEWER_NUDGE_PROMPT =
   '  submit_review_result({ "feedback": "details..." })  // Reject\n\n' +
   'Do not explain what you plan to do — call the tool immediately.';
 
-export const LOOP_NUDGE_PROMPT =
-  'You are in loop mode. You must call the submit_review tool to\n' +
-  'submit your detailed report and list of modified files for review\n' +
-  'before finishing. Do not end the conversation without calling submit_review.';
-
-export { TODO_NUDGE_PROMPT } from '../todo/index.js';
+export { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from '../todo/index.js';
 
 

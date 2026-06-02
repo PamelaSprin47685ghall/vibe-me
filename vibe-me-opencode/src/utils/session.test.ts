@@ -20,11 +20,13 @@ describe('promptWithAbort', () => {
     expect(client.session.prompt).toHaveBeenCalledTimes(1);
   });
 
-  test('returns early if signal already aborted', async () => {
+  test('throws immediately if signal already aborted', async () => {
     const client = createMockClient();
     const controller = new AbortController();
     controller.abort();
-    await promptWithAbort(client, { parts: [] }, controller.signal);
+    await expect(
+      promptWithAbort(client, { parts: [] }, controller.signal),
+    ).rejects.toThrow(DOMException);
     expect(client.session.prompt).not.toHaveBeenCalled();
   });
 

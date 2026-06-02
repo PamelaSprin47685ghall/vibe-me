@@ -2,7 +2,13 @@ export function isAbortErrorName(name: string | undefined): boolean {
   return name === 'MessageAbortedError' || name === 'AbortError';
 }
 
-export function createAbortSuppressor(suppressAfterMs: number) {
+export interface AbortSuppressor {
+  signal: AbortSignal;
+  suppress: () => void;
+  restore: () => void;
+}
+
+export function createAbortSuppressor(suppressAfterMs: number): AbortSuppressor {
   let suppressUntil = 0;
   return {
     suppress(): void {

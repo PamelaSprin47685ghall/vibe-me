@@ -46,3 +46,14 @@ export async function appendSyntaxDiagnostics(
   const result = await checkSyntax(content, filePath);
   return formatSyntaxDiagnostics(filePath, result, options);
 }
+
+export function appendSyntaxDiagnosticsToOutput(
+  currentOutput: string,
+  filePath: string,
+  _fileContent: string,
+  checkResult: SyntaxCheckResult,
+): string {
+  if (hasSyntaxCheckMarker(currentOutput)) return currentOutput;
+  const formatted = formatSyntaxDiagnostics(filePath, checkResult);
+  return formatted ? `${currentOutput}\n\n${formatted}` : currentOutput;
+}

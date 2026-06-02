@@ -2,7 +2,9 @@ import path from 'node:path';
 import { FinderManager, createExternalFinder } from './finder.js';
 import { buildQuery, resolveExternalBasePath } from './query.js';
 import { formatFindOutput, formatGrepOutput, fileAnnotation } from './format.js';
-import { globalIteratorStore, ScopedIteratorStore } from '../util/iterator.js';
+import { ScopedLRUStore } from '../util/lru-pure.js';
+
+const globalIteratorStore = new ScopedLRUStore<unknown>(50, 20);
 
 export interface FuzzyFindParams {
   pattern?: string;
@@ -23,7 +25,7 @@ export interface FuzzyGrepParams {
 
 export interface SearchOptions {
   cwd: string;
-  scopeId?: string;
+  scopeId: string;
   store?: ScopedIteratorStore;
 }
 
@@ -51,7 +53,7 @@ export class FuzzySearchCoordinator {
     options: SearchOptions
   ): Promise<{ output: string; isError?: boolean }> {
     const store = options.store ?? globalIteratorStore;
-    const scopeId = options.scopeId ?? 'global';
+    const scopeId = options.scopeId;
     const activeCwd = options.cwd;
 
     let searchState: FuzzyFindState | undefined;
@@ -137,7 +139,7 @@ export class FuzzySearchCoordinator {
     options: SearchOptions
   ): Promise<{ output: string; isError?: boolean }> {
     const store = options.store ?? globalIteratorStore;
-    const scopeId = options.scopeId ?? 'global';
+    const scopeId = options.scopeId;
     const activeCwd = options.cwd;
 
     let searchState: FuzzyGrepState | undefined;

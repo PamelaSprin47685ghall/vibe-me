@@ -1,6 +1,6 @@
-import { isAbortError, isAbortErrorName, createAbortSuppressor, storeIterator, consumeIterator, clearIterators } from 'engine/util';
+import { isAbortError, isAbortErrorName, createAbortSuppressor } from 'engine/util';
 
-export { isAbortError, isAbortErrorName, createAbortSuppressor, storeIterator, consumeIterator, clearIterators };
+export { isAbortError, isAbortErrorName, createAbortSuppressor };
 
 export function getSessionIdFromContext(ctx) {
   return ctx?.sessionManager?.getSessionId?.() || ctx?.sessionManager?.sessionId || null;

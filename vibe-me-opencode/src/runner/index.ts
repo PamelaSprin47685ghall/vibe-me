@@ -1,19 +1,12 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { buildRunnerPrompt, RUNNER_SYSTEM_PROMPT } from 'engine/runner';
+import { buildRunnerPrompt, RUNNER_SYSTEM_PROMPT, execute as executeCommand, wait, abort, cleanupJob, type ExecuteResult } from 'engine/runner';
 import {
   extractSessionText,
   extractToolContext,
   isAbortError,
   promptWithAbort,
 } from '../utils/session';
-import {
-  abort,
-  cleanupJob,
-  type ExecuteResult,
-  execute as executeCommand,
-  wait,
-} from './tools.js';
 
 export { RUNNER_SYSTEM_PROMPT };
 

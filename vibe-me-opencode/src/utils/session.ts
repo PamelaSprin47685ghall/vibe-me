@@ -66,48 +66,52 @@ export function extractToolContext(
 /**
  * Call `client.session.prompt` with optional abort signal support.
  *
- * - If the signal is already aborted, returns early without calling prompt.
+ * - If the signal is already aborted, throws immediately.
  * - If no signal is provided, calls prompt directly.
  * - If a signal is provided, races the prompt against the abort signal and
- *   cleans up the listener in a finally block.
- *
- * Unhandled rejection on the prompt promise is prevented via `.catch(() => {})`.
+ *   guarantees exactly one resolve/reject — no dangling unhandled rejections.
  */
 export async function promptWithAbort(
   client: PluginInput['client'],
   args: Parameters<PluginInput['client']['session']['prompt']>[0],
   signal?: AbortSignal,
 ): Promise<void> {
-  if (signal?.aborted) return;
+  if (signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError');
+  }
   if (!signal) {
     await client.session.prompt(args);
     return;
   }
 
-  const promptPromise = client.session.prompt(args);
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
 
-  let rejectAbort: (reason?: unknown) => void;
-  const abortPromise = new Promise<void>((_, reject) => {
-    rejectAbort = reject;
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+
+    signal.addEventListener('abort', onAbort);
+
+    client.session.prompt(args)
+      .then(() => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      })
+      .catch((err: unknown) => {
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
+      })
+      .finally(() => {
+        signal.removeEventListener('abort', onAbort);
+      });
   });
-
-  const onAbort = () => {
-    rejectAbort(new DOMException('Aborted', 'AbortError'));
-  };
-
-  signal.addEventListener('abort', onAbort);
-
-  try {
-    await Promise.race([promptPromise, abortPromise]);
-  } catch (err) {
-    if (err instanceof DOMException && err.name === 'AbortError') {
-      promptPromise.catch(() => {});
-      throw err;
-    }
-    throw err;
-  } finally {
-    signal.removeEventListener('abort', onAbort);
-  }
 }
 
 export interface SubagentParams {

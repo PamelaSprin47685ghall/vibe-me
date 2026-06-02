@@ -7,14 +7,17 @@ export function hasOpenTodos(todos: Array<{ status: string }>): boolean {
   return todos.some((t) => !TERMINAL_TODO_STATUSES.has(t.status));
 }
 
-export function wasTagSkipped(text: string, tag: string): boolean {
-  return text.includes(tag);
-}
-
+const SKIP_TODO_RE = /<skip-todo-check\s*\/?>/i;
+const SKIP_LOOP_RE = /<skip-loop-check\s*\/?>/i;
 export const TODO_NUDGE_PROMPT =
   'There are still incomplete todos. Continue working through the remaining items. ' +
   'If stuck or blocked, explain the situation and ask for guidance. ' +
   'If you want to skip this check, respond with <skip-todo-check />';
+
+export const LOOP_NUDGE_PROMPT =
+  'You are in loop mode. You must call the submit_review tool to\n' +
+  'submit your detailed report and list of modified files for review\n' +
+  'before finishing. Do not end the conversation without calling submit_review.';
 
 export interface NudgeInputContext {
   todos: Array<{ status: string }>;
@@ -31,15 +34,14 @@ export function decideNudge(context: NudgeInputContext): NudgeAction {
   }
 
   const openTodos = hasOpenTodos(context.todos);
-  const skipTodo = context.lastAssistantMessage ? wasTagSkipped(context.lastAssistantMessage, TODO_NUDGE_CHECK_TAG) : false;
+  const text = context.lastAssistantMessage ?? '';
 
   if (openTodos) {
-    if (!skipTodo) {
+    if (!SKIP_TODO_RE.test(text)) {
       return 'nudge-todo';
     }
   } else if (context.isLoopActive) {
-    const skipLoop = context.lastAssistantMessage ? wasTagSkipped(context.lastAssistantMessage, '<skip-loop-check />') : false;
-    if (!skipLoop) {
+    if (!SKIP_LOOP_RE.test(text)) {
       return 'nudge-loop';
     }
   }
@@ -48,13 +50,13 @@ export function decideNudge(context: NudgeInputContext): NudgeAction {
 }
 
 export class NudgeCoordinator {
-  private lastTodoReminderAt = new Map<string, number>();
-  private lastLoopReminderAt = new Map<string, number>();
-  private lastRunnerReminderAt = new Map<string, number>();
-  private lastNudgeEntryIndex = new Map<string, number>();
-  private suppressors = new Map<string, ReturnType<typeof createAbortSuppressor>>();
+  public lastTodoReminderAt = new Map<string, number>();
+  public lastLoopReminderAt = new Map<string, number>();
+  public lastRunnerReminderAt = new Map<string, number>();
+  public lastNudgeEntryIndex = new Map<string, number>();
+  public suppressors = new Map<string, ReturnType<typeof createAbortSuppressor>>();
 
-  constructor(private suppressAfterMs = 5000) {}
+  constructor(public suppressAfterMs = 5000) {}
 
   public getOrCreateSuppressor(sessionId: string) {
     let sup = this.suppressors.get(sessionId);
@@ -121,4 +123,10 @@ export class NudgeCoordinator {
     this.lastNudgeEntryIndex.clear();
     this.suppressors.clear();
   }
+}
+
+export const defaultCoordinator = new NudgeCoordinator();
+
+export function clearNudgeSession(sessionId: string): void {
+  defaultCoordinator.clearSession(sessionId);
 }

@@ -5,6 +5,7 @@ export * from './review/index.js';
 export * from './runner/index.js';
 export * from './ollama/index.js';
 export * from './todo/index.js';
+export * from './todo/nudge-engine.js';
 export * from './session/index.js';
 export * from './util/index.js';
 export * from './subagent/index.js';

@@ -1,57 +1,12 @@
-import { lookup } from 'node:dns/promises';
-import net from 'node:net';
-
-const LOOPBACK_HOSTNAMES = new Set(['localhost', 'ip6-localhost', 'ip6-loopback']);
+export { isIpBlocked, secureFetch } from './secure-fetch-dns-pinning.js';
+export { validateHostname } from './secure-fetch-dns-pinning.js';
 
 export function isPrivateIPv4(ip: string): boolean {
-  const parts = ip.split('.').map(Number);
-  if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) return true;
-  if (parts[0] === 10 || parts[0] === 127 || parts[0] === 0) return true;
-  if (parts[0] === 169 && parts[1] === 254) return true;
-  if (parts[0] === 172 && (parts[1] ?? 0) >= 16 && (parts[1] ?? 0) <= 31) return true;
-  if (parts[0] === 192 && parts[1] === 168) return true;
-  if (parts[0] === 100 && (parts[1] ?? 0) >= 64 && (parts[1] ?? 0) <= 127) return true;
-  if (parts[0]! >= 224) return true;
-  return false;
+  return ipIsBlocked(ip);
 }
 
 export function isPrivateIPv6(ip: string): boolean {
-  const normalized = ip.toLowerCase();
-  if (normalized === '::' || normalized === '::1' || normalized === '0:0:0:0:0:0:0:1' || normalized === '0:0:0:0:0:0:0:0') return true;
-  if (normalized.startsWith('fc') || normalized.startsWith('fd')) return true;
-  if (normalized.startsWith('fe8') || normalized.startsWith('fe9') || normalized.startsWith('fea') || normalized.startsWith('feb')) return true;
-  if (normalized.startsWith('::ffff:')) return isPrivateIPv4(normalized.slice(7));
-  return false;
-}
-
-export function ipIsBlocked(ip: string): boolean {
-  const family = net.isIP(ip);
-  if (family === 4) return isPrivateIPv4(ip);
-  if (family === 6) return isPrivateIPv6(ip);
-  return true;
-}
-
-export function validateHostname(hostname: string): string | null {
-  const stripped = hostname.replace(/^\[|\]$/g, '').toLowerCase();
-  if (LOOPBACK_HOSTNAMES.has(stripped)) return 'localhost fetch is not allowed';
-  if (net.isIP(stripped)) return ipIsBlocked(stripped) ? 'private network fetch is not allowed' : null;
-  return null;
-}
-
-export async function resolveAndValidate(hostname: string): Promise<string | null> {
-  const staticError = validateHostname(hostname);
-  if (staticError) return staticError;
-  let addresses;
-  try {
-    addresses = await lookup(hostname, { all: true, verbatim: true });
-  } catch {
-    return 'hostname could not be resolved';
-  }
-  if (!addresses.length) return 'hostname resolved to no addresses';
-  for (const { address } of addresses) {
-    if (ipIsBlocked(address)) return 'private network fetch is not allowed';
-  }
-  return null;
+  return ipIsBlocked(ip);
 }
 
 export async function validateFetchUrl(url: string): Promise<string | null> {
@@ -64,7 +19,7 @@ export async function validateFetchUrl(url: string): Promise<string | null> {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return `unsupported URL scheme: ${parsed.protocol}`;
   }
-  return resolveAndValidate(parsed.hostname);
+  return validateHost(parsed.hostname);
 }
 
 export const OLLAMA_API_BASE = 'https://ollama.com/api';

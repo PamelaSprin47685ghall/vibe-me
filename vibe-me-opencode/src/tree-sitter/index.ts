@@ -1,9 +1,3 @@
-/**
- * Tree-sitter syntax check hook — appends diagnostics to file edit/write
- * tool output. Works alongside LSP diagnostics for real-time syntax
- * verification.
- */
-
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -11,10 +5,9 @@ import type { PluginInput } from '@opencode-ai/plugin';
 import {
   checkSyntax,
   extractFilePath,
-  formatSyntaxDiagnostics,
   hasSyntaxCheckMarker,
   isFileEditTool,
-  type SyntaxCheckOk,
+  appendSyntaxDiagnosticsToOutput,
 } from 'engine/tree-sitter';
 
 interface ToolExecuteAfterInput {
@@ -48,17 +41,13 @@ export function createSyntaxCheckHook(ctx: PluginInput) {
       let content: string;
       try {
         content = await fs.readFile(path.resolve(ctx.directory, filePath), 'utf-8');
-      } catch {
-        return;
+      } catch { return; }
+
+      const checkResult = await checkSyntax(content, filePath);
+      const appended = appendSyntaxDiagnosticsToOutput(current, filePath, content, checkResult);
+      if (appended !== current) {
+        output.output = appended;
       }
-
-      const result = await checkSyntax(content, filePath);
-      if (!result.ok || result.errors.length === 0) return;
-
-      output.output = current + formatSyntaxDiagnostics(
-        filePath,
-        result as SyntaxCheckOk,
-      );
     },
   };
 }

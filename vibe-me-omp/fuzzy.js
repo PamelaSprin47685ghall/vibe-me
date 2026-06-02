@@ -25,7 +25,9 @@ export function createFuzzyFindTool(pi) {
       iterator: pi.typebox.Optional(pi.typebox.String({ description: 'Opaque single-use iterator from a previous fuzzy_find result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const result = await FuzzySearchCoordinator.fuzzyFind(params, { cwd: ctx.cwd, scopeId: ctx.workspaceId ?? 'global' });
+      const scopeId = ctx.sessionId || ctx.workspaceId;
+      if (!scopeId) throw new Error('fuzzy_find requires an active session');
+      const result = await FuzzySearchCoordinator.fuzzyFind(params, { cwd: ctx.cwd, scopeId });
       return {
         content: [{ type: 'text', text: result.output }],
         isError: result.isError,
@@ -52,7 +54,9 @@ export function createFuzzyGrepTool(pi) {
       iterator: pi.typebox.Optional(pi.typebox.String({ description: 'Opaque single-use iterator from a previous fuzzy_grep result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
-      const result = await FuzzySearchCoordinator.fuzzyGrep(params, { cwd: ctx.cwd, scopeId: ctx.workspaceId ?? 'global' });
+      const scopeId = ctx.sessionId || ctx.workspaceId;
+      if (!scopeId) throw new Error('fuzzy_grep requires an active session');
+      const result = await FuzzySearchCoordinator.fuzzyGrep(params, { cwd: ctx.cwd, scopeId });
       return {
         content: [{ type: 'text', text: result.output }],
         isError: result.isError,
@@ -67,9 +71,5 @@ export function resetFuzzyState() {
 
 export const _test = {
   resetFuzzyState,
-  storeCursor: (state) => globalIteratorStore.store('global', 'omp_c', state),
-  consumeCursor: (id) => globalIteratorStore.consume(id),
-  storeFindCursor: (state) => globalIteratorStore.store('global', 'omp_f', state),
-  consumeFindCursor: (id) => globalIteratorStore.consume(id),
   resolveExternalBasePath,
 };

@@ -1,4 +1,4 @@
-import { createAbortSuppressor } from "engine/util";
+import { createAbortSuppressor, globalIteratorStore } from "engine/util";
 import { deactivateReview } from "engine/review";
 import { cleanupJob, getActiveJobs } from "engine/runner";
 import type { PluginEventHook } from "./types/tool";
@@ -16,6 +16,7 @@ export function createEventHook(): PluginEventHook {
           if (jobId.startsWith(workspaceId + "/")) cleanupJob(jobId);
         }
         deactivateReview(workspaceId);
+        globalIteratorStore.clearScope(workspaceId);
         suppressors.delete(workspaceId);
         break;
       case "error":

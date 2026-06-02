@@ -50,7 +50,8 @@ export async function findCapsFiles(projectRoot: string): Promise<CapsFileInfo[]
 
     if (entry.isDirectory() && CAPS_DIR_RE.test(entry.name) && !isExcludedDir(entry.name)) {
       const dirFiles: string[] = [];
-      await discoverFilesInDir(fullPath, dirFiles, 0);
+      const visited = new Set<string>();
+      await discoverFilesInDir(fullPath, dirFiles, 0, visited);
       for (const filePath of dirFiles) {
         if (fileCount >= MAX_CAPS_FILES || totalBytes >= MAX_TOTAL_CONTEXT_BYTES) break;
         const info = await tryReadFile(filePath, path.relative(projectRoot, filePath));
@@ -80,8 +81,19 @@ async function tryReadFile(filePath: string, label: string): Promise<CapsFileInf
   }
 }
 
-async function discoverFilesInDir(dirPath: string, out: string[], depth: number): Promise<void> {
+async function discoverFilesInDir(dirPath: string, out: string[], depth: number, visited: Set<string>): Promise<void> {
   if (depth >= MAX_DIR_DEPTH) return;
+  
+  let realPath: string;
+  try {
+    realPath = await fs.realpath(dirPath);
+  } catch {
+    return;
+  }
+  
+  if (visited.has(realPath)) return;
+  visited.add(realPath);
+  
   let entries;
   try {
     entries = await fs.readdir(dirPath, { withFileTypes: true });
@@ -93,7 +105,7 @@ async function discoverFilesInDir(dirPath: string, out: string[], depth: number)
     if (entry.isFile()) {
       out.push(fullPath);
     } else if (entry.isDirectory() && !isExcludedDir(entry.name)) {
-      await discoverFilesInDir(fullPath, out, depth + 1);
+      await discoverFilesInDir(fullPath, out, depth + 1, visited);
     }
   }
 }

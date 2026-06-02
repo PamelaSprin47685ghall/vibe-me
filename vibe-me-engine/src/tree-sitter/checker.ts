@@ -82,41 +82,8 @@ function buildEnvMock() {
 
 let packPromise: Promise<WasmPack> | null = null;
 
-async function loadPack(): Promise<WasmPack> {
-  const { createRequire } = await import('node:module');
-  const Module = createRequire(import.meta.url)('node:module') as {
-    prototype: { require: (id: string) => unknown };
-  };
-  const originalRequire = Module.prototype.require;
-  const originalInstance = WebAssembly.Instance;
-  const envMock = buildEnvMock();
-
-  Module.prototype.require = function patchedRequire(id: string) {
-    if (id === 'env') return envMock;
-    return originalRequire.call(this, id);
-  };
-
-  WebAssembly.Instance = function patchedInstance(
-    module: WebAssembly.Module,
-    importObject?: WebAssembly.Imports,
-  ) {
-    const instance = new originalInstance(module, importObject);
-    const memory = (instance.exports as { memory?: WebAssembly.Memory }).memory;
-    const hasEnv = importObject && (importObject as Record<string, unknown>).env != null;
-    if (memory && hasEnv) shimMemory.buffer = memory.buffer;
-    return instance;
-  } as unknown as typeof WebAssembly.Instance;
-
-  try {
-    return (await import('@kreuzberg/tree-sitter-language-pack-wasm')) as unknown as WasmPack;
-  } finally {
-    Module.prototype.require = originalRequire;
-    WebAssembly.Instance = originalInstance;
-  }
-}
-
 function getPack(): Promise<WasmPack> {
-  packPromise ??= loadPack();
+  packPromise ??= loadTreeSitterPack();
   return packPromise;
 }
 
