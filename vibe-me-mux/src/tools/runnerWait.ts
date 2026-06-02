@@ -1,21 +1,32 @@
-import { tool } from "ai";
-import { z } from "zod";
+import type { SchemaFactory, ToolDefinition, RunnerWaitToolArgs, PluginToolArgs } from "../types/contract";
+import type { HostDependencies } from "../types/deps";
 import { wait } from "engine/runner";
-import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 
-const RunnerWaitToolInputSchema = z.object({
-  jobId: z.string().describe("The job ID to wait for"),
-  ms: z.number().int().min(100).max(30000).default(2000).describe("Time to wait in milliseconds"),
-});
+export function createRunnerWaitTool<S>(
+  _deps: HostDependencies,
+  f: SchemaFactory<S>,
+): ToolDefinition<S> {
+  const schema = f.object({
+    jobId: f.string("The job ID to wait for"),
+    ms: f.number(
+      "Time to wait in milliseconds",
+    ),
+  });
 
-export const createRunnerWaitTool: ToolFactory = (_config: PluginToolConfiguration) => {
-  return tool({
-    description: "Wait for a background runner task to produce more output or finish.",
-    inputSchema: RunnerWaitToolInputSchema,
-    execute: async (args) => {
-      const result = await wait({ sessionId: args.jobId, ms: args.ms });
-      const output = result.output + (result.message ? "\n\n" + result.message : "");
+  return {
+    name: "runner_wait",
+    description:
+      "Wait for a background runner task to produce more output or finish.",
+    schema,
+    execute: async (_config, args: PluginToolArgs) => {
+      const { jobId, ms } = args as RunnerWaitToolArgs;
+      const result = await wait({
+        sessionId: jobId,
+        ms: ms ?? 2000,
+      });
+      const output =
+        result.output + (result.message ? "\n\n" + result.message : "");
       return output || "(no new output)";
     },
-  });
-};
+  };
+}

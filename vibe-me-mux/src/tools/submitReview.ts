@@ -1,13 +1,12 @@
-import { tool } from "ai";
-import { z } from "zod";
-import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
+import type { SchemaFactory, ToolDefinition, PluginToolArgs, SubmitReviewToolArgs } from "../types/contract";
+import type { HostDependencies } from "../types/deps";
 import {
-  isForegroundWaitBackgroundedError,
-  requireTaskService,
-  requireWorkspaceId,
-} from "../types/tool";
-import { isReviewActive, tryLockReview, unlockReview, getReviewTask } from "engine/review";
-import { resolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
+  isReviewActive,
+  tryLockReview,
+  unlockReview,
+  getReviewTask,
+} from "engine/review";
+import { delegateToSubAgent } from "./delegate";
 
 const REVIEW_CRITERIA = `## Review Criteria
 
@@ -29,12 +28,11 @@ Your job is to:
 
 Be thorough and fair. Approved work must meet all relevant criteria. If you find issues, clearly describe what needs to change and why.`;
 
-const SubmitReviewInputSchema = z.object({
-  report: z.string().min(1).describe("Detailed report of what was done"),
-  affectedFiles: z.array(z.string()).describe("List of file paths that were modified or created"),
-});
-
-function buildReviewPrompt(report: string, affectedFiles: string[], originalTask: string): string {
+function buildReviewPrompt(
+  report: string,
+  affectedFiles: readonly string[],
+  originalTask: string,
+): string {
   return `${REVIEW_INSTRUCTIONS}
 
 ${REVIEW_CRITERIA}
@@ -53,15 +51,27 @@ Review the above changes against the criteria. Examine the affected files and ev
 Call agent_report with your structured verdict when done.`;
 }
 
-export const createSubmitReviewTool: ToolFactory = (config: PluginToolConfiguration) => {
-  return tool({
+export function createSubmitReviewTool<S>(
+  deps: HostDependencies,
+  f: SchemaFactory<S>,
+): ToolDefinition<S> {
+  const schema = f.object({
+    report: f.string("Detailed report of what was done"),
+    affectedFiles: f.array(
+      f.string("File path that was modified or created"),
+      "List of file paths that were modified or created",
+    ),
+  });
+
+  return {
+    name: "submit_review",
     description:
       "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and provides structured feedback. Only works when session is in active loop mode.",
-    inputSchema: SubmitReviewInputSchema,
-    execute: async (args, { abortSignal }) => {
-      const workspaceId = requireWorkspaceId(config, "submitReview");
-      const taskService = requireTaskService(config, "submitReview");
-      const aiSettings = await resolveDelegatedAgentAiSettings(config, "explore");
+    schema,
+    execute: async (config, args: PluginToolArgs) => {
+      const a = args as SubmitReviewToolArgs;
+      const workspaceId = config.workspaceId;
+      if (!workspaceId) throw new Error("submitReview requires workspaceId");
 
       if (!isReviewActive(workspaceId)) {
         return "You do not need review. Just continue with your work.";
@@ -71,40 +81,24 @@ export const createSubmitReviewTool: ToolFactory = (config: PluginToolConfigurat
         return "A review is already in progress for this session.";
       }
 
-      const originalTask = getReviewTask(workspaceId) ?? "No original task recorded.";
-      const reviewPrompt = buildReviewPrompt(args.report, args.affectedFiles, originalTask);
-
-      const createResult = await taskService.create({
-        parentWorkspaceId: workspaceId,
-        kind: "agent",
-        agentId: "explore",
-        modelString: aiSettings.modelString,
-        thinkingLevel: aiSettings.thinkingLevel,
-        prompt: reviewPrompt,
-        title: "Review",
-      });
-
-      if (!createResult.success) {
-        unlockReview(workspaceId);
-        return `Failed to create review task: ${createResult.error}`;
-      }
-
-      const taskId = createResult.data.taskId;
-
       try {
-        const result = await taskService.waitForAgentReport(taskId, {
-          requestingWorkspaceId: workspaceId,
-          abortSignal,
-        });
-        return result.reportMarkdown;
-      } catch (error) {
-        if (isForegroundWaitBackgroundedError(error)) {
-          return `Review task (${taskId}) moved to background. Check it later via task tools.`;
-        }
-        throw error;
+        const originalTask =
+          getReviewTask(workspaceId) ?? "No original task recorded.";
+        const reviewPrompt = buildReviewPrompt(
+          a.report,
+          a.affectedFiles,
+          originalTask,
+        );
+        return await delegateToSubAgent(
+          config,
+          deps,
+          "explore",
+          reviewPrompt,
+          "Review",
+        );
       } finally {
         unlockReview(workspaceId);
       }
     },
-  });
-};
+  };
+}

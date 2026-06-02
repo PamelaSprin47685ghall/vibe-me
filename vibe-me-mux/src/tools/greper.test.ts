@@ -1,9 +1,26 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { PluginToolConfiguration } from "../types/tool";
-import { FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME } from "../types/tool";
-import type { ToolExecutionOptions } from "ai";
-import type { HostDependencies, TaskCreateInput, TaskCreateResult, TaskServiceLike, TaskWaitResult } from "../types/deps";
-import { createRegistration } from "../index";
+import {
+  FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME,
+  type SchemaFactory,
+} from "../types/contract";
+import type {
+  HostDependencies,
+  TaskCreateInput,
+  TaskCreateResult,
+  TaskServiceLike,
+  TaskWaitResult,
+} from "../types/deps";
+import { createGreperTool } from "./greper";
+
+const mockSchemaFactory: SchemaFactory<never> = {
+  string: () => ({ raw: undefined as never, _type: undefined as never }),
+  number: () => ({ raw: undefined as never, _type: undefined as never }),
+  boolean: () => ({ raw: undefined as never, _type: undefined as never }),
+  enum: () => ({ raw: undefined as never, _type: undefined as never }),
+  array: () => ({ raw: undefined as never, _type: undefined as never }),
+  object: () => ({ raw: undefined as never, _type: undefined as never }),
+};
 
 class ForegroundWaitBackgroundedError extends Error {
   constructor() {
@@ -13,11 +30,33 @@ class ForegroundWaitBackgroundedError extends Error {
 }
 
 const mockTaskService: {
-  create: ReturnType<typeof mock<(input: TaskCreateInput) => Promise<TaskCreateResult>>>;
-  waitForAgentReport: ReturnType<typeof mock<(taskId: string, opts: { requestingWorkspaceId: string; abortSignal?: AbortSignal }) => Promise<TaskWaitResult>>>;
+  create: ReturnType<
+    typeof mock<(input: TaskCreateInput) => Promise<TaskCreateResult>>
+  >;
+  waitForAgentReport: ReturnType<
+    typeof mock<
+      (
+        taskId: string,
+        opts: {
+          requestingWorkspaceId: string;
+          abortSignal?: AbortSignal;
+        },
+      ) => Promise<TaskWaitResult>
+    >
+  >;
 } = {
-  create: mock<(input: TaskCreateInput) => Promise<TaskCreateResult>>(),
-  waitForAgentReport: mock<(taskId: string, opts: { requestingWorkspaceId: string; abortSignal?: AbortSignal }) => Promise<TaskWaitResult>>(),
+  create: mock<
+    (input: TaskCreateInput) => Promise<TaskCreateResult>
+  >(),
+  waitForAgentReport: mock<
+    (
+      taskId: string,
+      opts: {
+        requestingWorkspaceId: string;
+        abortSignal?: AbortSignal;
+      },
+    ) => Promise<TaskWaitResult>
+  >(),
 };
 
 const mockDeps: HostDependencies = {
@@ -26,24 +65,17 @@ const mockDeps: HostDependencies = {
   loadConfigOrDefault: () => ({
     projects: new Map(),
     agentAiDefaults: {},
-    subagentAiDefaults: { explore: { modelString: "anthropic:claude-sonnet-4-5", thinkingLevel: "medium" } },
+    subagentAiDefaults: {
+      explore: {
+        modelString: "anthropic:claude-sonnet-4-5",
+        thinkingLevel: "medium",
+      },
+    },
   }),
   readAgentDefinition: () => Promise.reject(new Error("not used")),
   resolveAgentFrontmatter: () => Promise.reject(new Error("not used")),
   resolveAgentInheritanceChain: () => Promise.resolve([{ id: "explore" }]),
   findWorkspaceEntry: () => undefined,
-};
-
-function bootstrap() {
-  const registration = createRegistration(mockDeps);
-  const greperEntry = registration.tools.find((t) => t.name === "greper");
-  if (!greperEntry) throw new Error("greper tool missing");
-  return greperEntry.factory;
-}
-
-const mockToolCallOptions: ToolExecutionOptions = {
-  toolCallId: "test-call-id",
-  messages: [],
 };
 
 function createToolConfig(): PluginToolConfiguration {
@@ -55,10 +87,9 @@ function createToolConfig(): PluginToolConfiguration {
   };
 }
 
-const createGreperTool = bootstrap();
+const greperDef = createGreperTool(mockDeps, mockSchemaFactory);
 
 beforeEach(() => {
-  bootstrap();
   mockTaskService.create.mockReset();
   mockTaskService.waitForAgentReport.mockReset();
 });
@@ -73,11 +104,9 @@ describe("greper tool", () => {
       reportMarkdown: "Found 3 matches in src/utils.ts",
     });
 
-    const tool = createGreperTool(createToolConfig());
-    const result: string = (await tool.execute!(
-      { intent: "find all usages of getUserName function" },
-      { ...mockToolCallOptions, abortSignal: new AbortController().signal }
-    )) as string;
+    const result = await greperDef.execute(createToolConfig(), {
+      intent: "find all usages of getUserName function",
+    });
 
     expect(mockTaskService.create).toHaveBeenCalledWith({
       parentWorkspaceId: "ws-test",
@@ -88,10 +117,13 @@ describe("greper tool", () => {
       prompt: "find all usages of getUserName function",
       title: "Greper",
     });
-    expect(mockTaskService.waitForAgentReport).toHaveBeenCalledWith("task-123", {
-      requestingWorkspaceId: "ws-test",
-      abortSignal: expect.any(AbortSignal) as AbortSignal,
-    });
+    expect(mockTaskService.waitForAgentReport).toHaveBeenCalledWith(
+      "task-123",
+      {
+        requestingWorkspaceId: "ws-test",
+        abortSignal: undefined,
+      },
+    );
     expect(result).toBe("Found 3 matches in src/utils.ts");
   });
 
@@ -101,13 +133,13 @@ describe("greper tool", () => {
       error: "Max nesting depth exceeded",
     });
 
-    const tool = createGreperTool(createToolConfig());
-    const result: string = (await tool.execute!(
-      { intent: "search for config files" },
-      { ...mockToolCallOptions, abortSignal: new AbortController().signal }
-    )) as string;
+    const result = await greperDef.execute(createToolConfig(), {
+      intent: "search for config files",
+    });
 
-    expect(result).toBe("Failed to create greper task: Max nesting depth exceeded");
+    expect(result).toBe(
+      "Failed to create greper task: Max nesting depth exceeded",
+    );
     expect(mockTaskService.waitForAgentReport).not.toHaveBeenCalled();
   });
 
@@ -116,16 +148,16 @@ describe("greper tool", () => {
       success: true,
       data: { taskId: "task-456", kind: "agent", status: "running" },
     });
-    mockTaskService.waitForAgentReport.mockRejectedValue(new ForegroundWaitBackgroundedError());
+    mockTaskService.waitForAgentReport.mockRejectedValue(
+      new ForegroundWaitBackgroundedError(),
+    );
 
-    const tool = createGreperTool(createToolConfig());
-    const result: string = (await tool.execute!(
-      { intent: "find all TODO comments" },
-      { ...mockToolCallOptions, abortSignal: new AbortController().signal }
-    )) as string;
+    const result = await greperDef.execute(createToolConfig(), {
+      intent: "find all TODO comments",
+    });
 
     expect(result).toBe(
-      "Greper task (task-456) moved to background. Use task tools to monitor it."
+      "Greper task (task-456) moved to background. Use task tools to monitor it.",
     );
   });
 
@@ -134,16 +166,15 @@ describe("greper tool", () => {
       success: true,
       data: { taskId: "task-789", kind: "agent", status: "running" },
     });
-    mockTaskService.waitForAgentReport.mockRejectedValue(new Error("Network timeout"));
-
-    const tool = createGreperTool(createToolConfig());
+    mockTaskService.waitForAgentReport.mockRejectedValue(
+      new Error("Network timeout"),
+    );
 
     let caught: unknown;
     try {
-      await tool.execute!(
-        { intent: "search for imports" },
-        { ...mockToolCallOptions, abortSignal: new AbortController().signal }
-      );
+      await greperDef.execute(createToolConfig(), {
+        intent: "search for imports",
+      });
     } catch (error) {
       caught = error;
     }

@@ -6,8 +6,8 @@ import type {
   AgentFrontmatterPackage,
   ConfigFile,
   AgentInheritanceRequest,
-  AgentInheritanceEntry,
 } from "../types/deps";
+import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
 
 const mockLoadConfigOrDefault = mock<() => ConfigFile>(() => ({
   projects: new Map(),
@@ -15,7 +15,11 @@ const mockLoadConfigOrDefault = mock<() => ConfigFile>(() => ({
   subagentAiDefaults: {},
 }));
 const mockReadAgentDefinition = mock<
-  (runtime: unknown, workspacePath: string, agentId: string) => Promise<AgentDefinitionPackage>
+  (
+    runtime: unknown,
+    workspacePath: string,
+    agentId: string,
+  ) => Promise<AgentDefinitionPackage>
 >((_runtime, _workspacePath, agentId) =>
   Promise.resolve({
     id: agentId,
@@ -25,16 +29,34 @@ const mockReadAgentDefinition = mock<
   }),
 );
 const mockResolveAgentFrontmatter = mock<
-  (runtime: unknown, workspacePath: string, agentId: string) => Promise<AgentFrontmatterPackage>
+  (
+    runtime: unknown,
+    workspacePath: string,
+    agentId: string,
+  ) => Promise<AgentFrontmatterPackage>
 >(() => Promise.resolve({ name: "" }));
 const mockResolveAgentInheritanceChain = mock<
-  (args: AgentInheritanceRequest) => Promise<AgentInheritanceEntry[]>
+  (args: AgentInheritanceRequest) => Promise<{ id: string }[]>
 >((args) => Promise.resolve([{ id: args.agentId }]));
 
 function findWorkspaceEntryMock(
   configFile: ConfigFile,
   workspaceId: string,
-): { workspace: { id: string; aiSettings?: { model: string; thinkingLevel?: string }; aiSettingsByAgent?: Record<string, { model: string; thinkingLevel?: string }> } } | undefined {
+):
+  | {
+      workspace: {
+        id: string;
+        aiSettings?: {
+          model: string;
+          thinkingLevel?: string;
+        };
+        aiSettingsByAgent?: Record<
+          string,
+          { model: string; thinkingLevel?: string }
+        >;
+      };
+    }
+  | undefined {
   for (const project of configFile.projects?.values() ?? []) {
     const found = project.workspaces.find((w) => w.id === workspaceId);
     if (found) return { workspace: found };
@@ -54,8 +76,8 @@ const mockDeps: HostDependencies = {
   findWorkspaceEntry: findWorkspaceEntryMock,
 };
 
-import { createRegistration } from "../index";
-import { resolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
+const resolveDelegatedAgentAiSettings =
+  createResolveDelegatedAgentAiSettings(mockDeps);
 
 function createToolConfig(): PluginToolConfiguration {
   return {
@@ -70,8 +92,6 @@ beforeEach(() => {
   mockReadAgentDefinition.mockReset();
   mockResolveAgentFrontmatter.mockReset();
   mockResolveAgentInheritanceChain.mockReset();
-
-  createRegistration(mockDeps);
 
   mockLoadConfigOrDefault.mockImplementation(() => ({
     projects: new Map(),
@@ -121,9 +141,15 @@ describe("resolveDelegatedAgentAiSettings", () => {
       agentAiDefaults: {},
       subagentAiDefaults: {},
     }));
-    mockResolveAgentInheritanceChain.mockResolvedValue([{ id: "explore" }, { id: "exec" }]);
+    mockResolveAgentInheritanceChain.mockResolvedValue([
+      { id: "explore" },
+      { id: "exec" },
+    ]);
 
-    const result = await resolveDelegatedAgentAiSettings(createToolConfig(), "explore");
+    const result = await resolveDelegatedAgentAiSettings(
+      createToolConfig(),
+      "explore",
+    );
 
     expect(result).toEqual({
       modelString: "openai:gpt-5.3-codex",
@@ -148,7 +174,10 @@ describe("resolveDelegatedAgentAiSettings", () => {
       },
     }));
 
-    const result = await resolveDelegatedAgentAiSettings(createToolConfig(), "exec");
+    const result = await resolveDelegatedAgentAiSettings(
+      createToolConfig(),
+      "exec",
+    );
 
     expect(result).toEqual({
       modelString: "openai:gpt-5.3-codex",
@@ -166,7 +195,10 @@ describe("resolveDelegatedAgentAiSettings", () => {
       },
       subagentAiDefaults: {},
     }));
-    mockResolveAgentInheritanceChain.mockResolvedValue([{ id: "desktop" }, { id: "exec" }]);
+    mockResolveAgentInheritanceChain.mockResolvedValue([
+      { id: "desktop" },
+      { id: "exec" },
+    ]);
     mockResolveAgentFrontmatter.mockResolvedValue({
       name: "desktop",
       ai: {
@@ -174,7 +206,10 @@ describe("resolveDelegatedAgentAiSettings", () => {
       },
     });
 
-    const result = await resolveDelegatedAgentAiSettings(createToolConfig(), "desktop");
+    const result = await resolveDelegatedAgentAiSettings(
+      createToolConfig(),
+      "desktop",
+    );
 
     expect(result).toEqual({
       modelString: "anthropic:claude-sonnet-4-5",

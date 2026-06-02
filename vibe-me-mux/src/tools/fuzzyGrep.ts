@@ -1,11 +1,7 @@
 import path from "node:path";
-
-import { tool } from "ai";
-import { z } from "zod";
-
-import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
+import type { SchemaFactory, ToolDefinition, FuzzyGrepToolArgs, PluginToolArgs } from "../types/contract";
+import type { HostDependencies } from "../types/deps";
 import type { GrepCursor, GrepMode, GrepResult } from "@ff-labs/fff-node";
-
 import {
   fileAnnotation as fffFileAnnotation,
   truncateLine,
@@ -15,10 +11,6 @@ import {
   storeIterator,
   consumeIterator,
 } from "engine/fuzzy";
-
-
-
-// ── Grep output formatting ──
 
 function formatGrepOutput(
   result: Pick<GrepResult, "items" | "totalMatched">,
@@ -66,8 +58,6 @@ interface GrepIteratorState {
   cursor: GrepCursor | null;
 }
 
-// ── External finder for paths outside cwd ──
-
 function resolveExternalBasePath(absPath: string): {
   basePath: string;
   pathConstraint: string | null;
@@ -101,127 +91,107 @@ async function createExternalFinder(basePath: string) {
   return finder;
 }
 
-// ── Tool schema ──
-
-const FuzzyGrepInputSchema = z.object({
-  pattern: z
-    .string()
-    .min(1)
-    .nullish()
-    .describe(
+export function createFuzzyGrepTool<S>(
+  _deps: HostDependencies,
+  f: SchemaFactory<S>,
+): ToolDefinition<S> {
+  const schema = f.object({
+    pattern: f.string(
       "Initial search pattern. Required on the first call. Supports literal text and regex-like patterns.",
     ),
-  path: z
-    .string()
-    .nullish()
-    .describe(
+    path: f.string(
       "Initial path constraint (repo-relative or absolute path outside workspace). Use 'src/' or '*.ts' to narrow the first call.",
     ),
-  exclude: z
-    .union([z.string(), z.array(z.string())])
-    .nullish()
-    .describe("Initial exclude paths (e.g. 'test/,*.min.js')"),
-  caseSensitive: z
-    .boolean()
-    .nullish()
-    .describe(
-      "Initial case-sensitivity override (smart-case by default — case-insensitive when pattern is all lowercase)",
+    exclude: f.string(
+      "Initial exclude paths (e.g. 'test/,*.min.js')",
     ),
-  context: z
-    .number()
-    .int()
-    .min(0)
-    .nullish()
-    .describe("Initial number of context lines before and after each match"),
-  limit: z
-    .number()
-    .int()
-    .min(1)
-    .nullish()
-    .describe("Maximum number of matches to return per call"),
-  iterator: z
-    .string()
-    .nullish()
-    .describe(
-      "Opaque single-use iterator from a previous fuzzy_grep result. On continuation, pass only this field. Iteration is finished when the result shows iterator=\"\".",
+    caseSensitive: f.boolean(
+      "Initial case-sensitivity override (smart-case by default)",
     ),
-});
+    context: f.number(
+      "Initial number of context lines before and after each match",
+    ),
+    limit: f.number(
+      "Maximum number of matches to return per call",
+    ),
+    iterator: f.string(
+      "Opaque single-use iterator from a previous fuzzy_grep result. On continuation, pass only this field.",
+    ),
+  });
 
-// ── Tool factory ──
-
-export const createFuzzyGrepTool: ToolFactory = (config: PluginToolConfiguration) => {
-  return tool({
+  return {
+    name: "fuzzy_grep",
     description:
       "Search file contents using fuzzy-aware content search. Smart-case, git-aware, frecency-ranked. Supports automatic regex mode for regex-like patterns and automatic fuzzy fallback when no exact matches are found.\n\nFirst call: provide pattern and optional filters.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",
-    inputSchema: FuzzyGrepInputSchema,
-    execute: async (args, { abortSignal: _abortSignal }) => {
+    schema,
+    execute: async (config, args: PluginToolArgs) => {
+      const a = args as FuzzyGrepToolArgs;
       const external: { f: { destroy(): void } | null } = { f: null };
       try {
         const activeCwd = config.cwd;
-        let searchState: GrepIteratorState | undefined = args.iterator
-          ? consumeIterator<GrepIteratorState>(args.iterator)
+        let searchState: GrepIteratorState | undefined = a.iterator
+          ? consumeIterator<GrepIteratorState>(a.iterator)
           : undefined;
 
         if (!searchState) {
-          if (args.iterator) {
-            return `fuzzy_grep iterator error: unknown, expired, or already consumed iterator "${args.iterator}"`;
+          if (a.iterator) {
+            return `fuzzy_grep iterator error: unknown, expired, or already consumed iterator "${a.iterator}"`;
           }
-          if (!args.pattern) {
+          if (!a.pattern) {
             return "pattern is required on the first call";
           }
 
           let externalBasePath: string | null = null;
           let externalPathConstraint: string | null = null;
-          if (args.path && path.isAbsolute(args.path)) {
-            const info = resolveExternalBasePath(path.resolve(args.path));
+          if (a.path && path.isAbsolute(a.path)) {
+            const info = resolveExternalBasePath(path.resolve(a.path));
             externalBasePath = info.basePath;
             externalPathConstraint = info.pathConstraint;
           }
 
           const query = buildQuery(
-            externalBasePath ? externalPathConstraint : args.path,
-            args.pattern,
-            args.exclude,
+            externalBasePath ? externalPathConstraint : a.path,
+            a.pattern,
+            a.exclude,
             externalBasePath ?? activeCwd,
             !!externalBasePath,
           );
 
           const hasRegexSyntax =
-            args.pattern !==
-            args.pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            a.pattern !== a.pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           let mode: GrepMode = hasRegexSyntax ? "regex" : "plain";
           if (mode === "regex") {
             try {
-              new RegExp(args.pattern);
+              new RegExp(a.pattern);
             } catch {
               mode = "plain";
             }
           }
 
-          const trimmed = args.pattern.trim();
+          const trimmed = a.pattern.trim();
           const isWildcardOnly =
             hasRegexSyntax &&
             /^(?:[.^$]*(?:[.][*+?]|\*|\+)[.^$]*|[.^$\s]*|\.\*\??|\.\*[+?]?|\.\+\??|\.|\*|\?)$/.test(
               trimmed,
             );
           if (isWildcardOnly) {
-            return `Pattern '${args.pattern}' matches everything - fuzzy_grep needs a concrete substring or identifier.`;
+            return `Pattern '${a.pattern}' matches everything - fuzzy_grep needs a concrete substring or identifier.`;
           }
 
           searchState = {
             query,
             mode,
-            smartCase: args.caseSensitive !== true,
-            beforeContext: args.context ?? 0,
-            afterContext: args.context ?? 0,
-            pageSize: args.limit ?? 50,
+            smartCase: a.caseSensitive !== true,
+            beforeContext: a.context ?? 0,
+            afterContext: a.context ?? 0,
+            pageSize: a.limit ?? 50,
             externalBasePath,
             cursor: null,
           };
         }
 
         const externalBasePath = searchState.externalBasePath;
-        const f = externalBasePath
+        const f2 = externalBasePath
           ? await (async () => {
               const finder = await createExternalFinder(externalBasePath);
               external.f = finder;
@@ -229,7 +199,7 @@ export const createFuzzyGrepTool: ToolFactory = (config: PluginToolConfiguration
             })()
           : await FinderManager.get(activeCwd);
 
-        const grepResult = f.grep(searchState.query, {
+        const grepResult = f2.grep(searchState.query, {
           mode: searchState.mode,
           smartCase: searchState.smartCase,
           maxMatchesPerFile: Math.min(searchState.pageSize, 50),
@@ -245,9 +215,13 @@ export const createFuzzyGrepTool: ToolFactory = (config: PluginToolConfiguration
 
         let result = grepResult.value;
         let fuzzyNotice: string | null = null;
-        if (!result?.items?.length && !args.iterator && searchState.mode !== "regex") {
+        if (
+          !result?.items?.length &&
+          !a.iterator &&
+          searchState.mode !== "regex"
+        ) {
           try {
-            const fuzzy = f.grep(searchState.query, {
+            const fuzzy = f2.grep(searchState.query, {
               mode: "fuzzy",
               smartCase: searchState.smartCase,
               maxMatchesPerFile: Math.min(searchState.pageSize, 50),
@@ -283,7 +257,10 @@ export const createFuzzyGrepTool: ToolFactory = (config: PluginToolConfiguration
         notices.push(
           `iterator="${
             result?.nextCursor
-              ? storeIterator("ffi_i", { ...searchState, cursor: result.nextCursor })
+              ? storeIterator("ffi_i", {
+                  ...searchState,
+                  cursor: result.nextCursor,
+                })
               : ""
           }"`,
         );
@@ -303,5 +280,5 @@ export const createFuzzyGrepTool: ToolFactory = (config: PluginToolConfiguration
         }
       }
     },
-  });
-};
+  };
+}

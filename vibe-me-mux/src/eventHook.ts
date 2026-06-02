@@ -4,37 +4,28 @@ import { cleanupJob, getActiveJobs } from "engine/runner";
 import type { PluginEventHook } from "./types/tool";
 
 export function createEventHook(): PluginEventHook {
-  const abortSuppressors = new Map<
-    string,
-    ReturnType<typeof createAbortSuppressor>
-  >();
-
-  function getOrCreateSuppressor(workspaceId: string) {
-    let sup = abortSuppressors.get(workspaceId);
-    if (!sup) {
-      sup = createAbortSuppressor(30_000);
-      abortSuppressors.set(workspaceId, sup);
-    }
-    return sup;
-  }
+  const suppressors = new Map<string, ReturnType<typeof createAbortSuppressor>>();
 
   return (event) => {
     const { type, workspaceId } = event;
     if (!workspaceId) return;
 
     switch (type) {
-      case "stream-end":
-        break;
       case "stream-abort":
         for (const [jobId] of getActiveJobs()) {
           if (jobId.startsWith(workspaceId + "/")) cleanupJob(jobId);
         }
         deactivateReview(workspaceId);
-        abortSuppressors.delete(workspaceId);
+        suppressors.delete(workspaceId);
         break;
       case "error":
-        if (event.properties?.errorType === "aborted") {
-          getOrCreateSuppressor(workspaceId).suppress();
+        if ((event.properties as { readonly errorType?: string } | undefined)?.errorType === "aborted") {
+          let sup = suppressors.get(workspaceId);
+          if (!sup) {
+            sup = createAbortSuppressor(30_000);
+            suppressors.set(workspaceId, sup);
+          }
+          sup.suppress();
         }
         break;
     }

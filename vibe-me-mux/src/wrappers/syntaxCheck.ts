@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { Tool } from "ai";
 import { checkSyntax, extractFilePath, isFileEditTool } from "engine/tree-sitter";
-import type { PluginToolConfiguration, ToolWrapperRegistration } from "../types/tool";
+import type { PluginToolConfiguration } from "../types/tool";
 import type { LoggerLike } from "../types/deps";
+import type { ToolLike, ToolWrapper, PluginToolArgs } from "../types/contract";
 
 const SYNTAX_CHECK_MARKER = "[syntax-check]";
 
@@ -24,35 +24,56 @@ function formatSyntaxErrors(result: SyntaxCheckOk, filePath: string): string {
   return `${SYNTAX_CHECK_MARKER} ${filePath}: ${result.errors.length} error(s) in ${result.lang}\n${lines.join("\n")}`;
 }
 
-function wrapFileEditTool(baseTool: Tool, config: PluginToolConfiguration, log: LoggerLike): Tool {
-  const baseToolRecord = baseTool as unknown as Record<string, unknown>;
-  const originalExecute = baseToolRecord.execute;
-
+function wrapFileEditTool(
+  baseTool: ToolLike,
+  config: PluginToolConfiguration,
+  log: LoggerLike,
+): ToolLike {
+  const originalExecute = baseTool.execute;
   if (typeof originalExecute !== "function") return baseTool;
 
-  const execFn = originalExecute as (
-    args: unknown,
-    options: unknown,
-  ) => unknown;
-
-  const clone = Object.create(
+  const clone: ToolLike = Object.create(
     Object.getPrototypeOf(baseTool) as object | null,
     Object.getOwnPropertyDescriptors(baseTool),
-  ) as Record<string, unknown>;
+  );
 
-  clone.execute = async (args: unknown, options: unknown) => {
-    const result = await execFn.call(baseTool, args, options);
+  clone.execute = ((
+    args: PluginToolArgs,
+    options?: { readonly abortSignal?: AbortSignal },
+  ) => {
+    const result = originalExecute.call(baseTool, args, options);
 
-    if (typeof result !== "string" || result.includes(SYNTAX_CHECK_MARKER)) {
-      return result;
+    if (result instanceof Promise) {
+      return result.then((resolved: unknown) =>
+        appendSyntaxCheck(resolved, args, baseTool, config, log),
+      );
     }
+    return appendSyntaxCheck(result, args, baseTool, config, log);
+  }) as ToolLike["execute"];
 
-    const toolName = String((baseTool as { name?: string }).name ?? "");
-    if (!isFileEditTool(toolName)) return result;
+  return clone;
+}
 
-    const filePath = extractFilePath(args as Record<string, unknown> | null | undefined);
-    if (!filePath) return result;
+function appendSyntaxCheck(
+  result: unknown,
+  args: PluginToolArgs,
+  baseTool: ToolLike,
+  config: PluginToolConfiguration,
+  log: LoggerLike,
+): unknown {
+  if (typeof result !== "string" || result.includes(SYNTAX_CHECK_MARKER)) {
+    return result;
+  }
 
+  const toolName = baseTool.name ?? "";
+  if (!isFileEditTool(toolName)) return result;
+
+  const filePath = extractFilePath(
+    args as Record<string, unknown> | null | undefined,
+  );
+  if (!filePath) return result;
+
+  return (async () => {
     try {
       const resolvedPath = path.resolve(config.cwd, filePath);
       const content = await fs.readFile(resolvedPath, "utf-8");
@@ -65,16 +86,19 @@ function wrapFileEditTool(baseTool: Tool, config: PluginToolConfiguration, log: 
       const reason = err instanceof Error ? err.message : String(err);
       log.debug("[syntaxCheck] wrapper failed", { reason });
     }
-
     return result;
-  };
-
-  return clone as Tool;
+  })();
 }
 
-export function createSyntaxCheckWrappers(log: LoggerLike): ToolWrapperRegistration[] {
+export function createSyntaxCheckWrappers(log: LoggerLike): ToolWrapper[] {
   return [
-    { targetTool: "file_edit_replace_string", wrapper: (tool, config) => wrapFileEditTool(tool, config, log) },
-    { targetTool: "file_edit_insert", wrapper: (tool, config) => wrapFileEditTool(tool, config, log) },
+    {
+      targetTool: "file_edit_replace_string",
+      wrapper: (tool, config) => wrapFileEditTool(tool, config, log),
+    },
+    {
+      targetTool: "file_edit_insert",
+      wrapper: (tool, config) => wrapFileEditTool(tool, config, log),
+    },
   ];
 }

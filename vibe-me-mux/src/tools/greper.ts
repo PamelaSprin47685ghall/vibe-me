@@ -1,53 +1,25 @@
-import { tool } from "ai";
-import { z } from "zod";
-import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
-import {
-  isForegroundWaitBackgroundedError,
-  requireTaskService,
-  requireWorkspaceId,
-} from "../types/tool";
-import { resolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
+import type { SchemaFactory, ToolDefinition, PluginToolArgs, GreperToolArgs } from "../types/contract";
+import type { HostDependencies } from "../types/deps";
+import { delegateToSubAgent } from "./delegate";
 
-const GreperToolInputSchema = z.object({
-  intent: z.string().describe("Natural-language description of the code to search for"),
-});
+export function createGreperTool<S>(
+  deps: HostDependencies,
+  f: SchemaFactory<S>,
+): ToolDefinition<S> {
+  const schema = f.object({
+    intent: f.string(
+      "Natural-language description of the code to search for",
+    ),
+  });
 
-export const createGreperTool: ToolFactory = (config: PluginToolConfiguration) => {
-  return tool({
+  return {
+    name: "greper",
     description:
       "Receive a natural-language intent for code search and delegate to the search agent. IMPORTANT: Do NOT assume the search agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent. Failure to do so will cause severe confusion.",
-    inputSchema: GreperToolInputSchema,
-    execute: async (args, { abortSignal }) => {
-      const workspaceId = requireWorkspaceId(config, "greper");
-      const taskService = requireTaskService(config, "greper");
-      const aiSettings = await resolveDelegatedAgentAiSettings(config, "explore");
-
-      const createResult = await taskService.create({
-        parentWorkspaceId: workspaceId,
-        kind: "agent",
-        agentId: "explore",
-        modelString: aiSettings.modelString,
-        thinkingLevel: aiSettings.thinkingLevel,
-        prompt: args.intent,
-        title: "Greper",
-      });
-
-      if (!createResult.success) {
-        return `Failed to create greper task: ${createResult.error}`;
-      }
-
-      try {
-        const result = await taskService.waitForAgentReport(createResult.data.taskId, {
-          requestingWorkspaceId: workspaceId,
-          abortSignal,
-        });
-        return result.reportMarkdown;
-      } catch (error) {
-        if (isForegroundWaitBackgroundedError(error)) {
-          return `Greper task (${createResult.data.taskId}) moved to background. Use task tools to monitor it.`;
-        }
-        throw error;
-      }
+    schema,
+    execute: async (config, args: PluginToolArgs) => {
+      const { intent } = args as GreperToolArgs;
+      return delegateToSubAgent(config, deps, "explore", intent, "Greper");
     },
-  });
-};
+  };
+}

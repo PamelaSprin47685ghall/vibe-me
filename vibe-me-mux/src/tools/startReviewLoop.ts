@@ -1,25 +1,31 @@
-import { tool } from "ai";
-import { z } from "zod";
-import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
-import { requireWorkspaceId } from "../types/tool";
+import type { SchemaFactory, ToolDefinition, StartReviewLoopToolArgs, PluginToolArgs } from "../types/contract";
+import type { HostDependencies } from "../types/deps";
+import { requireWorkspaceId } from "../types/contract";
 import { activateReview } from "engine/review";
 
-const StartReviewLoopInputSchema = z.object({
-  task: z.string().min(1).describe("Description of the task/reason for entering review loop mode. This is recorded as the original task for review context."),
-});
+export function createStartReviewLoopTool<S>(
+  _deps: HostDependencies,
+  f: SchemaFactory<S>,
+): ToolDefinition<S> {
+  const schema = f.object({
+    task: f.string(
+      "Description of the task/reason for entering review loop mode. This is recorded as the original task for review context.",
+    ),
+  });
 
-export const createStartReviewLoopTool: ToolFactory = (config: PluginToolConfiguration) => {
-  return tool({
+  return {
+    name: "start_review_loop",
     description:
       "Activate review loop mode for the current session. " +
       "When active, submit_review will create a reviewer sub-agent instead of skipping. " +
       "Use this when the user asks to enter review/loop mode, or when explicitly instructed to start a review loop. " +
       "Call this once at the beginning; the loop stays active until the session ends or is explicitly stopped.",
-    inputSchema: StartReviewLoopInputSchema,
-    execute: (args) => {
+    schema,
+    execute: async (config, args: PluginToolArgs) => {
+      const { task } = args as StartReviewLoopToolArgs;
       const workspaceId = requireWorkspaceId(config, "start_review_loop");
-      activateReview(workspaceId, args.task);
+      activateReview(workspaceId, task);
       return "Review loop activated. Use submit_review when you want your work reviewed.";
     },
-  });
-};
+  };
+}

@@ -5,10 +5,12 @@ export function createCapsInjector(): ContextInjectorRegistration {
   const cache = new Map<string, Promise<string | null>>();
 
   return {
-    inject: async (projectPath: string): Promise<string | null> => {
-      const promise = cache.get(projectPath) ?? buildCapitalsContext(projectPath).catch(() => null);
+    inject: (projectPath: string) => {
+      const promise =
+        cache.get(projectPath) ??
+        buildCapitalsContext(projectPath).catch(() => null);
       cache.set(projectPath, promise);
-      return await promise;
+      return promise;
     },
   };
 }

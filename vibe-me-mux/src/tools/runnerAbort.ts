@@ -1,18 +1,23 @@
-import { tool } from "ai";
-import { z } from "zod";
+import type { SchemaFactory, ToolDefinition, RunnerAbortToolArgs, PluginToolArgs } from "../types/contract";
+import type { HostDependencies } from "../types/deps";
 import { abort } from "engine/runner";
-import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
 
-const RunnerAbortToolInputSchema = z.object({
-  jobId: z.string().describe("The job ID to abort"),
-});
-
-export const createRunnerAbortTool: ToolFactory = (_config: PluginToolConfiguration) => {
-  return tool({
-    description: "Forcefully terminate a running background runner task.",
-    inputSchema: RunnerAbortToolInputSchema,
-    execute: (args) => {
-      return abort(args.jobId);
-    },
+export function createRunnerAbortTool<S>(
+  _deps: HostDependencies,
+  f: SchemaFactory<S>,
+): ToolDefinition<S> {
+  const schema = f.object({
+    jobId: f.string("The job ID to abort"),
   });
-};
+
+  return {
+    name: "runner_abort",
+    description:
+      "Forcefully terminate a running background runner task.",
+    schema,
+    execute: async (_config, args: PluginToolArgs) => {
+      const { jobId } = args as RunnerAbortToolArgs;
+      return abort(jobId);
+    },
+  };
+}

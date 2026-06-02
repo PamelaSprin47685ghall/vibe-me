@@ -1,148 +1,132 @@
 import type { ConfigFile, HostDependencies } from "../types/deps";
 import type { PluginToolConfiguration } from "../types/tool";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __vibeMeMuxDeps: HostDependencies | undefined;
+export interface ResolvedDelegatedAgentAiSettings {
+  readonly modelString: string;
+  readonly thinkingLevel: string;
 }
 
-export function bindResolveDeps(deps: HostDependencies): void {
-  globalThis.__vibeMeMuxDeps = deps;
+interface NamedSettings {
+  readonly modelString?: string;
+  readonly thinkingLevel?: string;
 }
 
-function requireDeps(): HostDependencies {
-  const deps = globalThis.__vibeMeMuxDeps;
-  if (!deps) {
-    throw new Error(
-      "vibe-me-mux: deps not bound. Call createRegistration(deps) before using any plugin tool.",
-    );
+export function createResolveDelegatedAgentAiSettings(deps: HostDependencies) {
+  return async function resolveDelegatedAgentAiSettings(
+    config: PluginToolConfiguration,
+    agentId: string,
+  ): Promise<ResolvedDelegatedAgentAiSettings> {
+    const configFile: ConfigFile = deps.loadConfigOrDefault();
+    const workspace = config.workspaceId
+      ? deps.findWorkspaceEntry(configFile, config.workspaceId)?.workspace
+      : undefined;
+
+    const agentIds = await resolveInheritanceChain(deps, config, agentId);
+
+    const sources = [
+      resolveInheritedWorkspaceAiSettings(agentIds, workspace),
+      configFile.subagentAiDefaults?.[agentId],
+      resolveInheritedConfigAiSettings(agentIds, configFile.agentAiDefaults),
+      await resolveDescriptorAiSettings(deps, config, agentId),
+    ];
+
+    return {
+      modelString: firstField(sources, "modelString") ?? deps.defaultModel,
+      thinkingLevel: firstField(sources, "thinkingLevel") ?? "off",
+    };
+  };
+}
+
+function firstField(
+  sources: readonly (NamedSettings | undefined)[],
+  key: "modelString" | "thinkingLevel",
+): string | undefined {
+  for (const s of sources) {
+    const v = s?.[key];
+    if (v != null) return v;
   }
-  return deps;
+  return undefined;
 }
 
-interface ResolvedDelegatedAgentAiSettings {
-  modelString: string;
-  thinkingLevel: string;
-}
-
-interface PartialAiSettings {
-  modelString?: string;
-  thinkingLevel?: string;
-}
-
-function resolveInheritedConfigAiSettings(
-  agentIds: readonly string[],
-  entries: Record<string, { modelString?: string; thinkingLevel?: string } | undefined> | undefined
-): PartialAiSettings {
-  let modelString: string | undefined;
-  let thinkingLevel: string | undefined;
-
-  for (const agentId of agentIds) {
-    const entry = entries?.[agentId];
-    modelString ??= entry?.modelString;
-    thinkingLevel ??= entry?.thinkingLevel;
-    if (modelString != null && thinkingLevel != null) {
-      break;
-    }
-  }
-
-  return { modelString, thinkingLevel };
-}
-
-function resolveInheritedWorkspaceAiSettings(
-  agentIds: readonly string[],
-  workspace:
-    | {
-        aiSettingsByAgent?: Record<string, { model: string; thinkingLevel?: string }>;
-        aiSettings?: { model: string; thinkingLevel?: string };
-      }
-    | undefined
-): PartialAiSettings {
-  let modelString: string | undefined;
-  let thinkingLevel: string | undefined;
-
-  for (const agentId of agentIds) {
-    const entry = workspace?.aiSettingsByAgent?.[agentId];
-    modelString ??= entry?.model;
-    thinkingLevel ??= entry?.thinkingLevel;
-    if (modelString != null && thinkingLevel != null) {
-      break;
-    }
-  }
-
-  if (workspace?.aiSettingsByAgent == null) {
-    modelString ??= workspace?.aiSettings?.model;
-    thinkingLevel ??= workspace?.aiSettings?.thinkingLevel;
-  }
-
-  return { modelString, thinkingLevel };
-}
-
-async function resolveAgentInheritance(config: PluginToolConfiguration, agentId: string): Promise<string[]> {
-  const deps = requireDeps();
+async function resolveInheritanceChain(
+  deps: HostDependencies,
+  config: PluginToolConfiguration,
+  agentId: string,
+): Promise<readonly string[]> {
   const workspaceId = config.workspaceId ?? config.cwd;
-
   try {
-    const agentDefinition = await deps.readAgentDefinition(config.runtime, config.cwd, agentId);
+    const def = await deps.readAgentDefinition(
+      config.runtime ?? null,
+      config.cwd,
+      agentId,
+    );
     const chain = await deps.resolveAgentInheritanceChain({
-      runtime: config.runtime,
+      runtime: config.runtime ?? null,
       workspacePath: config.cwd,
-      agentId: agentDefinition.id,
-      agentDefinition,
+      agentId: def.id,
+      agentDefinition: def,
       workspaceId,
     });
-    return chain.map((entry) => entry.id);
+    return chain.map((e) => e.id);
   } catch {
     return [agentId];
   }
 }
 
 async function resolveDescriptorAiSettings(
+  deps: HostDependencies,
   config: PluginToolConfiguration,
-  agentId: string
-): Promise<PartialAiSettings> {
-  const deps = requireDeps();
+  agentId: string,
+): Promise<NamedSettings> {
   try {
-    const frontmatter = await deps.resolveAgentFrontmatter(config.runtime, config.cwd, agentId);
+    const fm = await deps.resolveAgentFrontmatter(
+      config.runtime ?? null,
+      config.cwd,
+      agentId,
+    );
     return {
-      modelString: frontmatter.ai?.model,
-      thinkingLevel: frontmatter.ai?.thinkingLevel,
+      modelString: fm.ai?.model,
+      thinkingLevel: fm.ai?.thinkingLevel,
     };
   } catch {
     return {};
   }
 }
 
-export async function resolveDelegatedAgentAiSettings(
-  config: PluginToolConfiguration,
-  agentId: string
-): Promise<ResolvedDelegatedAgentAiSettings> {
-  const deps = requireDeps();
-  const configFile: ConfigFile = deps.loadConfigOrDefault();
-  const workspace = config.workspaceId
-    ? deps.findWorkspaceEntry(configFile, config.workspaceId)?.workspace
-    : undefined;
-  const inheritanceChain = await resolveAgentInheritance(config, agentId);
-  const workspaceAiSettings = resolveInheritedWorkspaceAiSettings(inheritanceChain, workspace);
-  const directSubagentAiSettings = configFile.subagentAiDefaults?.[agentId];
-  const inheritedAgentAiSettings = resolveInheritedConfigAiSettings(
-    inheritanceChain,
-    configFile.agentAiDefaults
-  );
-  const descriptorAiSettings = await resolveDescriptorAiSettings(config, agentId);
+function resolveInheritedConfigAiSettings(
+  agentIds: readonly string[],
+  entries:
+    | Record<string, NamedSettings | undefined>
+    | undefined,
+): NamedSettings | undefined {
+  for (const id of agentIds) {
+    const e = entries?.[id];
+    if (e) return e;
+  }
+  return undefined;
+}
 
-  return {
-    modelString:
-      workspaceAiSettings.modelString ??
-      directSubagentAiSettings?.modelString ??
-      inheritedAgentAiSettings.modelString ??
-      descriptorAiSettings.modelString ??
-      deps.defaultModel,
-    thinkingLevel:
-      workspaceAiSettings.thinkingLevel ??
-      directSubagentAiSettings?.thinkingLevel ??
-      inheritedAgentAiSettings.thinkingLevel ??
-      descriptorAiSettings.thinkingLevel ??
-      "off",
-  };
+function resolveInheritedWorkspaceAiSettings(
+  agentIds: readonly string[],
+  workspace:
+    | {
+        readonly aiSettingsByAgent?: Record<
+          string,
+          { readonly model: string; readonly thinkingLevel?: string }
+        >;
+        readonly aiSettings?: { readonly model: string; readonly thinkingLevel?: string };
+      }
+    | undefined,
+): NamedSettings | undefined {
+  for (const id of agentIds) {
+    const e = workspace?.aiSettingsByAgent?.[id];
+    if (e) return { modelString: e.model, thinkingLevel: e.thinkingLevel };
+  }
+  if (workspace?.aiSettingsByAgent == null && workspace?.aiSettings) {
+    return {
+      modelString: workspace.aiSettings.model,
+      thinkingLevel: workspace.aiSettings.thinkingLevel,
+    };
+  }
+  return undefined;
 }

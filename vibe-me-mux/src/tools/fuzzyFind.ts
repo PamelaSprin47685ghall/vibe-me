@@ -1,8 +1,5 @@
-import { tool } from "ai";
-import { z } from "zod";
-
-import type { PluginToolConfiguration, ToolFactory } from "../types/tool";
-
+import type { SchemaFactory, ToolDefinition, FuzzyFindToolArgs, PluginToolArgs } from "../types/contract";
+import type { HostDependencies } from "../types/deps";
 import {
   fileAnnotation as fffFileAnnotation,
   FinderManager,
@@ -17,67 +14,63 @@ interface FuzzyFindIteratorState {
   pageIndex: number;
 }
 
-
-
-// ── Tool schema ──
-
-const FuzzyFindInputSchema = z.object({
-  pattern: z
-    .string()
-    .min(1)
-    .nullish()
-    .describe(
+export function createFuzzyFindTool<S>(
+  _deps: HostDependencies,
+  f: SchemaFactory<S>,
+): ToolDefinition<S> {
+  const schema = f.object({
+    pattern: f.string(
       "Initial plain fuzzy file path text to search for (e.g., 'component', 'src/utils/', 'Button.tsx'). Regex and glob syntax are not supported.",
     ),
-  path: z.string().nullish().describe("Initial optional path constraint to narrow search scope"),
-  limit: z.number().int().min(1).nullish().describe("Maximum number of results to return per call (default: 30)"),
-  iterator: z
-    .string()
-    .nullish()
-    .describe(
-      "Opaque single-use iterator from a previous fuzzy_find result. On continuation, pass only this field. Iteration is finished when the result shows iterator=\"\".",
+    path: f.string(
+      "Initial optional path constraint to narrow search scope",
     ),
-});
+    limit: f.number(
+      "Maximum number of results to return per call (default: 30)",
+    ),
+    iterator: f.string(
+      "Opaque single-use iterator from a previous fuzzy_find result. On continuation, pass only this field.",
+    ),
+  });
 
-// ── Tool factory ──
-
-export const createFuzzyFindTool: ToolFactory = (config: PluginToolConfiguration) => {
-  return tool({
+  return {
+    name: "fuzzy_find",
     description:
       "Search for files by fuzzy path text matching. Returns file paths ranked by relevance and frecency. Supports partial matches on file names and directory paths. Regex and glob syntax are not supported.\n\nFirst call: provide pattern and optional path.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",
-    inputSchema: FuzzyFindInputSchema,
-    execute: async (args) => {
+    schema,
+    execute: async (config, args: PluginToolArgs) => {
+      const a = args as FuzzyFindToolArgs;
       try {
         const finder = await FinderManager.get(config.cwd);
-        let searchState: FuzzyFindIteratorState | undefined = args.iterator
-          ? consumeIterator<FuzzyFindIteratorState>(args.iterator)
+        let searchState: FuzzyFindIteratorState | undefined = a.iterator
+          ? consumeIterator<FuzzyFindIteratorState>(a.iterator)
           : undefined;
 
         if (!searchState) {
-          if (args.iterator) {
-            return `fuzzy_find iterator error: unknown, expired, or already consumed iterator "${args.iterator}"`;
+          if (a.iterator) {
+            return `fuzzy_find iterator error: unknown, expired, or already consumed iterator "${a.iterator}"`;
           }
-          if (!args.pattern) {
+          if (!a.pattern) {
             return "pattern is required on the first call";
           }
 
           searchState = {
-            query: buildQuery(args.path, args.pattern, undefined, config.cwd),
-            pageSize: args.limit ?? 30,
+            query: buildQuery(a.path, a.pattern, undefined, config.cwd),
+            pageSize: a.limit ?? 30,
             pageIndex: 0,
           };
         }
 
-        const result = finder.fileSearch(searchState.query, {
+        const findResult = finder.fileSearch(searchState.query, {
           pageSize: searchState.pageSize,
           pageIndex: searchState.pageIndex,
         });
 
-        if (!result?.ok) {
-          throw new Error(result?.error ?? "fuzzy_find failed");
+        if (!findResult?.ok) {
+          throw new Error(findResult?.error ?? "fuzzy_find failed");
         }
 
-        const searchResult = result.value;
+        const searchResult = findResult.value;
         if (!searchResult?.items?.length) {
           return `No matching files found\n\n[iterator=""]`;
         }
@@ -116,5 +109,5 @@ export const createFuzzyFindTool: ToolFactory = (config: PluginToolConfiguration
         return `fuzzy_find error: ${err instanceof Error ? err.message : String(err)}`;
       }
     },
-  });
-};
+  };
+}
