@@ -13,8 +13,6 @@
     "test": "bun test src/"
   },
   "dependencies": {
-    "@ff-labs/fff-node": "^0.8.4",
-    "@kreuzberg/tree-sitter-language-pack-wasm": "^1.8.1",
     "engine": "file:../vibe-me-engine"
   },
   "devDependencies": {

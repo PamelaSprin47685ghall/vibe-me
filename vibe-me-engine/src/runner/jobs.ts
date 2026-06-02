@@ -287,7 +287,16 @@ export async function wait(options: WaitOptions): Promise<WaitResult> {
   }
 
   if (!newOutput) {
-    return { output: '', completed: false, message: '[System] Task still running. No new output during this wait.' };
+    return {
+      output: '',
+      completed: false,
+      message:
+        '[System] Task still running. No new output during this wait.\n' +
+        '⚠️ Risk warning: Output stream is silent. This strongly suggests the process may be hung ' +
+        'or stuck in an infinite loop. Evaluate the last few lines of output carefully.\n' +
+        'Unless you are sure it is doing heavy background computation, continued waiting is usually pointless. ' +
+        'The wise choice is to call abort() and redesign a more robust command.',
+    };
   }
 
   return { output: newOutput, completed: false, message: '[System] Task still running in background.' };
