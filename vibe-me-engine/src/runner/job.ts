@@ -13,7 +13,7 @@ export class ActiveJob {
   public bytesRead = 0;
   public finalOutput = '';
   public closePromise: Promise<void> = Promise.resolve();
-  
+
   private writeStream: WriteStream | null;
   private cleanupExecuted = false;
 

@@ -1,12 +1,21 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import {
+  activateReview,
+  clearReviewSessions,
+  deactivateReview,
+  getReviewTask,
+  isReviewActive,
+  setPendingReview,
+  tryLockReview,
+  unlockReview,
+} from 'engine/review';
+import {
   createLoopCommandManager,
   createLoopNudgeHook,
   createSubmitReviewResultTool,
   createSubmitReviewTool,
   Deferred,
   getReviewerConfig,
-  reviewSessions,
 } from './index';
 
 function createMockContext() {
@@ -40,28 +49,28 @@ function createOutput() {
 }
 
 afterEach(() => {
-  reviewSessions.clear();
+  clearReviewSessions();
 });
 
 describe('reviewSessions state', () => {
   test('starts inactive', () => {
-    expect(reviewSessions.isActive('ses-1')).toBe(false);
+    expect(isReviewActive('ses-1')).toBe(false);
   });
 
   test('can activate and deactivate', () => {
-    reviewSessions.activate('ses-1', 'test task');
-    expect(reviewSessions.isActive('ses-1')).toBe(true);
-    reviewSessions.deactivate('ses-1');
-    expect(reviewSessions.isActive('ses-1')).toBe(false);
+    activateReview('ses-1', 'test task');
+    expect(isReviewActive('ses-1')).toBe(true);
+    deactivateReview('ses-1');
+    expect(isReviewActive('ses-1')).toBe(false);
   });
 
   test('stores original task', () => {
-    reviewSessions.activate('ses-1', 'Refactor the auth module');
-    expect(reviewSessions.getTask('ses-1')).toBe('Refactor the auth module');
+    activateReview('ses-1', 'Refactor the auth module');
+    expect(getReviewTask('ses-1')).toBe('Refactor the auth module');
   });
 
   test('unlock on unknown session does not throw', () => {
-    expect(() => reviewSessions.unlock('nonexistent')).not.toThrow();
+    expect(() => unlockReview('nonexistent')).not.toThrow();
   });
 });
 
@@ -117,7 +126,7 @@ describe('createLoopCommandManager', () => {
         output,
       );
 
-      expect(reviewSessions.isActive('ses-1')).toBe(false);
+      expect(isReviewActive('ses-1')).toBe(false);
       expect(output.parts[0]?.text).toContain('cancelled');
     });
 
@@ -134,7 +143,7 @@ describe('createLoopCommandManager', () => {
         output,
       );
 
-      expect(reviewSessions.isActive('ses-1')).toBe(true);
+      expect(isReviewActive('ses-1')).toBe(true);
       expect(output.parts[0]?.text).toContain('Refactor the auth module');
       expect(output.parts[0]?.text).toContain('loop mode is active');
       expect(output.parts[0]?.text).toContain('submit_review');
@@ -142,7 +151,7 @@ describe('createLoopCommandManager', () => {
     });
 
     test('does not toggle [\u2014] already active is a no-op', async () => {
-      reviewSessions.activate('ses-1', 'existing task');
+      activateReview('ses-1', 'existing task');
       const manager = createLoopCommandManager(createMockContext());
       const output = createOutput();
 
@@ -155,7 +164,7 @@ describe('createLoopCommandManager', () => {
         output,
       );
 
-      expect(reviewSessions.isActive('ses-1')).toBe(true);
+      expect(isReviewActive('ses-1')).toBe(true);
       expect(output.parts[0]?.text).toContain('already active');
     });
   });
@@ -163,7 +172,8 @@ describe('createLoopCommandManager', () => {
 
 describe('createSubmitReviewResultTool', () => {
   test('resolves pending result with null feedback (accept)', async () => {
-    reviewSessions.setPending('reviewer-1', new Deferred<any>());
+    const d = new Deferred<any>();
+    setPendingReview('reviewer-1', (result) => d.resolve(result));
 
     const reviewTool = createSubmitReviewResultTool();
     const result = await (reviewTool as any).execute(
@@ -175,7 +185,8 @@ describe('createSubmitReviewResultTool', () => {
   });
 
   test('resolves pending result with feedback (reject)', async () => {
-    reviewSessions.setPending('reviewer-1', new Deferred<any>());
+    const d = new Deferred<any>();
+    setPendingReview('reviewer-1', (result) => d.resolve(result));
 
     const reviewTool = createSubmitReviewResultTool();
     const result = await (reviewTool as any).execute(
@@ -197,7 +208,8 @@ describe('createSubmitReviewResultTool', () => {
   });
 
   test('treats empty string as null (accept)', async () => {
-    reviewSessions.setPending('reviewer-1', new Deferred<any>());
+    const d = new Deferred<any>();
+    setPendingReview('reviewer-1', (result) => d.resolve(result));
 
     const reviewTool = createSubmitReviewResultTool();
     const result = await (reviewTool as any).execute(
@@ -221,8 +233,8 @@ describe('createSubmitReviewTool', () => {
   });
 
   test('rejects concurrent review attempts', async () => {
-    reviewSessions.activate('ses-1', 'task');
-    reviewSessions.tryLock('ses-1');
+    activateReview('ses-1', 'task');
+    tryLockReview('ses-1');
 
     const ctx = createMockContext();
     const tool = createSubmitReviewTool(ctx);
@@ -234,7 +246,7 @@ describe('createSubmitReviewTool', () => {
   });
 
   test('releases lock when reviewer session creation fails', async () => {
-    reviewSessions.activate('ses-1', 'task');
+    activateReview('ses-1', 'task');
 
     const ctx = createMockContext();
     ctx.client.session.create = mock(async () => ({ data: { id: undefined } }));
@@ -246,12 +258,12 @@ describe('createSubmitReviewTool', () => {
     );
 
     expect(result).toContain('Failed to create reviewer session');
-    expect(reviewSessions.isActive('ses-1')).toBe(true);
-    expect(reviewSessions.tryLock('ses-1')).toBe(true);
+    expect(isReviewActive('ses-1')).toBe(true);
+    expect(tryLockReview('ses-1')).toBe(true);
   });
 
   test('releases lock when client.session.create throws', async () => {
-    reviewSessions.activate('ses-1', 'task');
+    activateReview('ses-1', 'task');
 
     const ctx = createMockContext();
     ctx.client.session.create = mock(async () => {
@@ -266,8 +278,8 @@ describe('createSubmitReviewTool', () => {
       ),
     ).rejects.toThrow('Session creation network error');
 
-    expect(reviewSessions.isActive('ses-1')).toBe(true);
-    expect(reviewSessions.tryLock('ses-1')).toBe(true);
+    expect(isReviewActive('ses-1')).toBe(true);
+    expect(tryLockReview('ses-1')).toBe(true);
   });
 
   test('reviewer config matches getReviewerConfig exactly', () => {
@@ -302,7 +314,7 @@ describe('createLoopNudgeHook', () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({ data: [] }));
     const hook = createLoopNudgeHook(ctx);
-    reviewSessions.activate('ses-1', 'task');
+    activateReview('ses-1', 'task');
 
     await hook.handleEvent({
       event: { type: 'session.idle', properties: { sessionID: 'ses-1' } },
@@ -324,7 +336,7 @@ describe('createLoopNudgeHook', () => {
       ],
     }));
     const hook = createLoopNudgeHook(ctx);
-    reviewSessions.activate('ses-1', 'task');
+    activateReview('ses-1', 'task');
 
     await hook.handleEvent({
       event: { type: 'session.idle', properties: { sessionID: 'ses-1' } },
@@ -336,7 +348,7 @@ describe('createLoopNudgeHook', () => {
   test('suppresses nudge after abort error', async () => {
     const ctx = createMockContext();
     const hook = createLoopNudgeHook(ctx);
-    reviewSessions.activate('ses-1', 'task');
+    activateReview('ses-1', 'task');
 
     await hook.handleEvent({
       event: {

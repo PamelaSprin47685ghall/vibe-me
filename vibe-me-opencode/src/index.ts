@@ -3,7 +3,7 @@ import { createBrowserTool, getBrowserConfig } from './browser/index.js';
 import { createEditorTool, getEditorConfig } from './editor/index.js';
 import { createFuzzyFindTool, createFuzzyGrepTool } from './fuzzy/index.js';
 import { createGreperTool, getGreperConfig } from './greper/index.js';
-import { createCapitalsContextHook } from './inject-caps/index.js';
+import { createCapsContextHook } from 'engine/caps';
 import {
   createLoopCommandManager,
   createSubmitReviewResultTool,
@@ -296,7 +296,7 @@ function isAgentName(name: string): name is AgentName {
 
 const KunweiPlugin: Plugin = async (ctx) => {
   const mcps = getMcpConfig();
-  const capitalsContextHook = createCapitalsContextHook(ctx.directory);
+  const capitalsContextHook = createCapsContextHook(ctx.directory);
   const nudgeHook = createNudgeCoordinatorHook(ctx);
   const loopCommandManager = createLoopCommandManager(ctx);
   const syntaxCheckHook = createSyntaxCheckHook(ctx);

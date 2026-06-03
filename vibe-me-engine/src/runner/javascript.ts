@@ -2,7 +2,12 @@ import { pathToFileURL } from 'node:url';
 import { resolve, join } from 'node:path';
 import { init, parse } from 'es-module-lexer';
 
-let lexerInitialized = false;
+let lexerInitPromise: Promise<void> | null = null;
+
+function ensureLexer(): Promise<void> {
+  lexerInitPromise ??= init;
+  return lexerInitPromise;
+}
 
 export function createJavascriptPrelude(cwd: string): string {
   return [
@@ -21,10 +26,7 @@ export function resolveJavascriptSpecifier(cwd: string, specifier: string): stri
 }
 
 export async function rewriteJavascriptModuleSpecifiers(program: string, cwd: string): Promise<string> {
-  if (!lexerInitialized) {
-    await init;
-    lexerInitialized = true;
-  }
+  await ensureLexer();
 
   const [imports] = parse(program);
   if (imports.length === 0) return program;

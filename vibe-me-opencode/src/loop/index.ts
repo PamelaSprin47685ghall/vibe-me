@@ -55,54 +55,6 @@ class Deferred<T> {
   }
 }
 
-class ReviewSessionManager {
-  activate(sessionID: string, task: string): void {
-    activateReview(sessionID, task);
-  }
-
-  addChild(parentID: string, childID: string): void {
-    addChild(parentID, childID);
-  }
-
-  deactivate(sessionID: string): void {
-    deactivateReview(sessionID);
-  }
-
-  isActive(sessionID: string): boolean {
-    return isReviewActive(sessionID);
-  }
-
-  unlock(sessionID: string): void {
-    unlockReview(sessionID);
-  }
-
-  tryLock(sessionID: string): boolean {
-    return tryLockReview(sessionID);
-  }
-
-  setPending(sessionID: string, deferred: Deferred<ReviewResult>): void {
-    setPendingReview(sessionID, (result) => deferred.resolve(result));
-  }
-
-  resolvePending(sessionID: string, result: ReviewResult): boolean {
-    return resolvePendingReview(sessionID, result);
-  }
-
-  getTask(sessionID: string): string | undefined {
-    return getReviewTask(sessionID);
-  }
-
-  delete(sessionID: string): void {
-    deactivateReview(sessionID);
-  }
-
-  clear(): void {
-    clearReviewSessions();
-  }
-}
-
-const reviewSessions = new ReviewSessionManager();
-
 export function createLoopCommandManager(_ctx: PluginInput) {
   function registerCommand(opencodeConfig: Record<string, unknown>): void {
     const configCommand = opencodeConfig.command as
@@ -134,15 +86,14 @@ export function createLoopCommandManager(_ctx: PluginInput) {
 
     const task = input.arguments.trim();
     if (!task) {
-      const sid = input.sessionID;
-      reviewSessions.deactivate(sid);
+      deactivateReview(input.sessionID);
       output.parts.push({ type: 'text', text: 'loop mode cancelled.' });
       return;
     }
 
     const sessionID = input.sessionID;
 
-    if (reviewSessions.isActive(sessionID)) {
+    if (isReviewActive(sessionID)) {
       output.parts.push({
         type: 'text',
         text: 'loop mode is already active. Submit your work via submit_review.',
@@ -150,7 +101,7 @@ export function createLoopCommandManager(_ctx: PluginInput) {
       return;
     }
 
-    reviewSessions.activate(sessionID, task);
+    activateReview(sessionID, task);
 
     output.parts.push({
       type: 'text',
@@ -190,7 +141,7 @@ export function createSubmitReviewResultTool(): ToolDefinition {
             ? null
             : args.feedback;
 
-      const resolved = reviewSessions.resolvePending(context.sessionID, {
+      const resolved = resolvePendingReview(context.sessionID, {
         accepted: feedback == null,
         feedback: feedback ?? undefined,
       });
@@ -213,18 +164,18 @@ async function runReviewerWithNudge(
   abortSignal?: AbortSignal,
 ): Promise<ReviewResult> {
   if (abortSignal?.aborted) {
-    reviewSessions.delete(childID);
+    deactivateReview(childID);
     return { accepted: false, feedback: 'Review aborted.', terminated: true };
   }
 
   const deferred = new Deferred<ReviewResult>();
-  reviewSessions.setPending(childID, deferred);
+  setPendingReview(childID, (result) => deferred.resolve(result));
 
   let nudgeCount = 0;
 
   while (true) {
     if (abortSignal?.aborted) {
-      reviewSessions.delete(childID);
+      deactivateReview(childID);
       return { accepted: false, feedback: 'Review aborted.', terminated: true };
     }
 
@@ -259,12 +210,12 @@ async function runReviewerWithNudge(
     iterAbort.abort();
 
     if (result.type === 'result') {
-      reviewSessions.delete(childID);
+      deactivateReview(childID);
       return result.result;
     }
 
     if (result.type === 'error') {
-      reviewSessions.delete(childID);
+      deactivateReview(childID);
       if (isAbortError(result.error)) {
         return { accepted: false, feedback: 'Review aborted.', terminated: true };
       }
@@ -286,13 +237,13 @@ async function runReviewerWithNudge(
     ]);
 
     if (graceResult !== GRACE_TIMEOUT) {
-      reviewSessions.delete(childID);
+      deactivateReview(childID);
       return graceResult;
     }
 
     nudgeCount++;
     if (nudgeCount >= MAX_REVIEWER_NUDGES) {
-      reviewSessions.delete(childID);
+      deactivateReview(childID);
       const text = await extractSessionText(client, childID, directory);
       return {
         accepted: false,
@@ -327,11 +278,11 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
         ctx.directory,
       );
 
-      if (!sessionID || !reviewSessions.isActive(sessionID)) {
+      if (!sessionID || !isReviewActive(sessionID)) {
         return 'You do not need review. Just continue with your work.';
       }
 
-      if (!reviewSessions.tryLock(sessionID)) {
+      if (!tryLockReview(sessionID)) {
         return 'A review is already in progress. Wait for it to finish.';
       }
 
@@ -353,7 +304,7 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
           text: `=== Affected Files ===\n\n${args.affectedFiles.join('\n')}`,
         });
 
-        const task = reviewSessions.getTask(sessionID);
+        const task = getReviewTask(sessionID);
         if (task) {
           parts.push({
             type: 'text',
@@ -372,7 +323,7 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
         if (!childID) {
           return 'Failed to create reviewer session';
         }
-        reviewSessions.addChild(sessionID, childID);
+        addChild(sessionID, childID);
         registerChildAgent(childID, 'reviewer');
 
         const result = await runReviewerWithNudge(
@@ -384,18 +335,18 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
         );
 
         if (result.feedback == null) {
-          reviewSessions.deactivate(sessionID);
+          deactivateReview(sessionID);
           return 'Review passed. Your changes have been accepted. loop mode has ended.';
         }
 
         if (result.terminated) {
-          reviewSessions.deactivate(sessionID);
+          deactivateReview(sessionID);
           return `Review terminated: ${result.feedback}`;
         }
 
         return `Review feedback:\n\n${result.feedback}\n\nAddress the feedback above. loop mode is still active — fix the issues and call submit_review again.`;
       } finally {
-        reviewSessions.unlock(sessionID);
+        unlockReview(sessionID);
       }
     },
   });
@@ -415,7 +366,7 @@ export function createLoopNudgeHook(ctx: PluginInput) {
 
       if (event.type === 'session.idle') {
         if (suppressor.isSuppressed()) return;
-        if (!reviewSessions.isActive(sessionID)) return;
+        if (!isReviewActive(sessionID)) return;
 
         let todos: Array<{
           id: string;
@@ -480,7 +431,7 @@ export function createLoopNudgeHook(ctx: PluginInput) {
         event.type === 'session.close' ||
         event.type === 'session.remove'
       ) {
-        reviewSessions.deactivate(sessionID);
+        deactivateReview(sessionID);
       }
     },
   };
@@ -509,4 +460,4 @@ export function getReviewerConfig() {
   };
 }
 
-export { Deferred, type ReviewResult, reviewSessions };
+export { Deferred, type ReviewResult };

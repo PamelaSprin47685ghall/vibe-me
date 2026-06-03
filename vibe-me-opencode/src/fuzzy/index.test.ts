@@ -1,16 +1,8 @@
 import { describe, expect, it } from 'bun:test';
-import {
-  consumeIterator,
-  formatFindOutput,
-  formatGrepOutput,
-  storeIterator,
-} from './format';
+import { formatFindOutput, formatGrepOutput } from 'engine/fuzzy';
+import { buildQuery, normalizeExcludes, normalizePathConstraint } from 'engine/fuzzy';
+import { globalIteratorStore } from 'engine/util';
 import { resolveExternalBasePath } from './index';
-import {
-  buildQuery,
-  normalizeExcludes,
-  normalizePathConstraint,
-} from './query';
 
 // ── index.ts ──
 
@@ -242,15 +234,15 @@ describe('iterator store', () => {
       pageSize: 20,
       pageIndex: 1,
     };
-    const id = storeIterator('ffi_f', data);
+    const id = globalIteratorStore.store('global', 'ffi_f', data);
     expect(id).toMatch(/^ffi_f\d+$/);
-    const retrieved = consumeIterator<typeof data>(id);
+    const retrieved = globalIteratorStore.consume<typeof data>(id);
     expect(retrieved?.query).toBe('src/main');
     expect(retrieved?.pageIndex).toBe(1);
-    expect(consumeIterator(id)).toBeUndefined();
+    expect(globalIteratorStore.consume(id)).toBeUndefined();
   });
 
   it('returns undefined for unknown iterator id', () => {
-    expect(consumeIterator('missing')).toBeUndefined();
+    expect(globalIteratorStore.consume('missing')).toBeUndefined();
   });
 });
