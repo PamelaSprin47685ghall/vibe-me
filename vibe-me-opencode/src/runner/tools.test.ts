@@ -17,7 +17,7 @@ import {
   rewriteJavascriptModuleSpecifiers,
   type WaitResult,
   wait,
-} from './tools.js';
+} from 'engine/runner';
 
 const hasNpx = (() => {
   try {
@@ -357,9 +357,9 @@ describe('Runner Tools', () => {
   });
 
   describe('rewriteJavascriptModuleSpecifiers', () => {
-    it('rewrites `from "./x"` to a file:// import', () => {
+    it('rewrites `from "./x"` to a file:// import', async () => {
       const cwd = '/home/me/project';
-      const out = rewriteJavascriptModuleSpecifiers(
+      const out = await rewriteJavascriptModuleSpecifiers(
         'import { foo } from "./foo.mjs";\n',
         cwd,
       );
@@ -367,9 +367,9 @@ describe('Runner Tools', () => {
       expect(out).toContain(`from "${fileHref}";`);
     });
 
-    it('rewrites `export * from "../x"` to a file:// export', () => {
+    it('rewrites `export * from "../x"` to a file:// export', async () => {
       const cwd = '/home/me/project/nested';
-      const out = rewriteJavascriptModuleSpecifiers(
+      const out = await rewriteJavascriptModuleSpecifiers(
         'export * from "../sibling.mjs";\n',
         cwd,
       );
@@ -377,9 +377,9 @@ describe('Runner Tools', () => {
       expect(out).toContain(`from "${fileHref}";`);
     });
 
-    it('rewrites dynamic import("./x") to a file:// URL', () => {
+    it('rewrites dynamic import("./x") to a file:// URL', async () => {
       const cwd = '/home/me/project';
-      const out = rewriteJavascriptModuleSpecifiers(
+      const out = await rewriteJavascriptModuleSpecifiers(
         'const m = await import("./mod.mjs");\n',
         cwd,
       );
@@ -387,29 +387,29 @@ describe('Runner Tools', () => {
       expect(out).toContain(`import("${fileHref}")`);
     });
 
-    it('does not rewrite bare specifiers (e.g. node:fs, lodash)', () => {
+    it('does not rewrite bare specifiers (e.g. node:fs, lodash)', async () => {
       const cwd = '/home/me/project';
       const src = [
         'import fs from "node:fs";',
         'import lodash from "lodash";',
       ].join('\n');
-      const out = rewriteJavascriptModuleSpecifiers(src, cwd);
+      const out = await rewriteJavascriptModuleSpecifiers(src, cwd);
       expect(out).toContain('import fs from "node:fs";');
       expect(out).toContain('import lodash from "lodash";');
     });
 
-    it('does not rewrite non-string specifiers or unrelated `from` tokens', () => {
+    it('does not rewrite non-string specifiers or unrelated `from` tokens', async () => {
       const cwd = '/home/me/project';
-      const out = rewriteJavascriptModuleSpecifiers(
+      const out = await rewriteJavascriptModuleSpecifiers(
         'const from = "literal";\nconst x = from;\n',
         cwd,
       );
       expect(out).toBe('const from = "literal";\nconst x = from;\n');
     });
 
-    it('round-trips: rewritten pathToFileURL/fileURLToPath matches a real file', () => {
+    it('round-trips: rewritten pathToFileURL/fileURLToPath matches a real file', async () => {
       const cwd = '/home/me/project';
-      const out = rewriteJavascriptModuleSpecifiers(
+      const out = await rewriteJavascriptModuleSpecifiers(
         'import x from "./module.mjs";',
         cwd,
       );

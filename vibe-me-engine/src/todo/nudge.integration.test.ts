@@ -8,7 +8,7 @@ describe("Nudge Pure Decision Sandbox", () => {
       hasActiveRunner: true,
       isLoopActive: true,
     };
-    expect(decideNudge(context)).toBe("nudge-runner");
+    expect(decideNudge(context)).toBe("nudge-todo");
   });
 
   it("should nudge todo when open todos exist without skip tag", () => {
@@ -59,6 +59,26 @@ describe("Nudge Pure Decision Sandbox", () => {
       ],
       hasActiveRunner: false,
       isLoopActive: false,
+    };
+    expect(decideNudge(context)).toBe("none");
+  });
+
+  it("should skip todo nudge when last assistant message is a question", () => {
+    const context: NudgeInputContext = {
+      todos: [{ status: "pending" }],
+      lastAssistantMessage: "Would you like me to proceed?",
+      hasActiveRunner: false,
+      isLoopActive: false,
+    };
+    expect(decideNudge(context)).toBe("none");
+  });
+
+  it("should skip loop nudge when last assistant message is a question", () => {
+    const context: NudgeInputContext = {
+      todos: [],
+      lastAssistantMessage: "Should I submit the review now?",
+      hasActiveRunner: false,
+      isLoopActive: true,
     };
     expect(decideNudge(context)).toBe("none");
   });

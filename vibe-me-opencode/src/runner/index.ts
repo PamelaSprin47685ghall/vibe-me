@@ -1,14 +1,29 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { buildRunnerPrompt, RUNNER_SYSTEM_PROMPT, execute as executeCommand, wait, abort, cleanupJob, type ExecuteResult } from 'engine/runner';
+import {
+  buildRunnerPrompt,
+  buildRunnerNudgePrompt,
+  RUNNER_SYSTEM_PROMPT,
+  execute as executeCommand,
+  hasActiveJob,
+  getActiveJobs,
+  wait,
+  abort,
+  cleanupJob,
+  type ExecuteResult,
+} from 'engine/runner';
 import {
   extractSessionText,
   extractToolContext,
   isAbortError,
   promptWithAbort,
 } from '../utils/session';
+import { registerChildAgent, unregisterChildAgent } from '../utils/child-agent';
 
 export { RUNNER_SYSTEM_PROMPT };
+
+/** Sessions currently being managed by the runner tool's background nudge loop */
+export const managedRunnerSessions = new Set<string>();
 
 export function createRunnerTool(ctx: PluginInput): ToolDefinition {
   const client = ctx.client;
@@ -56,6 +71,7 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
       });
       const childID = createResult.data?.id;
       if (!childID) return 'Failed to create child session';
+      registerChildAgent(childID, 'runner');
 
       try {
         const language = args.language ?? 'shell';
@@ -91,6 +107,35 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
           abortSignal,
         );
 
+        if (execResult.background) {
+          managedRunnerSessions.add(childID);
+          try {
+            let nudgeCount = 0;
+            const MAX_RUNNER_NUDGES = 10;
+            while (hasActiveJob(getActiveJobs, childID) && nudgeCount < MAX_RUNNER_NUDGES) {
+              await promptWithAbort(
+                client,
+                {
+                  path: { id: childID },
+                  body: {
+                    parts: [{ type: 'text', text: buildRunnerNudgePrompt() }],
+                  },
+                },
+                abortSignal,
+              );
+              nudgeCount++;
+            }
+
+            if (hasActiveJob(getActiveJobs, childID)) {
+              abort(childID);
+              cleanupJob(childID);
+              return 'Runner did not respond after multiple attempts. The background task has been aborted.';
+            }
+          } finally {
+            managedRunnerSessions.delete(childID);
+          }
+        }
+
         const summary = await extractSessionText(client, childID, directory);
         return summary || '(no output)';
       } catch (err) {
@@ -99,10 +144,12 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
             client.session.abort({ path: { id: childID } });
           } catch (_) {}
           cleanupJob(childID);
+          unregisterChildAgent(childID);
           const text = await extractSessionText(client, childID, directory);
           return text ? `(aborted) ${text}` : '(aborted)';
         }
         cleanupJob(childID);
+        unregisterChildAgent(childID);
         throw err;
       }
     },

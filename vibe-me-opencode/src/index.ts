@@ -23,6 +23,7 @@ import {
   createRunnerWaitTool,
   getRunnerConfig,
 } from './runner/index.js';
+import { lookupChildAgent } from './utils/child-agent';
 import { createSyntaxCheckHook } from './tree-sitter/index.js';
 
 type AgentName =
@@ -305,6 +306,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
     mcp: mcps,
 
     tool: {
+      ...nudgeHook.tool,
       editor: createEditorTool(ctx),
       greper: createGreperTool(ctx),
       reverie: createReverieTool(ctx),
@@ -321,7 +323,8 @@ const KunweiPlugin: Plugin = async (ctx) => {
     },
 
     'chat.message': async (input, output) => {
-      const agent = input.agent ?? 'orchestrator';
+      const agent = input.agent ?? lookupChildAgent(input.sessionID) ?? 'orchestrator';
+      nudgeHook.handleChatMessage({ sessionID: input.sessionID, agent });
       const defaults = isAgentName(agent) ? getAgentToolDefaults(agent) : null;
       if (!defaults) return;
       output.message.tools = mergeTools(output.message.tools, defaults);
@@ -399,6 +402,21 @@ const KunweiPlugin: Plugin = async (ctx) => {
 
       loopCommandManager.registerCommand(opencodeConfig);
 
+      // Register /auto-continue command
+      const configCommand = opencodeConfig.command as
+        | Record<string, unknown>
+        | undefined;
+      if (!configCommand?.['auto-continue']) {
+        if (!opencodeConfig.command) {
+          opencodeConfig.command = {};
+        }
+        (opencodeConfig.command as Record<string, unknown>)['auto-continue'] = {
+          template: 'Call the auto_continue tool with enabled=true',
+          description:
+            'Enable auto-continuation — orchestrator keeps working through incomplete todos',
+        };
+      }
+
       const agentConfig = opencodeConfig.agent as Record<string, unknown>;
       for (const [name, entry] of Object.entries(agentConfig)) {
         if (typeof entry !== 'object' || !entry) continue;
@@ -425,6 +443,25 @@ const KunweiPlugin: Plugin = async (ctx) => {
       }
     },
 
+    'experimental.chat.messages.transform': async (
+      _input: Record<string, never>,
+      output: { messages: unknown[] },
+    ): Promise<void> => {
+      const typedOutput = output as {
+        messages: Array<{
+          info: { role: string; agent?: string; sessionID?: string };
+          parts: Array<{
+            type: string;
+            text?: string;
+            [key: string]: unknown;
+          }>;
+        }>;
+      };
+      await nudgeHook.handleMessagesTransform({
+        messages: typedOutput.messages,
+      });
+    },
+
     'experimental.chat.system.transform': async (
       input: { sessionID?: string },
       output: { system: string[] },
@@ -433,7 +470,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
     },
 
     'tool.execute.after': async (
-      input: { tool: string; callID: string },
+      input: { tool: string; sessionID?: string; callID: string },
       output: {
         output?: unknown;
         title?: string;
@@ -441,6 +478,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
       },
     ): Promise<void> => {
       await syntaxCheckHook['tool.execute.after'](input, output);
+      await nudgeHook.handleToolExecuteAfter(input, output);
     },
 
     'command.execute.before': async (
@@ -452,6 +490,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
       output: { parts: Array<{ type: string; text?: string }> },
     ): Promise<void> => {
       await loopCommandManager.handleCommandExecuteBefore(input, output);
+      await nudgeHook.handleCommandExecuteBefore(input, output);
     },
 
     event: async (input: {

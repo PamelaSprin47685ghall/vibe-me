@@ -1,6 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { isAbortError } from 'engine/util';
 import { readAssistantText, type Entry } from 'engine/session';
+import { registerChildAgent } from './child-agent';
 
 export { isAbortError };
 
@@ -136,6 +137,7 @@ export async function runSubagent(
   });
   const childID = createResult.data?.id;
   if (!childID) return 'Failed to create child session';
+  registerChildAgent(childID, params.agent);
 
   try {
     await promptWithAbort(

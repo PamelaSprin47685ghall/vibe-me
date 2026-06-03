@@ -11,7 +11,7 @@ describe("Nudge Decision Engine - Pure Logic Tests", () => {
     };
 
     const decision = decideNudge(context);
-    expect(decision).toBe("nudge-runner");
+    expect(decision).toBe("nudge-todo");
   });
 
   it("should return nudge-todo if open todos exist and skip tag is absent", () => {
@@ -55,6 +55,16 @@ describe("Nudge Decision Engine - Pure Logic Tests", () => {
       isLoopActive: false,
     };
 
+    expect(decideNudge(context)).toBe("none");
+  });
+
+  it("should skip todo nudge when last assistant message is a question", () => {
+    const context: NudgeInputContext = {
+      todos: [{ status: "pending" }],
+      lastAssistantMessage: "Do you want me to continue?",
+      hasActiveRunner: false,
+      isLoopActive: false,
+    };
     expect(decideNudge(context)).toBe("none");
   });
 

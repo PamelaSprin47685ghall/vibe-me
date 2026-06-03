@@ -34,7 +34,11 @@ export async function rewriteJavascriptModuleSpecifiers(program: string, cwd: st
   for (const imp of imports) {
     if (imp.n && /^\.\.?\//.test(imp.n)) {
       const resolved = resolveJavascriptSpecifier(cwd, imp.n);
-      replacements.push({ start: imp.s, end: imp.e, replacement: resolved });
+      // Dynamic imports (imp.d !== -1) include quotes in the span;
+      // adjust to exclude them so they're preserved in the output.
+      const startOff = imp.d !== -1 ? imp.s + 1 : imp.s;
+      const endOff = imp.d !== -1 ? imp.e - 1 : imp.e;
+      replacements.push({ start: startOff, end: endOff, replacement: resolved });
     }
   }
 

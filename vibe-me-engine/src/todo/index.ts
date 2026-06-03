@@ -9,6 +9,7 @@ export function hasOpenTodos(todos: Array<{ status: string }>): boolean {
 
 const SKIP_TODO_RE = /<skip-todo-check\s*\/?>/i;
 const SKIP_LOOP_RE = /<skip-loop-check\s*\/?>/i;
+const QUESTION_RE = /\?\s*$/;
 export const TODO_NUDGE_PROMPT =
   'There are still incomplete todos. Continue working through the remaining items. ' +
   'If stuck or blocked, explain the situation and ask for guidance. ' +
@@ -29,21 +30,23 @@ export interface NudgeInputContext {
 export type NudgeAction = 'nudge-todo' | 'nudge-loop' | 'nudge-runner' | 'none';
 
 export function decideNudge(context: NudgeInputContext): NudgeAction {
-  if (context.hasActiveRunner) {
-    return 'nudge-runner';
-  }
-
   const openTodos = hasOpenTodos(context.todos);
   const text = context.lastAssistantMessage ?? '';
 
   if (openTodos) {
-    if (!SKIP_TODO_RE.test(text)) {
-      return 'nudge-todo';
-    }
-  } else if (context.isLoopActive) {
-    if (!SKIP_LOOP_RE.test(text)) {
-      return 'nudge-loop';
-    }
+    if (SKIP_TODO_RE.test(text)) return 'none';
+    if (QUESTION_RE.test(text.trim())) return 'none';
+    return 'nudge-todo';
+  }
+
+  if (context.hasActiveRunner) {
+    return 'nudge-runner';
+  }
+
+  if (context.isLoopActive) {
+    if (SKIP_LOOP_RE.test(text)) return 'none';
+    if (QUESTION_RE.test(text.trim())) return 'none';
+    return 'nudge-loop';
   }
 
   return 'none';
@@ -56,7 +59,7 @@ export class NudgeCoordinator {
   public lastNudgeEntryIndex = new Map<string, number>();
   public suppressors = new Map<string, ReturnType<typeof createAbortSuppressor>>();
 
-  constructor(public suppressAfterMs = 5000) {}
+  constructor(public suppressAfterMs = 0) {}
 
   public getOrCreateSuppressor(sessionId: string) {
     let sup = this.suppressors.get(sessionId);
@@ -70,9 +73,9 @@ export class NudgeCoordinator {
   public shouldNudge(
     sessionId: string,
     context: NudgeInputContext,
-    entryCount: number,
+    entryCount?: number,
     now = Date.now(),
-    throttleMs = 5000
+    throttleMs = 0
   ): NudgeAction {
     const suppressor = this.getOrCreateSuppressor(sessionId);
     if (suppressor.isSuppressed()) return 'none';
@@ -80,21 +83,21 @@ export class NudgeCoordinator {
     const action = decideNudge(context);
     if (action === 'none') return 'none';
 
-    const lastIndex = this.lastNudgeEntryIndex.get(sessionId) ?? -1;
-    if (entryCount <= lastIndex && action !== 'nudge-runner') {
-      return 'none';
+    if (entryCount !== undefined && action !== 'nudge-runner') {
+      const lastIndex = this.lastNudgeEntryIndex.get(sessionId) ?? -1;
+      if (entryCount <= lastIndex) return 'none';
     }
 
     if (action === 'nudge-todo') {
       const lastAt = this.lastTodoReminderAt.get(sessionId) || 0;
       if (now - lastAt < throttleMs) return 'none';
       this.lastTodoReminderAt.set(sessionId, now);
-      this.lastNudgeEntryIndex.set(sessionId, entryCount);
+      if (entryCount !== undefined) this.lastNudgeEntryIndex.set(sessionId, entryCount);
     } else if (action === 'nudge-loop') {
       const lastAt = this.lastLoopReminderAt.get(sessionId) || 0;
       if (now - lastAt < throttleMs) return 'none';
       this.lastLoopReminderAt.set(sessionId, now);
-      this.lastNudgeEntryIndex.set(sessionId, entryCount);
+      if (entryCount !== undefined) this.lastNudgeEntryIndex.set(sessionId, entryCount);
     } else if (action === 'nudge-runner') {
       const lastAt = this.lastRunnerReminderAt.get(sessionId) || 0;
       if (now - lastAt < throttleMs) return 'none';

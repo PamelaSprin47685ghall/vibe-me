@@ -28,6 +28,7 @@ import {
   extractToolContext,
   promptWithAbort,
 } from '../utils/session';
+import { registerChildAgent } from '../utils/child-agent';
 
 const COMMAND_NAME = 'loop';
 
@@ -372,6 +373,7 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
           return 'Failed to create reviewer session';
         }
         reviewSessions.addChild(sessionID, childID);
+        registerChildAgent(childID, 'reviewer');
 
         const result = await runReviewerWithNudge(
           client,

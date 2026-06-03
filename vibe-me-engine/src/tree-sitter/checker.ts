@@ -1,3 +1,7 @@
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { dirname } from 'node:path';
+import { createRequire } from 'node:module';
+
 import type { SyntaxDiagnostic, SyntaxCheckResult } from '../util/types.js';
 
 interface WasmNode {
@@ -24,8 +28,63 @@ interface WasmPack {
   getParser(lang: string): WasmParser;
 }
 
+const __require = createRequire(import.meta.url);
+
+const ENV_SHIM = `{
+  iswlower: function(c) { return c >= 97 && c <= 122 ? 1 : 0; },
+  iswupper: function(c) { return c >= 65 && c <= 90 ? 1 : 0; },
+  iswxdigit: function(c) { return (c >= 48 && c <= 57) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102) ? 1 : 0; },
+  towlower: function(c) { return c >= 65 && c <= 90 ? c + 32 : c; },
+  strcmp: function(a, b) {
+    var mem = new Uint8Array(wasm.memory.buffer);
+    for (var i = 0;; i++) {
+      var ca = mem[a + i], cb = mem[b + i];
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      if (ca === 0) return 0;
+    }
+  },
+  memchr: function(ptr, c, n) {
+    var mem = new Uint8Array(wasm.memory.buffer);
+    for (var i = 0; i < n; i++) { if (mem[ptr + i] === c) return ptr + i; }
+    return 0;
+  },
+  memcpy: function(dest, src, num) {
+    var mem = new Uint8Array(wasm.memory.buffer);
+    mem.copyWithin(dest, src, src + num);
+    return dest;
+  },
+  memmove: function(dest, src, num) {
+    var mem = new Uint8Array(wasm.memory.buffer);
+    var tmp = mem.slice(src, src + num);
+    mem.set(tmp, dest);
+    return dest;
+  },
+  memset: function(ptr, value, num) {
+    var mem = new Uint8Array(wasm.memory.buffer);
+    mem.fill(value & 0xff, ptr, ptr + num);
+    return ptr;
+  },
+  strlen: function(ptr) {
+    var mem = new Uint8Array(wasm.memory.buffer);
+    var len = 0;
+    while (mem[ptr + len] !== 0) len++;
+    return len;
+  },
+  emscripten_notify_memory_growth: function(_index) {},
+  __indirect_function_table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' }),
+}`;
+
 async function loadTreeSitterPack(): Promise<WasmPack> {
-  const mod = await import('@kreuzberg/tree-sitter-language-pack-wasm');
+  const wasmPath = __require.resolve('@kreuzberg/tree-sitter-language-pack-wasm');
+  const patchedPath = wasmPath.replace('.js', '.patched.js');
+
+  if (!existsSync(patchedPath)) {
+    const source = readFileSync(wasmPath, 'utf-8');
+    const patched = source.replace(/require\("env"\)/g, () => ENV_SHIM);
+    writeFileSync(patchedPath, patched);
+  }
+
+  const mod = __require(patchedPath);
   return {
     detectLanguageFromPath: (path: string) => mod.detectLanguageFromPath(path),
     getParser: (lang: string) => mod.getParser(lang),
