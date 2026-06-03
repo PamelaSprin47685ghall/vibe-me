@@ -9,9 +9,11 @@ export function supportsSyntaxDiagnosticsTool(toolName) {
 }
 
 export async function appendSyntaxDiagnostics(cwd, event) {
-  if (!isFileEditTool(event?.tool)) return;
+  const toolName = event.toolName ?? event.tool;
+  if (!isFileEditTool(toolName)) return;
 
-  const filePath = extractFilePath(event?.args);
+  const input = event.input ?? event.args;
+  const filePath = extractFilePath(input);
   if (!filePath) return;
 
   const fullPath = path.resolve(cwd, filePath);
@@ -23,8 +25,18 @@ export async function appendSyntaxDiagnostics(cwd, event) {
   }
 
   const checkResult = await checkSyntax(content, filePath);
-  const currentOutput = event.result;
-  if (typeof currentOutput !== 'string') return;
 
-  event.result = appendSyntaxDiagnosticsToOutput(currentOutput, filePath, content, checkResult);
+  // pi-coding-agent format: shared content array with {type, text} blocks
+  if (Array.isArray(event.content)) {
+    const textBlock = event.content.find(c => c.type === 'text');
+    if (textBlock && typeof textBlock.text === 'string') {
+      textBlock.text = appendSyntaxDiagnosticsToOutput(textBlock.text, filePath, content, checkResult);
+      return;
+    }
+  }
+
+  // Legacy string result fallback
+  if (typeof event.result === 'string') {
+    event.result = appendSyntaxDiagnosticsToOutput(event.result, filePath, content, checkResult);
+  }
 }

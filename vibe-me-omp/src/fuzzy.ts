@@ -18,11 +18,11 @@ export function createFuzzyFindTool(pi) {
     name: 'fuzzy_find',
     label: 'Fuzzy Find',
     description: FUZZY_FIND_DESCRIPTION,
-    parameters: pi.typebox.Object({
-      pattern: pi.typebox.Optional(pi.typebox.String({ description: "Initial plain fuzzy file path text to search for (e.g., 'component', 'src/utils/', 'Button.tsx'). Regex and glob syntax are not supported." })),
-      path: pi.typebox.Optional(pi.typebox.String({ description: 'Initial optional path constraint to narrow search scope' })),
-      limit: pi.typebox.Optional(pi.typebox.Number({ description: 'Maximum number of results to return per call (default: 30)' })),
-      iterator: pi.typebox.Optional(pi.typebox.String({ description: 'Opaque single-use iterator from a previous fuzzy_find result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
+    parameters: pi.typebox.Type.Object({
+      pattern: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: "Initial plain fuzzy file path text to search for (e.g., 'component', 'src/utils/', 'Button.tsx'). Regex and glob syntax are not supported." })),
+      path: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Initial optional path constraint to narrow search scope' })),
+      limit: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Maximum number of results to return per call (default: 30)' })),
+      iterator: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Opaque single-use iterator from a previous fuzzy_find result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const scopeId = ctx.sessionId || ctx.workspaceId;
@@ -41,17 +41,17 @@ export function createFuzzyGrepTool(pi) {
     name: 'fuzzy_grep',
     label: 'Fuzzy Grep',
     description: FUZZY_GREP_DESCRIPTION,
-    parameters: pi.typebox.Object({
-      pattern: pi.typebox.Optional(pi.typebox.String({ description: 'Initial search pattern. Required on the first call. Supports literal text and regex-like patterns.' })),
-      path: pi.typebox.Optional(pi.typebox.String({ description: "Initial path constraint (repo-relative or absolute path outside workspace). Use 'src/' or '*.ts' to narrow the first call." })),
-      exclude: pi.typebox.Optional(pi.typebox.Union([
-        pi.typebox.String({ description: "Initial exclude paths (e.g. 'test/,*.min.js')" }),
-        pi.typebox.Array(pi.typebox.String({ description: 'Initial exclude path or glob' })),
+    parameters: pi.typebox.Type.Object({
+      pattern: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Initial search pattern. Required on the first call. Supports literal text and regex-like patterns.' })),
+      path: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: "Initial path constraint (repo-relative or absolute path outside workspace). Use 'src/' or '*.ts' to narrow the first call." })),
+      exclude: pi.typebox.Type.Optional(pi.typebox.Type.Union([
+        pi.typebox.Type.String({ description: "Initial exclude paths (e.g. 'test/,*.min.js')" }),
+        pi.typebox.Type.Array(pi.typebox.Type.String({ description: 'Initial exclude path or glob' })),
       ])),
-      caseSensitive: pi.typebox.Optional(pi.typebox.Boolean({ description: 'Initial case-sensitivity override (smart-case by default - case-insensitive when pattern is all lowercase)' })),
-      context: pi.typebox.Optional(pi.typebox.Number({ description: 'Initial number of context lines before and after each match' })),
-      limit: pi.typebox.Optional(pi.typebox.Number({ description: 'Maximum number of matches to return per call.' })),
-      iterator: pi.typebox.Optional(pi.typebox.String({ description: 'Opaque single-use iterator from a previous fuzzy_grep result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
+      caseSensitive: pi.typebox.Type.Optional(pi.typebox.Type.Boolean({ description: 'Initial case-sensitivity override (smart-case by default - case-insensitive when pattern is all lowercase)' })),
+      context: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Initial number of context lines before and after each match' })),
+      limit: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Maximum number of matches to return per call.' })),
+      iterator: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Opaque single-use iterator from a previous fuzzy_grep result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const scopeId = ctx.sessionId || ctx.workspaceId;

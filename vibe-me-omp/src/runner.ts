@@ -58,13 +58,13 @@ export function registerRunnerTools(pi, helpers) {
     name: 'runner',
     label: 'Runner',
     description: 'Execute shell, Python, or JavaScript and return a summary, with background wait/abort support.',
-    parameters: pi.typebox.Object({
-      language: pi.typebox.Optional(pi.typebox.Enum(RUNNER_LANGUAGES, { description: 'shell, python, or javascript' })),
-      program: pi.typebox.String({ description: 'Shell command, Python code, or JavaScript/TypeScript code.' }),
-      dependencies: pi.typebox.Optional(pi.typebox.Array(pi.typebox.String({ description: 'Language dependencies.' }))),
-      what_to_summarize: pi.typebox.String({ description: 'What to summarize from output.' }),
+    parameters: pi.typebox.Type.Object({
+      language: pi.typebox.Type.Optional(pi.typebox.Type.Enum(RUNNER_LANGUAGES, { description: 'shell, python, or javascript' })),
+      program: pi.typebox.Type.String({ description: 'Shell command, Python code, or JavaScript/TypeScript code.' }),
+      dependencies: pi.typebox.Type.Optional(pi.typebox.Type.Array(pi.typebox.Type.String({ description: 'Language dependencies.' }))),
+      what_to_summarize: pi.typebox.Type.String({ description: 'What to summarize from output.' }),
     }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
       const language = RUNNER_LANGUAGES.includes(params.language) ? params.language : 'shell';
       try {
         const child = await createChildSession(pi, ctx, {
@@ -73,22 +73,43 @@ export function registerRunnerTools(pi, helpers) {
         });
         try {
           const childSessionId = child.session.sessionManager.getSessionId();
-          const runResult = await execute({
+          const { promise: abortPromise, reject } = signal
+            ? Promise.withResolvers()
+            : { promise: null, reject: null };
+
+          if (signal) {
+            if (signal.aborted) {
+              abort(childSessionId);
+              reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+            } else {
+              signal.addEventListener('abort', () => {
+                abort(childSessionId);
+                reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+              }, { once: true });
+            }
+          }
+
+          const wrap = (p) => abortPromise ? Promise.race([p, abortPromise]) : p;
+
+          const runResult = await wrap(execute({
             sessionId: childSessionId,
             program: params.program,
             language,
             dependencies: params.dependencies,
             cwd: ctx.cwd,
             earlyTimeoutMs: RUNNER_MAX_WAIT_MS * 120,
-          });
-          await child.session.prompt(buildRunnerPrompt(language, params.program, params.dependencies, params.what_to_summarize, runResult.output, runResult.background, runResult.message));
-          await child.session.waitForIdle();
+          }));
+          await wrap(child.session.prompt(buildRunnerPrompt(language, params.program, params.dependencies, params.what_to_summarize, runResult.output, runResult.background, runResult.message)));
+          await wrap(child.session.waitForIdle());
           return { content: [{ type: 'text', text: readAssistantText(child.session.sessionManager) ?? '(no output)' }] };
         } finally {
           child.session.abort?.();
           child.dispose?.();
         }
       } catch (error) {
+        if (error?.name === 'AbortError') {
+          return { content: [{ type: 'text', text: 'Runner aborted.' }] };
+        }
         return asErrorResult(error);
       }
     },
@@ -99,8 +120,8 @@ export function registerRunnerTools(pi, helpers) {
     label: 'Runner Wait',
     description: 'Wait for background runner output.',
     defaultInactive: true,
-    parameters: pi.typebox.Object({
-      ms: pi.typebox.Optional(pi.typebox.Number({ description: 'Wait time in milliseconds.' })),
+    parameters: pi.typebox.Type.Object({
+      ms: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Wait time in milliseconds.' })),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
       const sessionId = getSessionIdFromContext(ctx);
@@ -120,7 +141,7 @@ export function registerRunnerTools(pi, helpers) {
     label: 'Runner Abort',
     description: 'Abort background runner task.',
     defaultInactive: true,
-    parameters: pi.typebox.Object({}),
+    parameters: pi.typebox.Type.Object({}),
     async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
       const sessionId = getSessionIdFromContext(ctx);
       if (!sessionId) return { content: [{ type: 'text', text: 'No runner session found.' }], isError: true };

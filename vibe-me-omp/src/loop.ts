@@ -150,8 +150,8 @@ export function registerLoopFeatures(pi, helpers) {
     name: 'submit_review',
     label: 'Submit Review',
     description: 'Submit work for review while loop mode is active.',
-    parameters: pi.typebox.Object({
-      report: pi.typebox.String({ description: 'Detailed description of what was changed.' }),
+    parameters: pi.typebox.Type.Object({
+      report: pi.typebox.Type.String({ description: 'Detailed description of what was changed.' }),
       affectedFiles: stringArraySchema(pi, 'Modified or created file path.'),
     }),
     async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
@@ -183,10 +183,10 @@ export function registerLoopFeatures(pi, helpers) {
     name: 'submit_review_result',
     label: 'Submit Review Result',
     description: 'Submit a reviewer verdict for loop mode review sessions.',
-    parameters: pi.typebox.Object({
-      feedback: pi.typebox.Optional(pi.typebox.Union([
-        pi.typebox.String({ description: 'Pass non-empty text to reject.' }),
-        pi.typebox.Null({ description: 'Pass null to accept.' }),
+    parameters: pi.typebox.Type.Object({
+      feedback: pi.typebox.Type.Optional(pi.typebox.Type.Union([
+        pi.typebox.Type.String({ description: 'Pass non-empty text to reject.' }),
+        pi.typebox.Type.Null({ description: 'Pass null to accept.' }),
       ])),
     }),
     defaultInactive: true,

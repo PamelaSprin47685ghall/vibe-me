@@ -1,4 +1,4 @@
-import { afterEach, describe, it } from 'bun:test';
+import { afterEach, describe, it } from 'vitest';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -10,22 +10,24 @@ function createPi() {
     const commands = [];
     const handlers = {};
     const messages = [];
-    let activeTools = ['read', 'edit', 'write', 'find', 'fuzzy_find', 'fuzzy_grep', 'lsp', 'browser', 'search', 'glob'];
+    let activeTools = ['read', 'edit', 'write', 'find', 'fuzzy_find', 'fuzzy_grep', 'lsp', 'browser', 'search', 'glob', 'bash', 'editor', 'greper', 'reverie', 'browse', 'runner', 'runner_wait', 'runner_abort', 'submit_review', 'submit_review_result', 'websearch', 'webfetch', 'todo_read', 'todo_write'];
     return {
         tools,
         commands,
         handlers,
         messages,
         typebox: {
-            Object: (properties) => ({ type: 'object', properties }),
-            String: (options = {}) => ({ type: 'string', ...options }),
-            Number: (options = {}) => ({ type: 'number', ...options }),
-            Boolean: (options = {}) => ({ type: 'boolean', ...options }),
-            Null: (options = {}) => ({ type: 'null', ...options }),
-            Union: (items, options = {}) => ({ anyOf: items, ...options }),
-            Enum: (values, options = {}) => ({ type: 'enum', values, ...options }),
-            Array: (items) => ({ type: 'array', items }),
-            Optional: (schema) => schema,
+            Type: {
+                Object: (properties) => ({ type: 'object', properties }),
+                String: (options = {}) => ({ type: 'string', ...options }),
+                Number: (options = {}) => ({ type: 'number', ...options }),
+                Boolean: (options = {}) => ({ type: 'boolean', ...options }),
+                Null: (options = {}) => ({ type: 'null', ...options }),
+                Union: (items, options = {}) => ({ anyOf: items, ...options }),
+                Enum: (values, options = {}) => ({ type: 'enum', values, ...options }),
+                Array: (items) => ({ type: 'array', items }),
+                Optional: (schema) => schema,
+            },
         },
         pi: {},
         ui: { notify() {} },
@@ -109,19 +111,41 @@ describe('kunwei extension', () => {
         assert.equal(pi.messages[0].options.triggerTurn, true);
     });
 
-    it('session start removes disabled tools from active set', async () => {
+    it('session start strips subagent-only tools from main session', async () => {
         const pi = createPi();
         await kunweiExtension(pi);
 
         await pi.handlers.session_start[0]({}, {});
 
         const activeTools = pi.getActiveTools();
-        assert.ok(activeTools.includes('fuzzy_grep'));
-        assert.ok(activeTools.includes('fuzzy_find'));
-        assert.ok(activeTools.includes('find'));
+        // Main session tools
+        assert.ok(activeTools.includes('read'));
+        assert.ok(activeTools.includes('editor'));
+        assert.ok(activeTools.includes('greper'));
+        assert.ok(activeTools.includes('reverie'));
+        assert.ok(activeTools.includes('browse'));
+        assert.ok(activeTools.includes('runner'));
+        assert.ok(activeTools.includes('submit_review'));
+        assert.ok(activeTools.includes('websearch'));
+        assert.ok(activeTools.includes('webfetch'));
+        assert.ok(activeTools.includes('todo_write'));
+        assert.ok(activeTools.includes('todo_read'));
+        // Subagent-only tools stripped
+        assert.ok(!activeTools.includes('find'));
+        assert.ok(!activeTools.includes('edit'));
+        assert.ok(!activeTools.includes('write'));
+        assert.ok(!activeTools.includes('lsp'));
+        assert.ok(!activeTools.includes('fuzzy_find'));
+        assert.ok(!activeTools.includes('fuzzy_grep'));
+        assert.ok(!activeTools.includes('runner_wait'));
+        assert.ok(!activeTools.includes('runner_abort'));
+        assert.ok(!activeTools.includes('submit_review_result'));
+        // Platform tools stripped
         assert.ok(!activeTools.includes('search'));
         assert.ok(!activeTools.includes('glob'));
         assert.ok(!activeTools.includes('browser'));
+        // Built-in bash tool stripped
+        assert.ok(!activeTools.includes('bash'));
     });
 
     it('fuzzy tool descriptions follow mux wording', async () => {
@@ -166,28 +190,7 @@ describe('kunwei extension', () => {
         assert.equal(pi.messages.at(-1).message.customType, 'kunwei-loop-reminder');
     });
 
-    it('agent_end nudges todos when open todos remain', async () => {
-        const pi = createPi();
-        await kunweiExtension(pi);
-        const todoEntry = {
-            type: 'message',
-            message: {
-                role: 'toolResult',
-                toolName: 'todo_write',
-                isError: false,
-                details: {
-                    phases: [{ name: 'Todos', tasks: [{ content: 'x', status: 'pending' }] }],
-                },
-            },
-        };
-
-        await pi.handlers.agent_end[0]({}, {
-            sessionManager: { getSessionId: () => 'session-3', getEntries: () => [todoEntry] },
-            hasPendingMessages: () => false,
-        });
-
-        assert.equal(pi.messages.at(-1).message.customType, 'kunwei-todo-reminder');
-    });
+    
 });
 
 describe('kunwei helpers', () => {
@@ -369,15 +372,17 @@ describe('ollama SSRF', () => {
         const ollama = await import('../ollama.js');
         const pi = {
             typebox: {
-                Object: (p) => ({ type: 'object', properties: p }),
-                String: (o = {}) => ({ type: 'string', ...o }),
-                Number: (o = {}) => ({ type: 'number', ...o }),
-                Boolean: (o = {}) => ({ type: 'boolean', ...o }),
-                Null: (o = {}) => ({ type: 'null', ...o }),
-                Union: (items, o = {}) => ({ anyOf: items, ...o }),
-                Enum: (values, o = {}) => ({ type: 'enum', values, ...o }),
-                Array: (items) => ({ type: 'array', items }),
-                Optional: (s) => s,
+                Type: {
+                    Object: (p) => ({ type: 'object', properties: p }),
+                    String: (o = {}) => ({ type: 'string', ...o }),
+                    Number: (o = {}) => ({ type: 'number', ...o }),
+                    Boolean: (o = {}) => ({ type: 'boolean', ...o }),
+                    Null: (o = {}) => ({ type: 'null', ...o }),
+                    Union: (items, o = {}) => ({ anyOf: items, ...o }),
+                    Enum: (values, o = {}) => ({ type: 'enum', values, ...o }),
+                    Array: (items) => ({ type: 'array', items }),
+                    Optional: (s) => s,
+                },
             },
         };
         const tools = [];

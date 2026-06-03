@@ -1,6 +1,5 @@
 import {
   LOOP_NUDGE_PROMPT,
-  TODO_NUDGE_PROMPT,
   activateReview,
   addChild,
   clearReviewSessions as _clearReviewSessions,
@@ -15,7 +14,7 @@ import {
   getReviewTask,
 } from 'engine/review';
 import { getLatestTodoPhasesFromEntries, readAssistantText } from 'engine/session';
-import { TODO_NUDGE_CHECK_TAG, hasOpenTodos, NudgeCoordinator } from 'engine/todo';
+import { NudgeCoordinator } from 'engine/todo';
 import { buildRunnerNudgePrompt } from 'engine/runner';
 
 const TERMINAL_TODO_STATUSES = new Set(['completed', 'cancelled', 'abandoned']);
@@ -24,27 +23,6 @@ const coordinator = new NudgeCoordinator();
 
 function flattenTodoTasks(phases) {
   return phases.flatMap((phase) => phase.tasks || []);
-}
-
-export function handleTodoNudge(pi, _state, sessionId, sessionManager) {
-  const entries = sessionManager.getEntries?.() ?? [];
-  const tasks = flattenTodoTasks(getLatestTodoPhasesFromEntries(entries));
-  const lastAssistantMessage = readAssistantText(entries) ?? undefined;
-
-  const action = coordinator.shouldNudge(sessionId, {
-    todos: tasks,
-    lastAssistantMessage,
-    hasActiveRunner: false,
-    isLoopActive: false
-  }, entries.length);
-
-  if (action === 'nudge-todo') {
-    pi.sendMessage({
-      customType: 'kunwei-todo-reminder',
-      content: TODO_NUDGE_PROMPT,
-      display: false,
-    }, { triggerTurn: true, deliverAs: 'nextTurn' });
-  }
 }
 
 export function handleLoopNudge(pi, _state, sessionId, sessionManager, isLoopActive) {
@@ -88,7 +66,7 @@ export function clearNudgeSession(sessionId) {
   coordinator.clearSession(sessionId);
 }
 
-export { TODO_NUDGE_PROMPT as TODO_NUDGE, LOOP_NUDGE_PROMPT as LOOP_NUDGE, buildRunnerNudgePrompt as RUNNER_NUDGE };
+export { LOOP_NUDGE_PROMPT as LOOP_NUDGE, buildRunnerNudgePrompt as RUNNER_NUDGE };
 
 export const _test = {
   flattenTodoTasks,

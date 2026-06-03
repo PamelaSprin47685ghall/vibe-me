@@ -16,11 +16,26 @@ export function readAssistantText(sessionManager, { startIndex = 0, joiner = '\n
 
 export async function runSubagent(pi, ctx, config) {
     const child = await createChildSession(pi, ctx, config);
+    const { promise: abortPromise, reject } = config.signal
+        ? Promise.withResolvers()
+        : { promise: null, reject: null };
+
+    if (config.signal) {
+        if (config.signal.aborted) {
+            reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+        } else {
+            config.signal.addEventListener('abort', () => {
+                reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+            }, { once: true });
+        }
+    }
+
+    const wrap = (p) => abortPromise ? Promise.race([p, abortPromise]) : p;
 
     try {
-        await child.session.prompt(config.prompt);
-        if (config.waitForResult) return await config.waitForResult(child.session, child.dispose);
-        await child.session.waitForIdle();
+        await wrap(child.session.prompt(config.prompt));
+        if (config.waitForResult) return await wrap(config.waitForResult(child.session, child.dispose));
+        await wrap(child.session.waitForIdle());
         return readAssistantText(child.session.sessionManager);
     } finally {
         if (!config.waitForResult) {

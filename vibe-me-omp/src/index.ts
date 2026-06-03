@@ -3,8 +3,8 @@ import { appendCapsContext, buildCapsContext, stripHostAgentsPrompt } from './ca
 import { globalIteratorStore } from 'engine/util';
 import { _test as fuzzyTest, createFuzzyFindTool, createFuzzyGrepTool, resetFuzzyState } from './fuzzy.js';
 import { isReviewActive, LOOP_TOOL_NAMES, registerLoopFeatures, resetReviewStates, setPendingReviewStateForTest } from './loop.js';
-import { clearNudgeSession, handleLoopNudge, handleRunnerNudge, handleTodoNudge, TODO_NUDGE } from './nudge.js';
-import { getOllamaKey, OLLAMA_TOOL_NAMES, registerOllamaTools } from './ollama.js';
+import { clearNudgeSession, handleLoopNudge, handleRunnerNudge } from './nudge.js';
+import { getOllamaKey, registerOllamaTools } from './ollama.js';
 import { patchDisablePrune } from './prune.js';
 import { hasRunningRunnerJob, registerRunnerTools, resetRunnerJobs, RUNNER_TOOL_NAMES, setRunnerJobStateForTest, stripHeadTailPipes } from './runner.js';
 import { asErrorResult, getSessionIdFromContext, stringArraySchema } from './shared.js';
@@ -14,6 +14,21 @@ import { appendSyntaxDiagnostics, checkSyntax, supportsSyntaxDiagnosticsTool } f
 const registered = new WeakSet();
 
 patchDisablePrune().catch(() => {});
+
+const CHILD_ONLY_TOOLS: Record<string, true> = {
+    'find': true,
+    'edit': true,
+    'write': true,
+    'lsp': true,
+    'fuzzy_find': true,
+    'fuzzy_grep': true,
+    'runner_wait': true,
+    'runner_abort': true,
+    'submit_review_result': true,
+    'browser': true,
+    'search': true,
+    'glob': true,
+};
 
 export default async function kunweiExtension(pi) {
     if (registered.has(pi)) return;
@@ -28,20 +43,16 @@ export default async function kunweiExtension(pi) {
         stringArraySchema,
     };
 
-    pi.on('before_agent_start', (event, ctx) => ({
-        systemPrompt: appendCapsContext(stripHostAgentsPrompt(event.systemPrompt), ctx.cwd),
-    }));
+    pi.on('before_agent_start', async (event, ctx) => {
+        const sp = stripHostAgentsPrompt(event.systemPrompt);
+        const prefix = Array.isArray(sp) ? sp : [sp];
+        const capsContext = await buildCapsContext(ctx.cwd);
+        if (!capsContext) return { systemPrompt: prefix };
+        return { systemPrompt: [capsContext, ...prefix] };
+    });
 
     pi.on('tool_result', (event, ctx) => appendSyntaxDiagnostics(ctx.cwd, event));
 
-    pi.on('todo_reminder', (event, ctx) => {
-        if (!event.todos?.length) return;
-        pi.sendMessage({
-            customType: 'kunwei-todo-reminder',
-            content: TODO_NUDGE,
-            display: false,
-        }, { triggerTurn: true, deliverAs: 'nextTurn' });
-    });
 
     pi.on('agent_end', (_event, ctx) => {
         const sessionId = getSessionIdFromContext(ctx);
@@ -54,7 +65,6 @@ export default async function kunweiExtension(pi) {
             handleLoopNudge(pi, null, sessionId, ctx.sessionManager, isReviewActive);
             return;
         }
-        handleTodoNudge(pi, null, sessionId, ctx.sessionManager);
     });
 
     pi.on('session_shutdown', (_event, ctx) => {
@@ -65,12 +75,19 @@ export default async function kunweiExtension(pi) {
     });
 
     pi.on('session_start', async () => {
-        const keep = new Set(['read', 'find', 'fuzzy_find', 'fuzzy_grep', 'edit', 'write', 'lsp', ...SUBAGENT_TOOL_NAMES, ...RUNNER_TOOL_NAMES, ...LOOP_TOOL_NAMES, ...OLLAMA_TOOL_NAMES]);
-        const desired = new Set(pi.getActiveTools().filter((toolName) => keep.has(toolName)));
-        desired.add('fuzzy_grep');
-        desired.add('fuzzy_find');
-        desired.add('find');
-        await pi.setActiveTools([...desired]);
+        const activeTools = pi.getActiveTools();
+        // Disable built-in bash tool for all agents
+        let filtered = activeTools.filter((toolName) => toolName !== 'bash');
+        const activeSet = new Set(filtered);
+        // Main session has delegation tools like editor/greper in its active set.
+        // Child sessions (via createChildSession) have only their explicitly given tools.
+        const isMainSession = SUBAGENT_TOOL_NAMES.some((name) => activeSet.has(name));
+        if (isMainSession) {
+            filtered = filtered.filter((toolName) => !CHILD_ONLY_TOOLS[toolName]);
+        }
+        if (filtered.length !== activeTools.length) {
+            await pi.setActiveTools(filtered);
+        }
     });
 
     registerLoopFeatures(pi, sharedHelpers);

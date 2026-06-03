@@ -14,5 +14,16 @@ export function asErrorResult(error) {
 }
 
 export function stringArraySchema(pi, description) {
-  return pi.typebox.Array(pi.typebox.String({ description }));
+  return pi.typebox.Type.Array(pi.typebox.Type.String({ description }));
+}
+
+export function raceWithSignal(promise, signal) {
+    if (!signal) return promise;
+    if (signal.aborted) return Promise.reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+    const { promise: abortPromise, reject } = Promise.withResolvers();
+    const onAbort = () => reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+    signal.addEventListener('abort', onAbort, { once: true });
+    const result = Promise.race([promise, abortPromise]);
+    result.finally(() => signal.removeEventListener('abort', onAbort));
+    return result;
 }

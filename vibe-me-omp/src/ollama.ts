@@ -23,9 +23,9 @@ export function registerOllamaTools(pi, helpers) {
     name: 'websearch',
     label: 'Ollama Search',
     description: 'Search the web using Ollama web search.',
-    parameters: pi.typebox.Object({
-      query: pi.typebox.String({ description: 'Natural language search query.' }),
-      numResults: pi.typebox.Optional(pi.typebox.Number({ description: 'Maximum results to return.' })),
+    parameters: pi.typebox.Type.Object({
+      query: pi.typebox.Type.String({ description: 'Natural language search query.' }),
+      numResults: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Maximum results to return.' })),
     }),
     async execute(_toolCallId, params, signal) {
       try {
@@ -41,12 +41,12 @@ export function registerOllamaTools(pi, helpers) {
     name: 'webfetch',
     label: 'Ollama Fetch',
     description: 'Fetch URL content using Ollama web fetch.',
-    parameters: pi.typebox.Object({
-      url: pi.typebox.String({ description: 'URL to fetch.' }),
-      extract_main: pi.typebox.Optional(pi.typebox.Boolean({ description: 'Whether to extract main content.' })),
-      prefer_llms_txt: pi.typebox.Optional(pi.typebox.String({ description: 'auto, always, or never.' })),
-      prompt: pi.typebox.Optional(pi.typebox.String({ description: 'Optional extraction task.' })),
-      timeout: pi.typebox.Optional(pi.typebox.Number({ description: 'Timeout in seconds.' })),
+    parameters: pi.typebox.Type.Object({
+      url: pi.typebox.Type.String({ description: 'URL to fetch.' }),
+      extract_main: pi.typebox.Type.Optional(pi.typebox.Type.Boolean({ description: 'Whether to extract main content.' })),
+      prefer_llms_txt: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'auto, always, or never.' })),
+      prompt: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Optional extraction task.' })),
+      timeout: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Timeout in seconds.' })),
     }),
     async execute(_toolCallId, params, signal) {
       try {
