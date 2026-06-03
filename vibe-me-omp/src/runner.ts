@@ -79,7 +79,7 @@ export function registerRunnerTools(pi, helpers) {
             language,
             dependencies: params.dependencies,
             cwd: ctx.cwd,
-            timeoutMs: RUNNER_MAX_WAIT_MS * 120,
+            earlyTimeoutMs: RUNNER_MAX_WAIT_MS * 120,
           });
           await child.session.prompt(buildRunnerPrompt(language, params.program, params.dependencies, params.what_to_summarize, runResult.output, runResult.background, runResult.message));
           await child.session.waitForIdle();

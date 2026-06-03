@@ -1,12 +1,12 @@
-export { isIpBlocked, secureFetch } from './secure-fetch-dns-pinning.js';
-export { validateHostname } from './secure-fetch-dns-pinning.js';
+import { isIpBlocked, secureFetch, validateHostname } from './secure-fetch-dns-pinning.js';
+export { isIpBlocked, secureFetch, validateHostname };
 
 export function isPrivateIPv4(ip: string): boolean {
-  return ipIsBlocked(ip);
+  return isIpBlocked(ip);
 }
 
 export function isPrivateIPv6(ip: string): boolean {
-  return ipIsBlocked(ip);
+  return isIpBlocked(ip);
 }
 
 export async function validateFetchUrl(url: string): Promise<string | null> {
@@ -19,7 +19,7 @@ export async function validateFetchUrl(url: string): Promise<string | null> {
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return `unsupported URL scheme: ${parsed.protocol}`;
   }
-  return validateHost(parsed.hostname);
+  return validateHostname(parsed.hostname) ? null : 'host not allowed';
 }
 
 export const OLLAMA_API_BASE = 'https://ollama.com/api';

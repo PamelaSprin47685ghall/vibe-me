@@ -51,7 +51,7 @@ export class ActiveJob implements Disposable {
 
     if (this.childProcess && this.childProcess.pid) {
       try {
-        killTree(this.childProcess.pid);
+        killTree(this.childProcess);
       } catch {}
     }
 

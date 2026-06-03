@@ -2,9 +2,9 @@ import path from 'node:path';
 import { FinderManager, createExternalFinder } from './finder.js';
 import { buildQuery, resolveExternalBasePath } from './query.js';
 import { formatFindOutput, formatGrepOutput, fileAnnotation } from './format.js';
-import { ScopedLRUStore } from '../util/lru-pure.js';
+import { ScopedIteratorStore } from '../util/iterator.js';
 
-const globalIteratorStore = new ScopedLRUStore<unknown>(50, 20);
+const globalIteratorStore = new ScopedIteratorStore();
 
 export interface FuzzyFindParams {
   pattern?: string;
@@ -104,7 +104,7 @@ export class FuzzySearchCoordinator {
       });
 
       if (!searchResult?.ok) {
-        throw new Error(searchResult?.error || 'fuzzy_find failed');
+        throw new Error((searchResult as { error?: string })?.error || 'fuzzy_find failed');
       }
 
       const result = searchResult.value;
@@ -221,7 +221,7 @@ export class FuzzySearchCoordinator {
       });
 
       if (!grepResult?.ok) {
-        throw new Error(grepResult?.error || 'fuzzy_grep failed');
+        throw new Error((grepResult as { error?: string })?.error || 'fuzzy_grep failed');
       }
 
       let result = grepResult.value;

@@ -60,7 +60,7 @@ function attachReviewChild(parentSessionId, childSessionId, pendingResolve) {
 }
 
 function detachReviewChild(parentSessionId, childSessionId) {
-  resolvePendingReview(childSessionId, { feedback: 'Review session closed.', terminated: true });
+  resolvePendingReview(childSessionId, { accepted: false, feedback: 'Review session closed.', terminated: true });
   unlockReview(childSessionId);
 }
 
@@ -94,10 +94,10 @@ async function runReviewLoop(pi, sessionId, report, affectedFiles, task, ctx, he
       nudges += 1;
       const graceMs = nudges === 1 ? REVIEWER_INITIAL_GRACE_MS : REVIEWER_SUBSEQUENT_GRACE_MS;
       const afterGrace = await Promise.race([
-        deferred.then((value) => ({ type: 'done', value })),
-        new Promise((resolve) => setTimeout(() => resolve({ type: 'timeout' }), graceMs)),
+        deferred.then((value) => ({ type: 'done', value }) as const),
+        new Promise<{ type: 'timeout' }>((resolve) => setTimeout(() => resolve({ type: 'timeout' }), graceMs)),
       ]);
-      if (afterGrace.type === 'done') return afterGrace.value;
+      if ((afterGrace as { type: string }).type === 'done') return (afterGrace as { value: any }).value;
       await child.session.prompt(REVIEWER_NUDGE_PROMPT);
     }
     return { feedback: readText(child.session.sessionManager) || 'Reviewer failed to finish.', terminated: true };
@@ -192,7 +192,7 @@ export function registerLoopFeatures(pi, helpers) {
         return { content: [{ type: 'text', text: 'No pending review to resolve.' }], isError: true };
       }
       const feedback = typeof params.feedback === 'string' && params.feedback.trim() ? params.feedback : null;
-      const resolved = resolvePendingReview(sessionId, { feedback });
+      const resolved = resolvePendingReview(sessionId, { accepted: feedback == null, feedback });
       if (!resolved) {
         return { content: [{ type: 'text', text: 'No pending review to resolve.' }], isError: true };
       }

@@ -21,7 +21,7 @@ async function createFinder(basePath: string): Promise<FileFinder> {
   const { FileFinder } = await getFffModule();
   const result = FileFinder.create({ basePath, aiMode: true });
   if (!result.ok) {
-    throw new Error(`Failed to create FFF file finder: ${result.error}`);
+    throw new Error(`Failed to create FFF file finder: ${(result as { error: string }).error}`);
   }
   const finder = result.value;
   try {

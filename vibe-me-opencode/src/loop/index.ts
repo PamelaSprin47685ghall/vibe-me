@@ -190,7 +190,8 @@ export function createSubmitReviewResultTool(): ToolDefinition {
             : args.feedback;
 
       const resolved = reviewSessions.resolvePending(context.sessionID, {
-        feedback,
+        accepted: feedback == null,
+        feedback: feedback ?? undefined,
       });
       if (!resolved) {
         return 'Error: No pending review to resolve.';
@@ -212,7 +213,7 @@ async function runReviewerWithNudge(
 ): Promise<ReviewResult> {
   if (abortSignal?.aborted) {
     reviewSessions.delete(childID);
-    return { feedback: 'Review aborted.', terminated: true };
+    return { accepted: false, feedback: 'Review aborted.', terminated: true };
   }
 
   const deferred = new Deferred<ReviewResult>();
@@ -223,7 +224,7 @@ async function runReviewerWithNudge(
   while (true) {
     if (abortSignal?.aborted) {
       reviewSessions.delete(childID);
-      return { feedback: 'Review aborted.', terminated: true };
+      return { accepted: false, feedback: 'Review aborted.', terminated: true };
     }
 
     const iterAbort = new AbortController();
@@ -264,9 +265,10 @@ async function runReviewerWithNudge(
     if (result.type === 'error') {
       reviewSessions.delete(childID);
       if (isAbortError(result.error)) {
-        return { feedback: 'Review aborted.', terminated: true };
+        return { accepted: false, feedback: 'Review aborted.', terminated: true };
       }
       return {
+        accepted: false,
         feedback:
           result.error instanceof Error
             ? result.error.message
@@ -292,6 +294,7 @@ async function runReviewerWithNudge(
       reviewSessions.delete(childID);
       const text = await extractSessionText(client, childID, directory);
       return {
+        accepted: false,
         feedback:
           text || 'Reviewer failed to complete review after multiple attempts.',
         terminated: true,

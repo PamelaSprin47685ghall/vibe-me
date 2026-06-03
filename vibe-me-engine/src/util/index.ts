@@ -4,3 +4,4 @@ export * from './tool-descriptor.js';
 export * from './unified-context.js';
 export * from './types.js';
 export * from './schema.js';
+export * from './iterator.js';

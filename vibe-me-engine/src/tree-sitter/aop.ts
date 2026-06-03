@@ -15,12 +15,12 @@ export function withSyntaxCheck<T extends (...args: any[]) => Promise<string>>(
 
     try {
       const content = await readFile(path, 'utf-8');
-      const result = await checkSyntax(path, content);
+      const result = await checkSyntax(content, path);
       
-      if (result.errors.length === 0) return output;
+      if (!result.ok || result.errors.length === 0) return output;
       
       const diagnostics = result.errors
-        .map(e => `  Line ${e.startPosition.row + 1}: ${e.message}`)
+        .map(e => `  Line ${e.line}: ${e.message}`)
         .join('\n');
       
       return `${output}\n\n[syntax-check]\n${diagnostics}`;

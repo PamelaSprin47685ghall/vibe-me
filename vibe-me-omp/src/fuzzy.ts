@@ -72,4 +72,8 @@ export function resetFuzzyState() {
 export const _test = {
   resetFuzzyState,
   resolveExternalBasePath,
+  storeCursor: (state: any) => globalIteratorStore.store('global', 'omp_c', state),
+  consumeCursor: (id: string) => globalIteratorStore.consume(id),
+  storeFindCursor: (state: any) => globalIteratorStore.store('global', 'omp_f', state),
+  consumeFindCursor: (id: string) => globalIteratorStore.consume(id),
 };

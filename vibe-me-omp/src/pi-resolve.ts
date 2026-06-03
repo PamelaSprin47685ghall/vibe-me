@@ -4,11 +4,11 @@ import { homedir } from 'node:os';
 import { existsSync } from 'node:fs';
 
 const home = homedir();
-const PI_BASE_CANDIDATES = [
+const PI_BASE_CANDIDATES: string[] = [
     process.env.PI_BASE,
     join(home, '.cache/.bun/install/global/node_modules/@oh-my-pi'),
     join(home, '.bun/install/global/node_modules/@oh-my-pi'),
-].filter(Boolean);
+].filter((p): p is string => !!p);
 
 let resolvedBase;
 function resolveBase() {

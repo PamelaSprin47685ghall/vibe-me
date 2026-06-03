@@ -1,6 +1,5 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { buildRunnerNudgePrompt, hasActiveJob } from 'engine/runner';
-import { cleanupJob, getActiveJobs } from './tools.js';
+import { buildRunnerNudgePrompt, hasActiveJob, cleanupJob, getActiveJobs } from 'engine/runner';
 
 export function createRunnerNudgeHook(ctx: PluginInput) {
   return {

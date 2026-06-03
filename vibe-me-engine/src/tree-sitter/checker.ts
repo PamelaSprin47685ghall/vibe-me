@@ -7,7 +7,7 @@ interface WasmNode {
   startPosition(): { row: number; column: number };
   endPosition(): { row: number; column: number };
   childCount(): number;
-  child(index: number): WasmNode | null;
+  child(index: number): WasmNode | undefined;
 }
 
 interface WasmTree {
@@ -24,59 +24,11 @@ interface WasmPack {
   getParser(lang: string): WasmParser;
 }
 
-interface ShimMemory {
-  buffer: ArrayBuffer;
-}
-
-const shimMemory: ShimMemory = { buffer: new ArrayBuffer(0) };
-
-function memU8(): Uint8Array {
-  return new Uint8Array(shimMemory.buffer);
-}
-
-function buildEnvMock() {
+async function loadTreeSitterPack(): Promise<WasmPack> {
+  const mod = await import('@kreuzberg/tree-sitter-language-pack-wasm');
   return {
-    strcmp(a: number, b: number): number {
-      const u8 = memU8();
-      let i = 0;
-      while (true) {
-        const ca = u8[a + i];
-        const cb = u8[b + i];
-        const caVal = ca ?? 0;
-        const cbVal = cb ?? 0;
-        if (caVal !== cbVal) return caVal - cbVal;
-        if (caVal === 0) return 0;
-        i += 1;
-      }
-    },
-    memchr(ptr: number, value: number, num: number): number {
-      const u8 = memU8();
-      const target = value & 0xff;
-      for (let i = 0; i < num; i += 1) {
-        if (u8[ptr + i] === target) return ptr + i;
-      }
-      return 0;
-    },
-    iswlower(wc: number): number {
-      try {
-        const c = String.fromCodePoint(wc);
-        return c === c.toLowerCase() && c !== c.toUpperCase() ? 1 : 0;
-      } catch { return 0; }
-    },
-    iswupper(wc: number): number {
-      try {
-        const c = String.fromCodePoint(wc);
-        return c === c.toUpperCase() && c !== c.toLowerCase() ? 1 : 0;
-      } catch { return 0; }
-    },
-    iswxdigit(wc: number): number {
-      return (wc >= 48 && wc <= 57) || (wc >= 97 && wc <= 102) || (wc >= 65 && wc <= 70) ? 1 : 0;
-    },
-    towlower(wc: number): number {
-      try {
-        return String.fromCodePoint(wc).toLowerCase().codePointAt(0) ?? wc;
-      } catch { return wc; }
-    },
+    detectLanguageFromPath: (path: string) => mod.detectLanguageFromPath(path),
+    getParser: (lang: string) => mod.getParser(lang),
   };
 }
 

@@ -400,7 +400,7 @@ describe('pi-resolve', () => {
         const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'kunwei-pi-base-'));
         try {
             process.env.PI_BASE = tmp;
-            const { getPiBase } = await import('../pi-resolve.js?probe=1');
+            const { getPiBase } = await import('../pi-resolve.ts?probe=1');
             assert.equal(getPiBase(), tmp);
         } finally {
             delete process.env.PI_BASE;

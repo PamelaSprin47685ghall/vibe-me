@@ -2,7 +2,7 @@ import { chmodSync, createWriteStream, existsSync, unlinkSync, rmSync, writeFile
 import type { WriteStream } from 'node:fs';
 import type { ChildProcess } from 'node:child_process';
 import { killTree } from './process.js';
-import { getRunnerLogPath, getRunnerProjectDir } from './paths.js';
+import { getRunnerProjectDir } from './paths.js';
 
 export type JobStatus = 'running' | 'completed' | 'aborted';
 

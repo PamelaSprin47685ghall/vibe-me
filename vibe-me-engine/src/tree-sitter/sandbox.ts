@@ -52,13 +52,13 @@ async function loadWasmPackWithSandbox(): Promise<WasmPack> {
     
     const enhancedImports: WebAssembly.Imports = {
       ...importObject,
-      env: hasEnv ? { ...(importObject as Record<string, unknown>).env, ...envMock } : envMock,
+      env: hasEnv ? { ...(importObject as Record<string, unknown>).env as Record<string, unknown>, ...envMock } : envMock,
     };
     
-    const result = await originalInstantiate.call(this, source, enhancedImports);
+    const result: any = await originalInstantiate.call(globalThis, source, enhancedImports);
     
     if ('instance' in result) {
-      const memory = (result.instance.exports as { memory?: WebAssembly.Memory }).memory;
+      const memory = result.instance.exports.memory as WebAssembly.Memory | undefined;
       if (memory && hasEnv) {
         shimMemory.buffer = memory.buffer;
       }

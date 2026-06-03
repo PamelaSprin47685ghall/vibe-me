@@ -57,7 +57,7 @@ describe('Review State Machine - Atomic Transitions', () => {
     });
 
     it('returns false when no pending review exists', () => {
-      const success = resolvePendingReview('nonexistent', { feedback: 'test' });
+      const success = resolvePendingReview('nonexistent', { accepted: false, feedback: 'test' });
       expect(success).toBe(false);
     });
 
@@ -65,8 +65,8 @@ describe('Review State Machine - Atomic Transitions', () => {
       let callCount = 0;
       setPendingReview('session-1', () => { callCount++; });
 
-      resolvePendingReview('session-1', { feedback: 'test' });
-      resolvePendingReview('session-1', { feedback: 'test' });
+      resolvePendingReview('session-1', { accepted: false, feedback: 'test' });
+      resolvePendingReview('session-1', { accepted: false, feedback: 'test' });
 
       expect(callCount).toBe(1);
     });

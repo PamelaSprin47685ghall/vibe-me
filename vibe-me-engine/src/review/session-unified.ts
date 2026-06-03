@@ -33,7 +33,7 @@ class ReviewSessionNode implements Disposable {
     return true;
   }
 
-  #onTransition(event: ReviewEvent, newState: ReviewState): void {
+  #onTransition(_event: ReviewEvent, newState: ReviewState): void {
     if (newState === 'Completed') this.completeResolution();
   }
 
@@ -52,9 +52,9 @@ class ReviewSessionNode implements Disposable {
     this.abortSuppressor = suppressor;
   }
 
-  completeResolution(): void {
+  completeResolution(result?: ReviewResult): void {
     if (this.resolver) {
-      this.resolver({ accepted: true });
+      this.resolver(result ?? { accepted: true });
       this.resolver = undefined;
     }
     this.abortSuppressor?.restore();
@@ -67,7 +67,7 @@ class ReviewSessionNode implements Disposable {
   }
 
   [Symbol.dispose](): void {
-    const stack = [this];
+    const stack: ReviewSessionNode[] = [this];
     while (stack.length > 0) {
       const node = stack.pop()!;
       if (node.resolver) {
@@ -76,7 +76,7 @@ class ReviewSessionNode implements Disposable {
       }
       node.abortSuppressor?.restore();
       node.abortSuppressor = undefined;
-      stack.push(...node.children);
+      stack.push(...Array.from(node.children));
       node.children.clear();
     }
   }
@@ -190,7 +190,7 @@ export function resolvePendingReview(sessionID: string, result: ReviewResult): b
   const node = sessionRegistry.get(sessionID);
   if (!node) return false;
   node.lastFeedback = result.feedback;
-  node.completeResolution();
+  node.completeResolution(result);
   node.transition('COMPLETE');
   return true;
 }

@@ -93,40 +93,38 @@ async function resolveDnsPinned(hostname: string): Promise<DnsPinnedResult> {
 }
 
 class DnsPinningHttpAgent extends HttpAgent {
-  createConnection(options: { host?: string; port?: number }, callback: (err: Error | null, socket?: unknown) => void) {
-    const hostname = options.host || 'localhost';
-    
+  createConnection: typeof HttpAgent.prototype.createConnection = (options: any, callback?: any) => {
+    const hostname = options?.host || 'localhost';
     resolveDnsPinned(hostname)
       .then(({ ip }) => {
         const pinnedOptions = { ...options, host: ip };
-        super.createConnection(pinnedOptions, callback);
+        if (callback) super.createConnection(pinnedOptions, callback);
       })
-      .catch(callback);
-  }
+      .catch((err: Error) => callback?.(err));
+    return undefined;
+  };
 }
 
 class DnsPinningHttpsAgent extends HttpsAgent {
-  createConnection(options: { host?: string; port?: number; servername?: string }, callback: (err: Error | null, socket?: unknown) => void) {
-    const hostname = options.host || 'localhost';
-    
+  createConnection: typeof HttpsAgent.prototype.createConnection = (options: any, callback?: any) => {
+    const hostname = options?.host || 'localhost';
     resolveDnsPinned(hostname)
       .then(({ ip }) => {
-        const pinnedOptions = {
-          ...options,
-          host: ip,
-          servername: options.servername || hostname,
-        };
-        super.createConnection(pinnedOptions, callback);
+        const pinnedOptions = { ...options, host: ip, servername: options?.servername || hostname };
+        if (callback) super.createConnection(pinnedOptions, callback);
       })
-      .catch(callback);
-  }
+      .catch((err: Error) => callback?.(err));
+    return undefined;
+  };
 }
 
 const dnsPinningHttpAgent = new DnsPinningHttpAgent({ keepAlive: true });
 const dnsPinningHttpsAgent = new DnsPinningHttpsAgent({ keepAlive: true, rejectUnauthorized: false });
 
 export function validateHostname(hostname: string): boolean {
-  if (isIP(hostname)) return !isIpBlocked(hostname);
+  const stripped = hostname.replace(/^\[|\]$/g, '').toLowerCase();
+  if (stripped === 'localhost' || stripped === 'ip6-localhost' || stripped === 'ip6-loopback') return false;
+  if (isIP(stripped)) return !isIpBlocked(stripped);
   return true;
 }
 

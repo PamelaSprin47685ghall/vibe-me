@@ -8,7 +8,9 @@ export class PureLRUStore<T> {
     this.map.set(key, value);
     if (this.map.size > this.maxSize) {
       const first = this.map.keys().next().value;
-      this.map.delete(first);
+      if (first !== undefined) {
+        this.map.delete(first);
+      }
     }
   }
 
@@ -54,7 +56,9 @@ export class ScopedLRUStore<T> {
       this.scopes.set(scopeId, scope);
       if (this.scopes.size > this.globalScopeLimit) {
         const firstScope = this.scopes.keys().next().value;
-        this.scopes.delete(firstScope);
+        if (firstScope !== undefined) {
+          this.scopes.delete(firstScope);
+        }
       }
     } else {
       this.scopes.delete(scopeId);

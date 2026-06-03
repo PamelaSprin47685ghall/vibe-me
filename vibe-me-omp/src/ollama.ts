@@ -7,7 +7,6 @@ import {
   OLLAMA_API_BASE,
   isPrivateIPv4,
   isPrivateIPv6,
-  ipIsBlocked,
   validateHostname,
 } from 'engine/ollama';
 
@@ -31,7 +30,7 @@ export function registerOllamaTools(pi, helpers) {
     async execute(_toolCallId, params, signal) {
       try {
         const data = await ollamaPost('/web_search', { query: params.query, max_results: params.numResults ?? 10 }, signal);
-        return { content: [{ type: 'text', text: formatSearchResults(data.results || []) }], details: data };
+        return { content: [{ type: 'text', text: formatSearchResults((data.results || []) as Array<{ title: string; url: string; content: string }>) }], details: data };
       } catch (error) {
         return asErrorResult(error);
       }
