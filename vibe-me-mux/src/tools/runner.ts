@@ -48,6 +48,7 @@ export function createRunnerTool<S>(
 
       const execResult = await execute({
         sessionId: jobId,
+        parentSessionId: workspaceId,
         program: a.program,
         language: a.language ?? "shell",
         dependencies: a.dependencies,

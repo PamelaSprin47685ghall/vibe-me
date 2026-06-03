@@ -1,3 +1,4 @@
+import { globalIteratorStore } from 'engine/util';
 import {
   REVIEW_INSTRUCTIONS,
   REVIEWER_NUDGE_PROMPT,
@@ -123,7 +124,10 @@ export function registerLoopFeatures(pi, helpers) {
 
   pi.on('session_shutdown', (_event, ctx) => {
     const sessionId = getSessionIdFromContext(ctx);
-    if (sessionId) deactivateReview(sessionId);
+    if (sessionId) {
+      deactivateReview(sessionId);
+      globalIteratorStore.clearScope(sessionId);
+    }
   });
 
   pi.on('input', async (event, ctx) => {

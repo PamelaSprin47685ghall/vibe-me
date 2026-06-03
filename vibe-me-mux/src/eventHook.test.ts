@@ -1,7 +1,6 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test";
 import type { PluginEvent } from "./types/tool";
 
-const mockGetActiveJobs = mock<() => Map<string, unknown>>(() => new Map());
 const mockCleanupJob = mock<(id: string) => void>(() => undefined);
 const mockDeactivateReview = mock<(id: string) => void>(() => undefined);
 const mockSuppress = mock<() => void>(() => undefined);
@@ -10,7 +9,6 @@ const mockCreateAbortSuppressor = mock<
 >(() => ({ suppress: mockSuppress }));
 
 void mock.module("engine/runner", () => ({
-  getActiveJobs: mockGetActiveJobs,
   cleanupJob: mockCleanupJob,
 }));
 
@@ -26,29 +24,23 @@ void mock.module("engine/util", () => ({
 import { createEventHook } from "./eventHook";
 
 beforeEach(() => {
-  mockGetActiveJobs.mockReset();
   mockCleanupJob.mockReset();
   mockDeactivateReview.mockReset();
   mockCreateAbortSuppressor.mockReset();
   mockSuppress.mockReset();
 
-  mockGetActiveJobs.mockReturnValue(new Map());
   mockCreateAbortSuppressor.mockReturnValue({ suppress: mockSuppress });
 });
 
 describe("createEventHook", () => {
   test("stream-abort cleans up jobs scoped by workspaceId", () => {
     const event: PluginEvent = { type: "stream-abort", workspaceId: "ws1" };
-    mockGetActiveJobs.mockReturnValue(
-      new Map([["ws1/job1", {}], ["ws2/job2", {}]]),
-    );
 
     const hook = createEventHook();
     void hook(event);
 
     expect(mockCleanupJob).toHaveBeenCalledTimes(1);
-    expect(mockCleanupJob).toHaveBeenCalledWith("ws1/job1");
-    expect(mockCleanupJob).not.toHaveBeenCalledWith("ws2/job2");
+    expect(mockCleanupJob).toHaveBeenCalledWith("ws1");
     expect(mockDeactivateReview).toHaveBeenCalledWith("ws1");
   });
 
@@ -58,7 +50,7 @@ describe("createEventHook", () => {
     const hook = createEventHook();
     void hook(event);
 
-    expect(mockCleanupJob).not.toHaveBeenCalled();
+    expect(mockCleanupJob).toHaveBeenCalledWith("ws1");
     expect(mockDeactivateReview).toHaveBeenCalledWith("ws1");
   });
 

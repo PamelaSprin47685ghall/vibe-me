@@ -1,6 +1,6 @@
 import { createAbortSuppressor, globalIteratorStore } from "engine/util";
 import { deactivateReview } from "engine/review";
-import { cleanupJob, getActiveJobs } from "engine/runner";
+import { cleanupJob } from "engine/runner";
 import type { PluginEventHook } from "./types/tool";
 
 export function createEventHook(): PluginEventHook {
@@ -12,9 +12,7 @@ export function createEventHook(): PluginEventHook {
 
     switch (type) {
       case "stream-abort":
-        for (const [jobId] of getActiveJobs()) {
-          if (jobId.startsWith(workspaceId + "/")) cleanupJob(jobId);
-        }
+        cleanupJob(workspaceId);
         deactivateReview(workspaceId);
         globalIteratorStore.clearScope(workspaceId);
         suppressors.delete(workspaceId);
