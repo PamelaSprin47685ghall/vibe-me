@@ -12,6 +12,14 @@ const mockDependencies = {
 } as const;
 
 describe("createRegistration", () => {
+  test("registers stealth browser MCP", () => {
+    const registration = createRegistration(mockDependencies as never);
+
+    expect(registration.mcpServers["stealth-browser-mcp"]).toContain(
+      "git+https://github.com/vibheksoni/stealth-browser-mcp.git@"
+    );
+  });
+
   test("emits explicit JSON Schema parameters for web_fetch", () => {
     const registration = createRegistration(mockDependencies as never);
     const webFetchTool = registration.tools.find((tool) => tool.name === "webfetch");

@@ -9,6 +9,7 @@ import { managedRunnerSessions } from '../runner/index.js';
 export function createNudgeCoordinatorHook(ctx: PluginInput) {
   const nudgedSessions = new Set<string>();
   let lastNudgedSession: string | null = null;
+  const retryPendingSessions = new Set<string>();
 
   return {
     tool: {},
@@ -46,6 +47,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         cleanupJob(sessionID);
         defaultCoordinator.clearSession(sessionID);
         nudgedSessions.delete(sessionID);
+        retryPendingSessions.delete(sessionID);
         return;
       }
 
@@ -54,6 +56,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         (event.type === 'session.status' &&
           (props.status as { type?: string } | undefined)?.type === 'idle')
       ) {
+        if (retryPendingSessions.has(sessionID)) return;
         if (nudgedSessions.has(sessionID)) return;
         nudgedSessions.add(sessionID);
 
@@ -134,6 +137,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         if (sessionID !== lastNudgedSession) {
           nudgedSessions.delete(sessionID);
         }
+        retryPendingSessions.delete(sessionID);
         lastNudgedSession = null;
         return;
       }
@@ -142,6 +146,9 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         const error = props.error as { name?: string } | undefined;
         if (isAbortErrorName(error?.name)) {
           defaultCoordinator.suppress(sessionID);
+          retryPendingSessions.delete(sessionID);
+        } else {
+          retryPendingSessions.add(sessionID);
         }
       }
     },

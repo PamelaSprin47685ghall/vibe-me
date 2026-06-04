@@ -30,8 +30,29 @@ export interface PluginRegistration {
   readonly toolNames: readonly string[];
   readonly tools: readonly ToolDefinition[];
   readonly wrappers: readonly ToolWrapper[];
+  readonly mcpServers: Readonly<Record<string, string>>;
   readonly contextInjector: ContextInjectorRegistration;
   readonly eventHook: PluginEventHook;
+}
+
+const STEALTH_BROWSER_MCP_REPO = "https://github.com/vibheksoni/stealth-browser-mcp.git";
+const STEALTH_BROWSER_MCP_REF = process.env.STEALTH_BROWSER_MCP_REF ?? "master";
+
+export const stealthBrowserMcpCommand = [
+  "uvx",
+  "--python",
+  "3.13",
+  "--from",
+  `git+${STEALTH_BROWSER_MCP_REPO}@${STEALTH_BROWSER_MCP_REF}`,
+  "python",
+  "-m",
+  "server",
+].join(" ");
+
+export function getMcpServers(): Readonly<Record<string, string>> {
+  return {
+    "stealth-browser-mcp": stealthBrowserMcpCommand,
+  };
 }
 
 function createWebOverrideWrapper(
@@ -77,6 +98,7 @@ export function createRegistration(
   return {
     toolNames: tools.map((t) => t.name),
     tools,
+    mcpServers: getMcpServers(),
     wrappers: [
       ...createSyntaxCheckWrappers(deps.log),
       createWebOverrideWrapper(websearchDef, "web_search"),
