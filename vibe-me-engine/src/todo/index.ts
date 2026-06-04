@@ -1,5 +1,3 @@
-import { createAbortSuppressor } from '../util/abort.js';
-
 export const TODO_NUDGE_CHECK_TAG = '<skip-todo-check />';
 export const TERMINAL_TODO_STATUSES = new Set(['completed', 'cancelled', 'abandoned']);
 
@@ -57,17 +55,22 @@ export class NudgeCoordinator {
   public lastLoopReminderAt = new Map<string, number>();
   public lastRunnerReminderAt = new Map<string, number>();
   public lastNudgeEntryIndex = new Map<string, number>();
-  public suppressors = new Map<string, ReturnType<typeof createAbortSuppressor>>();
+  private suppressedSessions = new Set<string>();
 
-  constructor(public suppressAfterMs = 0) {}
+  public getOrCreateSuppressor(sessionId: string): { signal: AbortSignal; suppress: () => void; restore: () => void; isSuppressed: () => boolean } {
+    const coordinator = this;
+    return {
+      signal: new AbortController().signal,
+      suppress() { coordinator.suppressedSessions.add(sessionId); },
+      restore() { coordinator.suppressedSessions.delete(sessionId); },
+      isSuppressed() { return coordinator.consumeSuppression(sessionId); },
+    };
+  }
 
-  public getOrCreateSuppressor(sessionId: string) {
-    let sup = this.suppressors.get(sessionId);
-    if (!sup) {
-      sup = createAbortSuppressor(this.suppressAfterMs);
-      this.suppressors.set(sessionId, sup);
-    }
-    return sup;
+  public consumeSuppression(sessionId: string): boolean {
+    if (!this.suppressedSessions.has(sessionId)) return false;
+    this.suppressedSessions.delete(sessionId);
+    return true;
   }
 
   public shouldNudge(
@@ -77,8 +80,7 @@ export class NudgeCoordinator {
     now = Date.now(),
     throttleMs = 0
   ): NudgeAction {
-    const suppressor = this.getOrCreateSuppressor(sessionId);
-    if (suppressor.isSuppressed()) return 'none';
+    if (this.consumeSuppression(sessionId)) return 'none';
 
     const action = decideNudge(context);
     if (action === 'none') return 'none';
@@ -108,7 +110,7 @@ export class NudgeCoordinator {
   }
 
   public suppress(sessionId: string): void {
-    this.getOrCreateSuppressor(sessionId).suppress();
+    this.suppressedSessions.add(sessionId);
   }
 
   public clearSession(sessionId: string): void {
@@ -116,7 +118,7 @@ export class NudgeCoordinator {
     this.lastLoopReminderAt.delete(sessionId);
     this.lastRunnerReminderAt.delete(sessionId);
     this.lastNudgeEntryIndex.delete(sessionId);
-    this.suppressors.delete(sessionId);
+    this.suppressedSessions.delete(sessionId);
   }
 
   public clear(): void {
@@ -124,7 +126,7 @@ export class NudgeCoordinator {
     this.lastLoopReminderAt.clear();
     this.lastRunnerReminderAt.clear();
     this.lastNudgeEntryIndex.clear();
-    this.suppressors.clear();
+    this.suppressedSessions.clear();
   }
 }
 
