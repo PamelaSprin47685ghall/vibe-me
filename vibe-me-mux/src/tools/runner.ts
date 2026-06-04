@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
-import type { SchemaFactory, ToolDefinition, RunnerToolArgs, PluginToolArgs } from "../types/contract";
+import type { SchemaFactory, ToolDefinition, RunnerToolArgs, PluginToolArgs } from "../types/contract.js";
 import {
   isForegroundWaitBackgroundedError,
   requireTaskService,
   requireWorkspaceId,
-} from "../types/contract";
-import type { HostDependencies } from "../types/deps";
+} from "../types/contract.js";
+import type { HostDependencies } from "../types/deps.js";
 import { execute, cleanupJob } from "engine/runner";
-import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
+import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 export function createRunnerTool<S>(
   deps: HostDependencies,

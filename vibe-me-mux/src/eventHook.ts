@@ -1,7 +1,7 @@
 import { createAbortSuppressor, globalIteratorStore } from "engine/util";
 import { deactivateReview } from "engine/review";
 import { cleanupJob } from "engine/runner";
-import type { PluginEventHook } from "./types/tool";
+import type { PluginEventHook } from "./types/tool.js";
 
 export function createEventHook(): PluginEventHook {
   const suppressors = new Map<string, ReturnType<typeof createAbortSuppressor>>();

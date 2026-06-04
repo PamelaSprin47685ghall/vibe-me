@@ -1,12 +1,12 @@
-import type { SchemaFactory, ToolDefinition, PluginToolArgs, SubmitReviewToolArgs } from "../types/contract";
-import type { HostDependencies } from "../types/deps";
+import type { SchemaFactory, ToolDefinition, PluginToolArgs, SubmitReviewToolArgs } from "../types/contract.js";
+import type { HostDependencies } from "../types/deps.js";
 import {
   isReviewActive,
   tryLockReview,
   unlockReview,
   getReviewTask,
 } from "engine/review";
-import { delegateToSubAgent } from "./delegate";
+import { delegateToSubAgent } from "./delegate.js";
 
 const REVIEW_CRITERIA = `## Review Criteria
 

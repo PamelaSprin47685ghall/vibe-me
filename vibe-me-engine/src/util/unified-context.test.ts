@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { resolveUnifiedContext, createUnifiedContext } from './unified-context';
+import { resolveUnifiedContext, createUnifiedContext } from './unified-context.js';
 
 describe('UnifiedContext', () => {
   test('resolves sessionID variants', () => {

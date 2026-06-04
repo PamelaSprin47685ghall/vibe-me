@@ -1,9 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { checkSyntax, extractFilePath, isFileEditTool, appendSyntaxDiagnosticsToOutput } from "engine/tree-sitter";
-import type { PluginToolConfiguration } from "../types/tool";
-import type { LoggerLike } from "../types/deps";
-import type { ToolLike, ToolWrapper, PluginToolArgs } from "../types/contract";
+import type { PluginToolConfiguration } from "../types/tool.js";
+import type { LoggerLike } from "../types/deps.js";
+import type { ToolLike, ToolWrapper, PluginToolArgs } from "../types/contract.js";
 
 function wrapFileEditTool(
   baseTool: ToolLike,

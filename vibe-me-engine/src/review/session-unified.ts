@@ -1,4 +1,4 @@
-import type { AbortSuppressor } from '../util/abort';
+import type { AbortSuppressor } from '../util/abort.js';
 
 export type ReviewState = 'Idle' | 'AwaitingSubmission' | 'UnderReview' | 'Completed';
 export type ReviewEvent = 'ACTIVATE' | 'ACQUIRE_LOCK' | 'UNLOCK' | 'RELEASE_LOCK' | 'COMPLETE';

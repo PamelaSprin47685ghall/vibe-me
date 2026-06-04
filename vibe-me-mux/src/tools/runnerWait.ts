@@ -1,5 +1,5 @@
-import type { SchemaFactory, ToolDefinition, RunnerWaitToolArgs, PluginToolArgs } from "../types/contract";
-import type { HostDependencies } from "../types/deps";
+import type { SchemaFactory, ToolDefinition, RunnerWaitToolArgs, PluginToolArgs } from "../types/contract.js";
+import type { HostDependencies } from "../types/deps.js";
 import { wait } from "engine/runner";
 
 export function createRunnerWaitTool<S>(

@@ -1,5 +1,4 @@
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { dirname } from 'node:path';
 import { createRequire } from 'node:module';
 
 import type { SyntaxDiagnostic, SyntaxCheckResult } from '../util/types.js';
@@ -28,6 +27,7 @@ interface WasmPack {
   getParser(lang: string): WasmParser;
 }
 
+// @ts-ignore TS1343 — CJS compilers reject import.meta.url; ESM consumers see createRequire(import.meta.url)
 const __require = createRequire(import.meta.url);
 
 const ENV_SHIM = `{

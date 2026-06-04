@@ -1,5 +1,5 @@
 import { buildCapitalsContext } from "engine/caps";
-import type { ContextInjectorRegistration } from "../types/tool";
+import type { ContextInjectorRegistration } from "../types/tool.js";
 
 export function createCapsInjector(): ContextInjectorRegistration {
   const cache = new Map<string, Promise<string | null>>();

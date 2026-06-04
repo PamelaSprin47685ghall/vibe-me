@@ -1,5 +1,5 @@
-import type { TaskServiceLike } from "./deps";
-import type { PluginToolConfiguration } from "./tool";
+import type { TaskServiceLike } from "./deps.js";
+import type { PluginToolConfiguration } from "./tool.js";
 
 export type { PluginToolConfiguration };
 

@@ -1,11 +1,11 @@
-import type { PluginToolConfiguration } from "../types/tool";
-import type { HostDependencies } from "../types/deps";
+import type { PluginToolConfiguration } from "../types/tool.js";
+import type { HostDependencies } from "../types/deps.js";
 import {
   requireWorkspaceId,
   requireTaskService,
   isForegroundWaitBackgroundedError,
-} from "../types/contract";
-import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
+} from "../types/contract.js";
+import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 export interface DelegateOptions {
   readonly experiments?: { readonly toolPolicy?: { readonly disabledTools?: readonly string[] } };

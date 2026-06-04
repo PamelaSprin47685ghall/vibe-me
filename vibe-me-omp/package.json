@@ -19,10 +19,9 @@
     "engine": "file:../vibe-me-engine"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.11",
-    "@types/node": "^24.12.4",
-    "bun-types": "1.3.12",
-    "vitest": "^4.1.8",
-    "typescript": "^5.9.3"
+    "@biomejs/biome": "^2.4.16",
+    "@types/node": "^25.9.1",
+    "bun-types": "^1.3.14",
+    "typescript": "^6.0.3"
   }
 }

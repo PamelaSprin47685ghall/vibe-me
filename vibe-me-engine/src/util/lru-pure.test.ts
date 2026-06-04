@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { PureLRUStore, ScopedLRUStore } from './lru-pure';
+import { PureLRUStore, ScopedLRUStore } from './lru-pure.js';
 
 describe('PureLRUStore', () => {
   test('evicts oldest when exceeding max size', () => {

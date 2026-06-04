@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { PluginToolConfiguration } from "../types/tool";
+import type { PluginToolConfiguration } from "../types/tool.js";
 import type {
   HostDependencies,
   AgentDefinitionPackage,
   AgentFrontmatterPackage,
   ConfigFile,
   AgentInheritanceRequest,
-} from "../types/deps";
-import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings";
+} from "../types/deps.js";
+import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 const mockLoadConfigOrDefault = mock<() => ConfigFile>(() => ({
   projects: new Map(),

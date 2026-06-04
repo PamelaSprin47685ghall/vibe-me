@@ -1,5 +1,5 @@
-import type { ConfigFile, HostDependencies } from "../types/deps";
-import type { PluginToolConfiguration } from "../types/tool";
+import type { ConfigFile, HostDependencies } from "../types/deps.js";
+import type { PluginToolConfiguration } from "../types/tool.js";
 
 export interface ResolvedDelegatedAgentAiSettings {
   readonly modelString: string;

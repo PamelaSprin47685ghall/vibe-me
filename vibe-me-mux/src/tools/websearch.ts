@@ -1,5 +1,5 @@
-import type { SchemaFactory, ToolDefinition, WebsearchToolArgs, PluginToolArgs } from "../types/contract";
-import type { HostDependencies } from "../types/deps";
+import type { SchemaFactory, ToolDefinition, WebsearchToolArgs, PluginToolArgs } from "../types/contract.js";
+import type { HostDependencies } from "../types/deps.js";
 import { ollamaPost, formatSearchResults } from "engine/ollama";
 
 interface SearchResultItem {

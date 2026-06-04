@@ -1,5 +1,5 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test";
-import type { PluginEvent } from "./types/tool";
+import type { PluginEvent } from "./types/tool.js";
 
 const mockCleanupJob = mock<(id: string) => void>(() => undefined);
 const mockDeactivateReview = mock<(id: string) => void>(() => undefined);
@@ -21,7 +21,7 @@ void mock.module("engine/util", () => ({
 }));
 
 // mock.module is hoisted by bun — the mock is active before static imports resolve.
-import { createEventHook } from "./eventHook";
+import { createEventHook } from "./eventHook.js";
 
 beforeEach(() => {
   mockCleanupJob.mockReset();

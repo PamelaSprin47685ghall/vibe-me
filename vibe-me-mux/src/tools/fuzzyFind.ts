@@ -1,5 +1,5 @@
-import type { SchemaFactory, ToolDefinition, FuzzyFindToolArgs, PluginToolArgs } from "../types/contract";
-import type { HostDependencies } from "../types/deps";
+import type { SchemaFactory, ToolDefinition, FuzzyFindToolArgs, PluginToolArgs } from "../types/contract.js";
+import type { HostDependencies } from "../types/deps.js";
 import { FuzzySearchCoordinator } from "engine/fuzzy";
 
 export function createFuzzyFindTool<S>(

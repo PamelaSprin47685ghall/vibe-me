@@ -1,6 +1,6 @@
-import type { SchemaFactory, ToolDefinition, StartReviewLoopToolArgs, PluginToolArgs } from "../types/contract";
-import type { HostDependencies } from "../types/deps";
-import { requireWorkspaceId } from "../types/contract";
+import type { SchemaFactory, ToolDefinition, StartReviewLoopToolArgs, PluginToolArgs } from "../types/contract.js";
+import type { HostDependencies } from "../types/deps.js";
+import { requireWorkspaceId } from "../types/contract.js";
 import { activateReview } from "engine/review";
 
 export function createStartReviewLoopTool<S>(

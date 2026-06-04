@@ -1,6 +1,6 @@
-import type { SchemaFactory, ToolDefinition, PluginToolArgs, GreperToolArgs } from "../types/contract";
-import type { HostDependencies } from "../types/deps";
-import { delegateToSubAgent } from "./delegate";
+import type { SchemaFactory, ToolDefinition, PluginToolArgs, GreperToolArgs } from "../types/contract.js";
+import type { HostDependencies } from "../types/deps.js";
+import { delegateToSubAgent } from "./delegate.js";
 
 export function createGreperTool<S>(
   deps: HostDependencies,

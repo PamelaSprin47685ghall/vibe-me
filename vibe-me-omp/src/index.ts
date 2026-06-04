@@ -28,6 +28,8 @@ const CHILD_ONLY_TOOLS: Record<string, true> = {
     'browser': true,
     'search': true,
     'glob': true,
+    'ast_edit': true,
+    'ast_grep': true,
 };
 
 export default async function kunweiExtension(pi) {

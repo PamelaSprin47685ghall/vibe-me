@@ -1,3 +1,3 @@
-export * from "./tool";
-export * from "./deps";
-export * from "./contract";
+export * from "./tool.js";
+export * from "./deps.js";
+export * from "./contract.js";

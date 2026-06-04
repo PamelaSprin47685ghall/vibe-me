@@ -1,17 +1,17 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { PluginToolConfiguration } from "../types/tool";
+import type { PluginToolConfiguration } from "../types/tool.js";
 import {
   FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME,
   type SchemaFactory,
-} from "../types/contract";
+} from "../types/contract.js";
 import type {
   HostDependencies,
   TaskCreateInput,
   TaskCreateResult,
   TaskServiceLike,
   TaskWaitResult,
-} from "../types/deps";
-import { createGreperTool } from "./greper";
+} from "../types/deps.js";
+import { createGreperTool } from "./greper.js";
 
 const mockSchemaFactory: SchemaFactory<never> = {
   string: () => ({ raw: undefined as never, _type: undefined as never }),

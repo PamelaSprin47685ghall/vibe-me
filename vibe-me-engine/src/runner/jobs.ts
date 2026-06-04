@@ -5,7 +5,7 @@ import { killTree } from './process.js';
 import { stripHeadTailPipes } from './no-head-tail.js';
 import { createJavascriptPrelude, rewriteJavascriptModuleSpecifiers } from './javascript.js';
 import { runChildProcess } from './process.js';
-import { ActiveJob, JobRegistry, createTempScript, getTempScriptPath, globalJobRegistry } from './job.js';
+import { ActiveJob, createTempScript, getTempScriptPath, globalJobRegistry } from './job.js';
 import type { ExecuteOptions, ExecuteResult, WaitOptions, WaitResult, RunnerLanguage } from './types.js';
 
 export function getActiveJobs(): Map<string, ActiveJob> {

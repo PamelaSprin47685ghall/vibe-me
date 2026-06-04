@@ -1,31 +1,31 @@
-import { createCapsInjector } from "./context/capsInjector";
-import { createEventHook } from "./eventHook";
-import { createEditorTool } from "./tools/editor";
-import { createGreperTool } from "./tools/greper";
-import { createReverieTool } from "./tools/reverie";
-import { createRunnerTool } from "./tools/runner";
-import { createRunnerWaitTool } from "./tools/runnerWait";
-import { createRunnerAbortTool } from "./tools/runnerAbort";
-import { createBrowserTool } from "./tools/browser";
-import { createSubmitReviewTool } from "./tools/submitReview";
-import { createWebsearchTool } from "./tools/websearch";
-import { createWebfetchTool } from "./tools/webfetch";
-import { createFuzzyGrepTool } from "./tools/fuzzyGrep";
-import { createFuzzyFindTool } from "./tools/fuzzyFind";
-import { createStartReviewLoopTool } from "./tools/startReviewLoop";
-import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck";
+import { createCapsInjector } from "./context/capsInjector.js";
+import { createEventHook } from "./eventHook.js";
+import { createEditorTool } from "./tools/editor.js";
+import { createGreperTool } from "./tools/greper.js";
+import { createReverieTool } from "./tools/reverie.js";
+import { createRunnerTool } from "./tools/runner.js";
+import { createRunnerWaitTool } from "./tools/runnerWait.js";
+import { createRunnerAbortTool } from "./tools/runnerAbort.js";
+import { createBrowserTool } from "./tools/browser.js";
+import { createSubmitReviewTool } from "./tools/submitReview.js";
+import { createWebsearchTool } from "./tools/websearch.js";
+import { createWebfetchTool } from "./tools/webfetch.js";
+import { createFuzzyGrepTool } from "./tools/fuzzyGrep.js";
+import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
+import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
+import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import type {
   SchemaFactory,
   ToolDefinition,
   ToolWrapper,
   ToolLike,
   PluginToolArgs,
-} from "./types/contract";
-import type { HostDependencies } from "./types/deps";
+} from "./types/contract.js";
+import type { HostDependencies } from "./types/deps.js";
 import type {
   ContextInjectorRegistration,
   PluginEventHook,
-} from "./types/tool";
+} from "./types/tool.js";
 
 export interface PluginRegistration<S> {
   readonly toolNames: readonly string[];
@@ -118,12 +118,12 @@ export type {
   WebfetchToolArgs,
   FuzzyGrepToolArgs,
   FuzzyFindToolArgs,
-} from "./types/contract";
+} from "./types/contract.js";
 export type {
   ContextInjectorRegistration,
   PluginEvent,
   PluginEventHelpers,
   PluginEventHook,
   PluginToolConfiguration,
-} from "./types/tool";
-export type { HostDependencies, RuntimeHandle } from "./types/deps";
+} from "./types/tool.js";
+export type { HostDependencies, RuntimeHandle } from "./types/deps.js";
