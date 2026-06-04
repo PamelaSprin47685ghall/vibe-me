@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { PluginToolConfiguration } from "../types/tool.js";
-import {
-  FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME,
-  type SchemaFactory,
-} from "../types/contract.js";
+import { FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME } from "../types/contract.js";
 import type {
   HostDependencies,
   TaskCreateInput,
@@ -12,15 +9,6 @@ import type {
   TaskWaitResult,
 } from "../types/deps.js";
 import { createGreperTool } from "./greper.js";
-
-const mockSchemaFactory: SchemaFactory<never> = {
-  string: () => ({ raw: undefined as never, _type: undefined as never }),
-  number: () => ({ raw: undefined as never, _type: undefined as never }),
-  boolean: () => ({ raw: undefined as never, _type: undefined as never }),
-  enum: () => ({ raw: undefined as never, _type: undefined as never }),
-  array: () => ({ raw: undefined as never, _type: undefined as never }),
-  object: () => ({ raw: undefined as never, _type: undefined as never }),
-};
 
 class ForegroundWaitBackgroundedError extends Error {
   constructor() {
@@ -87,7 +75,7 @@ function createToolConfig(): PluginToolConfiguration {
   };
 }
 
-const greperDef = createGreperTool(mockDeps, mockSchemaFactory);
+const greperDef = createGreperTool(mockDeps);
 
 beforeEach(() => {
   mockTaskService.create.mockReset();

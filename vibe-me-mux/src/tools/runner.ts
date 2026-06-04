@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { SchemaFactory, ToolDefinition, RunnerToolArgs, PluginToolArgs } from "../types/contract.js";
+import type { JsonSchema, PluginToolArgs, RunnerToolArgs, ToolDefinition } from "../types/contract.js";
 import {
   isForegroundWaitBackgroundedError,
   requireTaskService,
@@ -9,28 +9,39 @@ import type { HostDependencies } from "../types/deps.js";
 import { execute, cleanupJob } from "engine/runner";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
-export function createRunnerTool<S>(
-  deps: HostDependencies,
-  f: SchemaFactory<S>,
-): ToolDefinition<S> {
+const parameters: JsonSchema = {
+  type: "object",
+  properties: {
+    language: {
+      type: "string",
+      enum: ["shell", "python"],
+      description: "Execution language",
+    },
+    program: {
+      type: "string",
+      description:
+        "The program to execute. Can be a shell command or Python code depending on language. Supports both quick synchronous execution and long-running background tasks.",
+    },
+    dependencies: {
+      type: "array",
+      items: {
+        type: "string",
+        description: "Python dependency package name",
+      },
+      description: "Python dependencies to install (only for python language).",
+    },
+    what_to_summarize: {
+      type: "string",
+      description: "What to look for in the output. Be specific.",
+    },
+  },
+  required: ["language", "program", "what_to_summarize"],
+  additionalProperties: false,
+};
+
+export function createRunnerTool(deps: HostDependencies): ToolDefinition {
   const resolveDelegatedAgentAiSettings =
     createResolveDelegatedAgentAiSettings(deps);
-  const schema = f.object({
-    language: f.enum(
-      ["shell", "python"] as const,
-      "Execution language",
-    ),
-    program: f.string(
-      "The program to execute. Can be a shell command or Python code depending on language. Supports both quick synchronous execution and long-running background tasks.",
-    ),
-    dependencies: f.array(
-      f.string("Python dependency package name"),
-      "Python dependencies to install (only for python language).",
-    ),
-    what_to_summarize: f.string(
-      "What to look for in the output. Be specific.",
-    ),
-  });
 
   return {
     name: "runner",
@@ -38,7 +49,7 @@ export function createRunnerTool<S>(
       "Execute a shell command or Python program and delegate output summarization to a sub-agent. " +
       "Supports quick synchronous execution and long-running background tasks. " +
       "Automatically handles timeout management and provides incremental output monitoring.",
-    schema,
+    parameters,
     execute: async (config, args: PluginToolArgs) => {
       const a = args as RunnerToolArgs;
       const workspaceId = requireWorkspaceId(config, "runner");

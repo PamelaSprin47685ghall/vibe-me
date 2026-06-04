@@ -3,6 +3,13 @@ import type { PluginToolConfiguration } from "./tool.js";
 
 export type { PluginToolConfiguration };
 
+export type JsonSchema = {
+  readonly type: "object";
+  readonly properties: Readonly<Record<string, unknown>>;
+  readonly required?: readonly string[];
+  readonly additionalProperties?: boolean;
+};
+
 // ── Tool argument types ──
 
 export interface BrowserToolArgs {
@@ -92,40 +99,12 @@ export type PluginToolArgs =
   | FuzzyGrepToolArgs
   | FuzzyFindToolArgs;
 
-// ── Schema wrapper & factory ──
-
-export interface SchemaWrapper<S, T> {
-  readonly raw: S;
-  readonly _type: T;
-}
-
-export type Infer<W extends SchemaWrapper<unknown, unknown>> =
-  W extends SchemaWrapper<unknown, infer T> ? T : never;
-
-export interface SchemaFactory<S> {
-  string(description: string): SchemaWrapper<S, string>;
-  number(description: string): SchemaWrapper<S, number>;
-  boolean(description: string): SchemaWrapper<S, boolean>;
-  enum<const V extends readonly string[]>(
-    values: V,
-    description: string,
-  ): SchemaWrapper<S, V[number]>;
-  array<T>(
-    items: SchemaWrapper<S, T>,
-    description: string,
-  ): SchemaWrapper<S, T[]>;
-  object<const P extends Record<string, SchemaWrapper<S, unknown>>>(
-    properties: P,
-    description?: string,
-  ): SchemaWrapper<S, { [K in keyof P]: Infer<P[K]> }>;
-}
-
 // ── Tool definition ──
 
-export interface ToolDefinition<S> {
+export interface ToolDefinition {
   readonly name: string;
   readonly description: string;
-  readonly schema: SchemaWrapper<S, unknown>;
+  readonly parameters: JsonSchema;
   readonly execute: (
     config: PluginToolConfiguration,
     args: PluginToolArgs,
@@ -138,7 +117,7 @@ export interface ToolDefinition<S> {
 export interface ToolLike {
   name?: string;
   description?: string;
-  parameters?: object;
+  parameters?: JsonSchema;
   execute?: (...args: readonly unknown[]) => unknown;
   [key: string]: unknown;
 }

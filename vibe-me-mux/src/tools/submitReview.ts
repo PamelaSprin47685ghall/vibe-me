@@ -1,4 +1,4 @@
-import type { SchemaFactory, ToolDefinition, PluginToolArgs, SubmitReviewToolArgs } from "../types/contract.js";
+import type { JsonSchema, PluginToolArgs, SubmitReviewToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
 import {
   isReviewActive,
@@ -51,23 +51,33 @@ Review the above changes against the criteria. Examine the affected files and ev
 Call agent_report with your structured verdict when done.`;
 }
 
-export function createSubmitReviewTool<S>(
-  deps: HostDependencies,
-  f: SchemaFactory<S>,
-): ToolDefinition<S> {
-  const schema = f.object({
-    report: f.string("Detailed report of what was done"),
-    affectedFiles: f.array(
-      f.string("File path that was modified or created"),
-      "List of file paths that were modified or created",
-    ),
-  });
+const parameters: JsonSchema = {
+  type: "object",
+  properties: {
+    report: {
+      type: "string",
+      description: "Detailed report of what was done",
+    },
+    affectedFiles: {
+      type: "array",
+      items: {
+        type: "string",
+        description: "File path that was modified or created",
+      },
+      description: "List of file paths that were modified or created",
+    },
+  },
+  required: ["report", "affectedFiles"],
+  additionalProperties: false,
+};
+
+export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
 
   return {
     name: "submit_review",
     description:
       "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and provides structured feedback. Only works when session is in active loop mode.",
-    schema,
+    parameters,
     execute: async (config, args: PluginToolArgs) => {
       const a = args as SubmitReviewToolArgs;
       const workspaceId = config.workspaceId;

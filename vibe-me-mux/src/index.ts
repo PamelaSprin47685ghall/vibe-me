@@ -15,7 +15,6 @@ import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
 import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import type {
-  SchemaFactory,
   ToolDefinition,
   ToolWrapper,
   ToolLike,
@@ -27,23 +26,23 @@ import type {
   PluginEventHook,
 } from "./types/tool.js";
 
-export interface PluginRegistration<S> {
+export interface PluginRegistration {
   readonly toolNames: readonly string[];
-  readonly tools: readonly ToolDefinition<S>[];
+  readonly tools: readonly ToolDefinition[];
   readonly wrappers: readonly ToolWrapper[];
   readonly contextInjector: ContextInjectorRegistration;
   readonly eventHook: PluginEventHook;
 }
 
-function createWebOverrideWrapper<S>(
-  def: ToolDefinition<S>,
+function createWebOverrideWrapper(
+  def: ToolDefinition,
   targetTool: string,
 ): ToolWrapper {
   return {
     targetTool,
     wrapper: (_tool, config) => ({
       description: def.description,
-      parameters: def.schema.raw as object,
+      parameters: def.parameters,
       execute: (args: PluginToolArgs, options?: { readonly abortSignal?: AbortSignal }) =>
         def.execute(
           { ...config, abortSignal: options?.abortSignal },
@@ -53,36 +52,27 @@ function createWebOverrideWrapper<S>(
   };
 }
 
-function createToolDef<S>(
-  factory: (deps: HostDependencies, f: SchemaFactory<S>) => ToolDefinition<S>,
+export function createRegistration(
   deps: HostDependencies,
-  f: SchemaFactory<S>,
-): ToolDefinition<S> {
-  return factory(deps, f);
-}
-
-export function createRegistration<S>(
-  deps: HostDependencies,
-  f: SchemaFactory<S>,
-): PluginRegistration<S> {
-  const tools: ToolDefinition<S>[] = [
-    createToolDef(createEditorTool, deps, f),
-    createToolDef(createGreperTool, deps, f),
-    createToolDef(createReverieTool, deps, f),
-    createToolDef(createRunnerTool, deps, f),
-    createToolDef(createRunnerWaitTool, deps, f),
-    createToolDef(createRunnerAbortTool, deps, f),
-    createToolDef(createBrowserTool, deps, f),
-    createToolDef(createSubmitReviewTool, deps, f),
-    createToolDef(createWebsearchTool, deps, f),
-    createToolDef(createWebfetchTool, deps, f),
-    createToolDef(createFuzzyGrepTool, deps, f),
-    createToolDef(createFuzzyFindTool, deps, f),
-    createToolDef(createStartReviewLoopTool, deps, f),
+): PluginRegistration {
+  const tools: ToolDefinition[] = [
+    createEditorTool(deps),
+    createGreperTool(deps),
+    createReverieTool(deps),
+    createRunnerTool(deps),
+    createRunnerWaitTool(deps),
+    createRunnerAbortTool(deps),
+    createBrowserTool(deps),
+    createSubmitReviewTool(deps),
+    createWebsearchTool(deps),
+    createWebfetchTool(deps),
+    createFuzzyGrepTool(deps),
+    createFuzzyFindTool(deps),
+    createStartReviewLoopTool(deps),
   ];
 
-  const websearchDef = createWebsearchTool(deps, f);
-  const webfetchDef = createWebfetchTool(deps, f);
+  const websearchDef = createWebsearchTool(deps);
+  const webfetchDef = createWebfetchTool(deps);
 
   return {
     toolNames: tools.map((t) => t.name),
@@ -98,13 +88,9 @@ export function createRegistration<S>(
 }
 
 export type {
-  SchemaFactory,
-  SchemaWrapper,
-  Infer,
   ToolDefinition,
   ToolLike,
   ToolWrapper,
-  PluginToolArgs,
   BrowserToolArgs,
   EditorToolArgs,
   GreperToolArgs,

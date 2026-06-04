@@ -1,4 +1,4 @@
-import type { RuntimeHandle, TaskServiceLike } from "./deps";
+import type { RuntimeHandle, TaskServiceLike } from "./deps.js";
 
 export interface PluginToolConfiguration {
   readonly cwd: string;

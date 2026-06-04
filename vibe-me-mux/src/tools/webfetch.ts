@@ -1,31 +1,45 @@
-import type { SchemaFactory, ToolDefinition, WebfetchToolArgs, PluginToolArgs } from "../types/contract.js";
+import type { JsonSchema, PluginToolArgs, ToolDefinition, WebfetchToolArgs } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
 import { ollamaPost } from "engine/ollama";
 
-export function createWebfetchTool<S>(
-  _deps: HostDependencies,
-  f: SchemaFactory<S>,
-): ToolDefinition<S> {
-  const schema = f.object({
-    url: f.string("The URL to fetch"),
-    extract_main: f.boolean(
-      "Extract main content from the page, removing navigation, ads, etc. (default: true)",
-    ),
-    prefer_llms_txt: f.enum(
-      ["auto", "always", "never"] as const,
-      "Probe for llms.txt files before fetching full page (default: auto)",
-    ),
-    prompt: f.string(
-      "Optional extraction task to run on the fetched content using a cheap secondary model",
-    ),
-    timeout: f.number("Timeout in seconds (max: 120)"),
-  });
+const parameters: JsonSchema = {
+  type: "object",
+  properties: {
+    url: {
+      type: "string",
+      description: "The URL to fetch",
+    },
+    extract_main: {
+      type: "boolean",
+      description:
+        "Extract main content from the page, removing navigation, ads, etc. (default: true)",
+    },
+    prefer_llms_txt: {
+      type: "string",
+      enum: ["auto", "always", "never"],
+      description: "Probe for llms.txt files before fetching full page (default: auto)",
+    },
+    prompt: {
+      type: "string",
+      description:
+        "Optional extraction task to run on the fetched content using a cheap secondary model",
+    },
+    timeout: {
+      type: "number",
+      description: "Timeout in seconds (max: 120)",
+    },
+  },
+  required: ["url"],
+  additionalProperties: false,
+};
+
+export function createWebfetchTool(_deps: HostDependencies): ToolDefinition {
 
   return {
     name: "webfetch",
     description:
       "Fetch a URL with better extraction for static/docs pages. Supports llms.txt probing, content-focused HTML extraction, metadata, redirects, and an optional prompt processed by a cheap secondary model.",
-    schema,
+    parameters,
     execute: async (_config, args: PluginToolArgs) => {
       const a = args as WebfetchToolArgs;
       const fetchBody: Record<string, unknown> = { url: a.url };

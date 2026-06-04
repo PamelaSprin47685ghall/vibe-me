@@ -1,4 +1,4 @@
-import type { SchemaFactory, ToolDefinition, WebsearchToolArgs, PluginToolArgs } from "../types/contract.js";
+import type { JsonSchema, PluginToolArgs, ToolDefinition, WebsearchToolArgs } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
 import { ollamaPost, formatSearchResults } from "engine/ollama";
 
@@ -8,22 +8,29 @@ interface SearchResultItem {
   content?: string;
 }
 
-export function createWebsearchTool<S>(
-  _deps: HostDependencies,
-  f: SchemaFactory<S>,
-): ToolDefinition<S> {
-  const schema = f.object({
-    query: f.string("Natural language search query..."),
-    numResults: f.number(
-      "Number of search results to return (default: 10)",
-    ),
-  });
+const parameters: JsonSchema = {
+  type: "object",
+  properties: {
+    query: {
+      type: "string",
+      description: "Natural language search query...",
+    },
+    numResults: {
+      type: "number",
+      description: "Number of search results to return (default: 10)",
+    },
+  },
+  required: ["query"],
+  additionalProperties: false,
+};
+
+export function createWebsearchTool(_deps: HostDependencies): ToolDefinition {
 
   return {
     name: "websearch",
     description:
       "Search the web for any topic and get clean, ready-to-use content.\n\nBest for: Finding current information, news, facts, people, companies, or answering questions about any topic.\nReturns: Clean text content from top search results.\n\nQuery tips:\ndescribe the ideal page, not keywords. \"blog post comparing React and Vue performance\" not \"React vs Vue\".\nUse category:people / category:company to search through Linkedin profiles / companies respectively.",
-    schema,
+    parameters,
     execute: async (_config, args: PluginToolArgs) => {
       const { query, numResults } = args as WebsearchToolArgs;
       try {
