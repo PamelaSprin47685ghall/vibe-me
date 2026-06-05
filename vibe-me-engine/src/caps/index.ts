@@ -7,7 +7,7 @@ const EXCLUDED_FILE_NAMES = new Set(['AGENTS.md', 'CLAUDE.md', 'README.md']);
 const EXCLUDED_DIR_NAMES = new Set(['AGENTS', 'CLAUDE', 'NODE_MODULES', '.GIT', 'TARGET', 'DIST', 'OUT', '.VENV', 'VENV', '__PYCACHE__', '.CACHE', '.NEXT', '.TURBO', '.PARCEL-CACHE']);
 const MAX_FILE_SIZE = 1_048_576;
 const MAX_TOTAL_CONTEXT_BYTES = 8 * 1_048_576;
-const MAX_CAPS_FILES = 200;
+const MAX_CAPS_FILES = 2000;
 const MAX_DIR_DEPTH = 5;
 
 export interface CapsFileInfo {
