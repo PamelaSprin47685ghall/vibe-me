@@ -1,5 +1,10 @@
 import type { RuntimeHandle, TaskServiceLike } from "./deps.js";
 
+export interface AgentToolPolicy {
+  readonly add?: string[];
+  readonly remove?: string[];
+}
+
 export interface PluginToolConfiguration {
   readonly cwd: string;
   readonly workspaceId?: string;

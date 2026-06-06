@@ -16,6 +16,7 @@ import { createWriteTool } from "./tools/write.js";
 import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import { createLoopCommand } from "./commands/loop.js";
+import { buildAgentToolPolicies } from "./agentToolPolicies.js";
 import type {
   ToolDefinition,
   ToolWrapper,
@@ -27,6 +28,7 @@ import type {
   ContextInjectorRegistration,
   PluginEventHook,
   PluginSlashCommandDefinition,
+  AgentToolPolicy,
 } from "./types/tool.js";
 
 export interface PluginRegistration {
@@ -37,6 +39,7 @@ export interface PluginRegistration {
   readonly contextInjector: ContextInjectorRegistration;
   readonly eventHook: PluginEventHook;
   readonly slashCommands: readonly PluginSlashCommandDefinition[];
+  readonly agentToolPolicies: Readonly<Record<string, AgentToolPolicy>>;
 }
 
 const STEALTH_BROWSER_MCP_REPO = "https://github.com/vibheksoni/stealth-browser-mcp.git";
@@ -112,6 +115,7 @@ export function createRegistration(
     contextInjector: createCapsInjector(),
     eventHook: createEventHook(),
     slashCommands: [createLoopCommand()],
+    agentToolPolicies: buildAgentToolPolicies(),
   };
 }
 
@@ -143,3 +147,5 @@ export type {
   PluginToolConfiguration,
 } from "./types/tool.js";
 export type { HostDependencies, RuntimeHandle } from "./types/deps.js";
+export type { AgentToolPolicy } from "./types/tool.js";
+export type { MuxAgentName } from "./agentToolPolicies.js";

@@ -1,6 +1,8 @@
 import type { JsonSchema, PluginToolArgs, SubmitReviewToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
 import {
+  deactivateReview,
+  REVIEW_INSTRUCTIONS,
   isReviewActive,
   tryLockReview,
   unlockReview,
@@ -8,47 +10,41 @@ import {
 } from "engine/review";
 import { delegateToSubAgent } from "./delegate.js";
 
-const REVIEW_CRITERIA = `## Review Criteria
+const AGENT_REPORT_REVIEW_INSTRUCTIONS = REVIEW_INSTRUCTIONS
+  .replace(
+    /submit_review_result\(\s*\{\s*"feedback"\s*:\s*null\s*\}\s*\)/g,
+    'agent_report({ "reportMarkdown": "PASS" })',
+  )
+  .replace(
+    /submit_review_result\(\s*\{\s*"feedback"\s*:\s*"specific\.\.\."\s*\}\s*\)/g,
+    'agent_report({ "reportMarkdown": "specific..." })',
+  )
+  .replace(
+    /IMPORTANT:\s*If you accept,\s*feedback MUST be null\.[^.]*\./g,
+    'IMPORTANT: If you accept, reportMarkdown MUST be exactly "PASS". Do not write ACCEPT, praise, JSON, or any other text — it will be misinterpreted as rejection feedback.',
+  )
+  .replace(
+    /You MUST call submit_review_result before finishing\./g,
+    'You MUST call agent_report before finishing.',
+  );
 
-1. **Correctness** - Does the code correctly implement the requirements? No logical errors, off-by-one, or race conditions?
-2. **Completeness** - Does it fully address the original task scope? No missing files or omitted edge cases?
-3. **Code Quality** - Is the code clean, well-structured, and maintainable? Appropriate abstractions, no dead code, minimal complexity?
-4. **Error Handling** - Are error states, edge cases, and unexpected inputs properly handled? Graceful degradation?
-5. **Security** - Any injection risks, credential leaks, traversal vulnerabilities, or unsafe data flows?
-6. **Performance** - Any obvious performance issues (N+1 queries, unnecessary allocations, redundant I/O)?
-7. **Testing** - Are the changes testable? Do existing tests still pass? Are new tests added where warranted?
-8. **Documentation** - Is the rationale documented? Are public APIs, config keys, or behavioral changes explained?`;
-
-const REVIEW_INSTRUCTIONS = `You are an expert code reviewer. Evaluate the submitted changes against the criteria below.
-
-Your job is to:
-1. Read the original task and change report
-2. Examine the affected files for each criterion
-3. Submit a structured verdict using the agent_report tool
-
-Be thorough and fair. Approved work must meet all relevant criteria. If you find issues, clearly describe what needs to change and why.`;
+function isPassingReviewReport(report: string): boolean {
+  return /^["'*\s]*PASS["'*\s.]*$/i.test(report.trim());
+}
 
 function buildReviewPrompt(
   report: string,
   affectedFiles: readonly string[],
-  originalTask: string,
+  originalTask: string | undefined,
 ): string {
-  return `${REVIEW_INSTRUCTIONS}
-
-${REVIEW_CRITERIA}
-
-## Original Task
-${originalTask}
-
-## Change Report
-${report}
-
-## Affected Files
-${affectedFiles.map((f) => `- ${f}`).join("\n")}
-
-## Instructions
-Review the above changes against the criteria. Examine the affected files and evaluate each criterion.
-Call agent_report with your structured verdict when done.`;
+  return [
+    AGENT_REPORT_REVIEW_INSTRUCTIONS,
+    "",
+    `=== Change Report ===\n\n${report}`,
+    "",
+    `=== Affected Files ===\n\n${affectedFiles.join("\n")}`,
+    originalTask ? `\n=== Original Task ===\n\n${originalTask}` : "",
+  ].join("\n");
 }
 
 const parameters: JsonSchema = {
@@ -76,36 +72,40 @@ export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
   return {
     name: "submit_review",
     description:
-      "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and provides structured feedback. Only works when session is in active loop mode.",
+      "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and returns PASS or actionable feedback. Only works when session is in active loop mode.",
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const a = args as SubmitReviewToolArgs;
       const workspaceId = config.workspaceId;
       if (!workspaceId) throw new Error("submitReview requires workspaceId");
 
-      if (!isReviewActive(workspaceId)) {
-        return "You do not need review. Just continue with your work.";
-      }
-
       if (!tryLockReview(workspaceId)) {
-        return "A review is already in progress for this session.";
+        return isReviewActive(workspaceId)
+          ? "A review is already in progress for this session."
+          : "You do not need review. Just continue with your work.";
       }
 
       try {
-        const originalTask =
-          getReviewTask(workspaceId) ?? "No original task recorded.";
+        const originalTask = getReviewTask(workspaceId);
         const reviewPrompt = buildReviewPrompt(
           a.report,
           a.affectedFiles,
           originalTask,
         );
-        return await delegateToSubAgent(
+        const reviewReport = await delegateToSubAgent(
           config,
           deps,
           "explore",
           reviewPrompt,
           "Review",
         );
+
+        if (isPassingReviewReport(reviewReport)) {
+          deactivateReview(workspaceId);
+          return "Review passed. Loop mode ended.";
+        }
+
+        return `Review feedback:\n\n${reviewReport}\n\nAddress the feedback above. loop mode is still active; fix the issues and call submit_review again.`;
       } finally {
         unlockReview(workspaceId);
       }
