@@ -27,3 +27,10 @@ export type PluginEventHook = (
   event: PluginEvent,
   helpers?: PluginEventHelpers,
 ) => void | Promise<void>;
+
+export interface PluginSlashCommandDefinition {
+  readonly key: string;
+  readonly description: string;
+  readonly inputHint?: string;
+  readonly execute: (workspaceId: string, args: string) => string | Promise<string>;
+}

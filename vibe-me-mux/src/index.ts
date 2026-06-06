@@ -15,6 +15,7 @@ import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
 import { createWriteTool } from "./tools/write.js";
 import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
+import { createLoopCommand } from "./commands/loop.js";
 import type {
   ToolDefinition,
   ToolWrapper,
@@ -25,6 +26,7 @@ import type { HostDependencies } from "./types/deps.js";
 import type {
   ContextInjectorRegistration,
   PluginEventHook,
+  PluginSlashCommandDefinition,
 } from "./types/tool.js";
 
 export interface PluginRegistration {
@@ -34,6 +36,7 @@ export interface PluginRegistration {
   readonly mcpServers: Readonly<Record<string, string>>;
   readonly contextInjector: ContextInjectorRegistration;
   readonly eventHook: PluginEventHook;
+  readonly slashCommands: readonly PluginSlashCommandDefinition[];
 }
 
 const STEALTH_BROWSER_MCP_REPO = "https://github.com/vibheksoni/stealth-browser-mcp.git";
@@ -108,6 +111,7 @@ export function createRegistration(
     ],
     contextInjector: createCapsInjector(),
     eventHook: createEventHook(),
+    slashCommands: [createLoopCommand()],
   };
 }
 
@@ -135,6 +139,7 @@ export type {
   PluginEvent,
   PluginEventHelpers,
   PluginEventHook,
+  PluginSlashCommandDefinition,
   PluginToolConfiguration,
 } from "./types/tool.js";
 export type { HostDependencies, RuntimeHandle } from "./types/deps.js";

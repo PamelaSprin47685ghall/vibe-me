@@ -43,11 +43,13 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
   const retryPendingSessions = new Set<string>();
   const stoppedSessions = new Set<string>();
   const sessionAgents = new Map<string, string>();
+  const deliveredNudgeMessageCounts = new Map<string, number>();
 
   function resumeSession(sessionID: string): void {
     nudgedSessions.delete(sessionID);
     retryPendingSessions.delete(sessionID);
     stoppedSessions.delete(sessionID);
+    deliveredNudgeMessageCounts.delete(sessionID);
     if (lastNudgedSession === sessionID) lastNudgedSession = null;
   }
 
@@ -93,6 +95,14 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
 
     const message = (error as { message?: unknown }).message;
     return typeof message === 'string' && /\babort(?:ed)?\b/i.test(message);
+  }
+
+  function isSessionBusyError(error: unknown): boolean {
+    return (
+      !!error &&
+      typeof error === 'object' &&
+      (error as { _tag?: unknown })._tag === 'SessionBusyError'
+    );
   }
 
   function isNudgePrompt(text: unknown): boolean {
@@ -141,6 +151,123 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
 
   function isRetryProgressPart(type: unknown): boolean {
     return RETRY_PROGRESS_PARTS.has(String(type));
+  }
+
+  function isTerminalAssistantFinish(finish: unknown): boolean {
+    if (typeof finish !== 'string') return false;
+    const normalized = finish.toLowerCase().replace(/[-_\s]/g, '');
+    return !normalized.includes('tool') && !normalized.includes('abort');
+  }
+
+  function isCompletedAssistantMessage(info: unknown): boolean {
+    if (!info || typeof info !== 'object') return false;
+    const message = info as {
+      type?: unknown;
+      role?: unknown;
+      time?: { completed?: unknown };
+      finish?: unknown;
+      error?: unknown;
+    };
+    if (message.type !== 'assistant' && message.role !== 'assistant') return false;
+    if (message.error) return false;
+    if (typeof message.finish === 'string') return isTerminalAssistantFinish(message.finish);
+    return typeof message.time?.completed === 'number';
+  }
+
+  async function nudgeIfNeeded(sessionID: string): Promise<void> {
+    if (stoppedSessions.has(sessionID)) return;
+    if (retryPendingSessions.has(sessionID)) return;
+    if (nudgedSessions.has(sessionID)) return;
+
+    const suppressor = defaultCoordinator.getOrCreateSuppressor(sessionID);
+    if (suppressor.isSuppressed()) return;
+    nudgedSessions.add(sessionID);
+
+    let todos: TodoItem[];
+    try {
+      const result = await ctx.client.session.todo({ path: { id: sessionID } });
+      todos = (result.data ?? []) as TodoItem[];
+    } catch {
+      nudgedSessions.delete(sessionID);
+      return;
+    }
+
+    let lastAssistantMessage: string | undefined;
+    let messageCount: number | undefined;
+    try {
+      const msgResult = await ctx.client.session.messages({ path: { id: sessionID } });
+      const messages = asMessageArray(msgResult.data);
+      messageCount = messages.length;
+      const lastAssistant = [...messages].reverse().find((m) => m.info?.role === 'assistant');
+      if (lastAssistant) {
+        rememberAgent(sessionID, (lastAssistant.info as { agent?: unknown }).agent);
+        lastAssistantMessage = (lastAssistant.parts ?? [])
+          .filter((p) => p.type === 'text' && p.text)
+          .map((p) => p.text ?? '')
+          .join('\n');
+      }
+    } catch { /* best-effort */ }
+
+    if (
+      messageCount !== undefined &&
+      deliveredNudgeMessageCounts.get(sessionID) === messageCount
+    ) {
+      nudgedSessions.delete(sessionID);
+      return;
+    }
+
+    const context: NudgeInputContext = {
+      todos,
+      lastAssistantMessage,
+      hasActiveRunner: hasActiveJob(getActiveJobs, sessionID),
+      isLoopActive: isReviewActive(sessionID),
+    };
+
+    const action = defaultCoordinator.shouldNudge(sessionID, context);
+    if (action === 'none') {
+      nudgedSessions.delete(sessionID);
+      return;
+    }
+
+    let promptText: string;
+    if (action === 'nudge-todo') {
+      promptText = TODO_NUDGE_PROMPT;
+    } else if (action === 'nudge-loop') {
+      promptText = LOOP_NUDGE_PROMPT;
+    } else if (action === 'nudge-runner') {
+      const jobs = getActiveJobs();
+      const isSelfJob = jobs.get(sessionID)?.status === 'running';
+      if (!isSelfJob) {
+        nudgedSessions.delete(sessionID);
+        return;
+      }
+      if (managedRunnerSessions.has(sessionID)) {
+        nudgedSessions.delete(sessionID);
+        return;
+      }
+      promptText = buildRunnerNudgePrompt();
+    } else { return; }
+
+    try {
+      lastNudgedSession = sessionID;
+      await ctx.client.session.prompt({
+        path: { id: sessionID },
+        body: createPromptBody(sessionID, promptText),
+      });
+      if (messageCount !== undefined) {
+        deliveredNudgeMessageCounts.set(sessionID, messageCount);
+      }
+      nudgedSessions.delete(sessionID);
+    } catch (error) {
+      if (isAbortEventError(error)) {
+        stopSession(sessionID);
+      } else if (isSessionBusyError(error)) {
+        nudgedSessions.delete(sessionID);
+      } else {
+        retryPendingSessions.add(sessionID);
+        nudgedSessions.delete(sessionID);
+      }
+    }
   }
 
   return {
@@ -193,6 +320,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         defaultCoordinator.clearSession(sessionID);
         resumeSession(sessionID);
         sessionAgents.delete(sessionID);
+        deliveredNudgeMessageCounts.delete(sessionID);
         return;
       }
 
@@ -212,7 +340,11 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
 
       if (event.type === 'message.updated') {
         const info = props.info as { error?: unknown } | undefined;
-        if (isAbortEventError(info?.error)) stopSession(sessionID);
+        if (isAbortEventError(info?.error)) {
+          stopSession(sessionID);
+        } else if (isCompletedAssistantMessage(info)) {
+          await nudgeIfNeeded(sessionID);
+        }
         return;
       }
 
@@ -246,6 +378,12 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         return;
       }
 
+      if (event.type === 'session.next.step.ended') {
+        retryPendingSessions.delete(sessionID);
+        if (isTerminalAssistantFinish(props.finish)) await nudgeIfNeeded(sessionID);
+        return;
+      }
+
       if (isRetryProgressEvent(event.type)) {
         retryPendingSessions.delete(sessionID);
         return;
@@ -255,86 +393,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         event.type === 'session.idle' ||
         (event.type === 'session.status' && statusType === 'idle')
       ) {
-        if (stoppedSessions.has(sessionID)) return;
-        if (retryPendingSessions.has(sessionID)) return;
-        if (nudgedSessions.has(sessionID)) return;
-
-        const suppressor = defaultCoordinator.getOrCreateSuppressor(sessionID);
-        if (suppressor.isSuppressed()) return;
-        nudgedSessions.add(sessionID);
-
-        let todos: TodoItem[];
-        try {
-          const result = await ctx.client.session.todo({ path: { id: sessionID } });
-          todos = (result.data ?? []) as TodoItem[];
-        } catch {
-          nudgedSessions.delete(sessionID);
-          return;
-        }
-
-        let lastAssistantMessage: string | undefined;
-        try {
-          const msgResult = await ctx.client.session.messages({ path: { id: sessionID } });
-          const messages = asMessageArray(msgResult.data);
-          const lastAssistant = [...messages].reverse().find((m) => m.info?.role === 'assistant');
-          if (lastAssistant) {
-            rememberAgent(sessionID, (lastAssistant.info as { agent?: unknown }).agent);
-            lastAssistantMessage = (lastAssistant.parts ?? [])
-              .filter((p) => p.type === 'text' && p.text)
-              .map((p) => p.text ?? '')
-              .join('\n');
-          }
-        } catch { /* best-effort */ }
-
-        const context: NudgeInputContext = {
-          todos,
-          lastAssistantMessage,
-          hasActiveRunner: hasActiveJob(getActiveJobs, sessionID),
-          isLoopActive: isReviewActive(sessionID),
-        };
-
-        const action = defaultCoordinator.shouldNudge(sessionID, context);
-        if (action === 'none') {
-          nudgedSessions.delete(sessionID);
-          return;
-        }
-
-        let promptText: string;
-        if (action === 'nudge-todo') {
-          promptText = TODO_NUDGE_PROMPT;
-        } else if (action === 'nudge-loop') {
-          promptText = LOOP_NUDGE_PROMPT;
-        } else if (action === 'nudge-runner') {
-          // Only nudge the runner itself, not the orchestrator
-          const jobs = getActiveJobs();
-          const isSelfJob = jobs.get(sessionID)?.status === 'running';
-          if (!isSelfJob) {
-            nudgedSessions.delete(sessionID);
-            return;
-          }
-          // Tool's internal loop already manages this session — skip
-          if (managedRunnerSessions.has(sessionID)) {
-            nudgedSessions.delete(sessionID);
-            return;
-          }
-          promptText = buildRunnerNudgePrompt();
-        } else { return; }
-
-        try {
-          lastNudgedSession = sessionID;
-          await ctx.client.session.prompt({
-            path: { id: sessionID },
-            body: createPromptBody(sessionID, promptText),
-          });
-          nudgedSessions.delete(sessionID);
-        } catch (error) {
-          if (isAbortEventError(error)) {
-            stopSession(sessionID);
-          } else {
-            retryPendingSessions.add(sessionID);
-            nudgedSessions.delete(sessionID);
-          }
-        }
+        await nudgeIfNeeded(sessionID);
         return;
       }
 

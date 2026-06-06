@@ -50,6 +50,13 @@ describe("createRegistration", () => {
     });
   });
 
+  test("registers /loop slash command descriptor", () => {
+    const registration = createRegistration(mockDependencies as never);
+    const loop = registration.slashCommands.find((c) => c.key === "loop");
+    expect(loop).toBeDefined();
+    expect(loop?.description).toBeTruthy();
+  });
+
   test("web overrides keep explicit object parameters", () => {
     const registration = createRegistration(mockDependencies as never);
     const webFetchWrapper = registration.wrappers.find(
