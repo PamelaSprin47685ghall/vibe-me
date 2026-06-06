@@ -45,7 +45,23 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
         }),
       );
       const prompt = `${fileSections.join("\n")}\nQuestion:\n${intent}`;
-      return delegateToSubAgent(config, deps, "explore", prompt, "Reverie");
+      return delegateToSubAgent(config, deps, "explore", prompt, "Reverie", {
+        experiments: {
+          toolPolicy: {
+            disabledTools: [
+              "reverie",
+              "greper",
+              "editor",
+              "browser",
+              "submit_review",
+              "start_review_loop",
+              "runner",
+              "runner_wait",
+              "runner_abort",
+            ],
+          },
+        },
+      });
     },
   };
 }

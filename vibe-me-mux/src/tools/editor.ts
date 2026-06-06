@@ -27,12 +27,19 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           toolPolicy: {
             disabledTools: [
-              "bash",
               "task",
               "task_await",
               "task_list",
               "task_terminate",
               "task_apply_git_patch",
+              "editor",
+              "greper",
+              "reverie",
+              "browser",
+              "submit_review",
+              "start_review_loop",
+              "runner_wait",
+              "runner_abort",
             ],
           },
         },

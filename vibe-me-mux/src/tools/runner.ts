@@ -115,6 +115,19 @@ export function createRunnerTool(deps: HostDependencies): ToolDefinition {
         thinkingLevel: aiSettings.thinkingLevel,
         prompt,
         title: "Runner",
+        experiments: {
+          toolPolicy: {
+            disabledTools: [
+              "runner",
+              "editor",
+              "greper",
+              "reverie",
+              "browser",
+              "submit_review",
+              "start_review_loop",
+            ],
+          },
+        },
       });
 
       if (!createResult.success) {

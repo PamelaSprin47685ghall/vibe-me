@@ -5,8 +5,12 @@ import { killTree } from './process.js';
 import { stripHeadTailPipes } from './no-head-tail.js';
 import { createJavascriptPrelude, rewriteJavascriptModuleSpecifiers } from './javascript.js';
 import { runChildProcess } from './process.js';
-import { ActiveJob, createTempScript, getTempScriptPath, globalJobRegistry } from './job.js';
+import { ActiveJob, createTempScript, getTempScriptPath, globalJobRegistry, MAX_OUTPUT_BYTES } from './job.js';
 import type { ExecuteOptions, ExecuteResult, WaitOptions, WaitResult, RunnerLanguage } from './types.js';
+
+function truncateTail(text: string, max: number): string {
+  return text.length <= max ? text : text.slice(-max);
+}
 
 export function getActiveJobs(): Map<string, ActiveJob> {
   return globalJobRegistry.getAll();
@@ -180,7 +184,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
       const fullOutput = job.finalOutput;
       if (capturedError) { cleanupJob(sessionId); throw capturedError; }
       cleanupJob(sessionId);
-      return { output: fullOutput.trim() || '(no output)', background: false, message: '[System] Task completed.' };
+      return { output: truncateTail(fullOutput, MAX_OUTPUT_BYTES).trim() || '(no output)', background: false, message: '[System] Task completed.' };
     }
   } catch (error: unknown) {
     if (error === capturedError) throw error;
@@ -195,7 +199,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
 
   job.bytesRead = job.finalOutput.length;
   return {
-    output: job.finalOutput.trim() || '(no output yet)',
+    output: truncateTail(job.finalOutput, MAX_OUTPUT_BYTES).trim() || '(no output yet)',
     background: true,
     jobId: sessionId,
     message: '[System] Task has been backgrounded. Use wait() to check progress.',
@@ -208,7 +212,7 @@ export async function wait(options: WaitOptions): Promise<WaitResult> {
   if (!job) return { output: '', completed: true, message: '[System] No active job — it has already finished or was cleaned up.' };
 
   if (job.status === 'completed' || job.status === 'aborted') {
-    const newOutput = job.finalOutput.substring(job.bytesRead).trim();
+    const newOutput = truncateTail(job.finalOutput.substring(job.bytesRead), MAX_OUTPUT_BYTES).trim();
     cleanupJob(sessionId);
     return {
       output: newOutput, completed: true,
@@ -239,7 +243,7 @@ export async function wait(options: WaitOptions): Promise<WaitResult> {
     };
   }
 
-  return { output: newOutput, completed: false, message: '[System] Task still running in background.' };
+  return { output: truncateTail(newOutput, MAX_OUTPUT_BYTES), completed: false, message: '[System] Task still running in background.' };
 }
 
 export function abort(sessionId: string): string {

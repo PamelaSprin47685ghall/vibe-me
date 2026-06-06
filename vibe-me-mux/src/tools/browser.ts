@@ -23,7 +23,23 @@ export function createBrowserTool(deps: HostDependencies): ToolDefinition {
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const { intent } = args as BrowserToolArgs;
-      return delegateToSubAgent(config, deps, "desktop", intent, "Browser");
+      return delegateToSubAgent(config, deps, "desktop", intent, "Browser", {
+        experiments: {
+          toolPolicy: {
+            disabledTools: [
+              "browser",
+              "editor",
+              "greper",
+              "reverie",
+              "submit_review",
+              "start_review_loop",
+              "runner",
+              "runner_wait",
+              "runner_abort",
+            ],
+          },
+        },
+      });
     },
   };
 }

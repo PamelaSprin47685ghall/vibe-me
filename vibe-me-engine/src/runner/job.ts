@@ -4,6 +4,8 @@ import type { ChildProcess } from 'node:child_process';
 import { killTree } from './process.js';
 import { getRunnerProjectDir } from './paths.js';
 
+export const MAX_OUTPUT_BYTES = 1024 * 1024;
+
 export type JobStatus = 'running' | 'completed' | 'aborted';
 
 export class ActiveJob {
@@ -28,7 +30,9 @@ export class ActiveJob {
   }
 
   public writeOutput(chunk: string): void {
-    this.finalOutput += chunk;
+    if (this.finalOutput.length < MAX_OUTPUT_BYTES) {
+      this.finalOutput += chunk;
+    }
     try {
       this.writeStream?.write(chunk);
     } catch {}

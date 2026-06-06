@@ -98,6 +98,23 @@ export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
           "explore",
           reviewPrompt,
           "Review",
+          {
+            experiments: {
+              toolPolicy: {
+                disabledTools: [
+                  "submit_review",
+                  "editor",
+                  "greper",
+                  "reverie",
+                  "browser",
+                  "start_review_loop",
+                  "runner",
+                  "runner_wait",
+                  "runner_abort",
+                ],
+              },
+            },
+          },
         );
 
         if (isPassingReviewReport(reviewReport)) {

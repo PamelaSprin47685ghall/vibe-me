@@ -23,7 +23,21 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const { intent } = args as GreperToolArgs;
-      return delegateToSubAgent(config, deps, "explore", intent, "Greper");
+      return delegateToSubAgent(config, deps, "explore", intent, "Greper", {
+        experiments: {
+          toolPolicy: {
+            disabledTools: [
+              "greper",
+              "reverie",
+              "browser",
+              "submit_review",
+              "start_review_loop",
+              "runner_wait",
+              "runner_abort",
+            ],
+          },
+        },
+      });
     },
   };
 }
