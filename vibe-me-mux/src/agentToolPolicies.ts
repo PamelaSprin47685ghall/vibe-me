@@ -36,6 +36,22 @@ const FILE_EDIT_REPLACE_STRING = "file_edit_replace_string";
 const FILE_EDIT_INSERT = "file_edit_insert";
 const ATTACH_FILE = "attach_file";
 
+// Task lifecycle tool names
+const TASK_AWAIT = "task_await";
+const TASK_LIST = "task_list";
+const TASK_TERMINATE = "task_terminate";
+const TASK_APPLY_GIT_PATCH = "task_apply_git_patch";
+
+// Miscellaneous tool names
+const ADVISOR = "advisor";
+const NOTIFY = "notify";
+const AGENT_REPORT = "agent_report";
+const ANALYTICS_QUERY = "analytics_query";
+const GET_GOAL = "get_goal";
+const COMPLETE_GOAL = "complete_goal";
+const REVIEW_PANE_UPDATE = "review_pane_update";
+const REVIEW_PANE_GET = "review_pane_get";
+
 // Family prefix patterns (match any tool name starting with the prefix)
 const STEALTH_FAMILY = "stealth_browser_mcp_.*";
 const DESKTOP_FAMILY = "desktop_.*";
@@ -61,6 +77,150 @@ const WEB_TOOLS: readonly string[] = [
 ];
 
 const FUZZY_TOOLS: readonly string[] = [FUZZY_FIND, FUZZY_GREP];
+
+const DELEGATION_TOOLS: readonly string[] = [
+  EDITOR,
+  GREPER,
+  REVERIE,
+  BROWSER,
+  SUBMIT_REVIEW,
+  START_REVIEW_LOOP,
+];
+
+const TASK_LIFECYCLE_TOOLS: readonly string[] = [
+  TASK,
+  TASK_AWAIT,
+  TASK_LIST,
+  TASK_TERMINATE,
+  TASK_APPLY_GIT_PATCH,
+];
+
+const ORCHESTRATION_TOOLS: readonly string[] = [
+  ASK_USER_QUESTION,
+  PROPOSE_PLAN,
+  TODO_READ,
+  TODO_WRITE,
+  ADVISOR,
+  NOTIFY,
+  AGENT_REPORT,
+  GET_GOAL,
+  COMPLETE_GOAL,
+  REVIEW_PANE_UPDATE,
+  REVIEW_PANE_GET,
+];
+
+const DESKTOP_INTERACTION_TOOLS: readonly string[] = [
+  ANALYTICS_QUERY,
+  "desktop_screenshot",
+  "desktop_move_mouse",
+  "desktop_click",
+  "desktop_double_click",
+  "desktop_drag",
+  "desktop_scroll",
+  "desktop_type",
+  "desktop_key_press",
+];
+
+const MUX_ADMIN_TOOLS: readonly string[] = [
+  "agent_skill_read",
+  "agent_skill_read_file",
+  "agent_skill_list",
+  "agent_skill_write",
+  "agent_skill_delete",
+  "skills_catalog_search",
+  "skills_catalog_read",
+  "mux_agents_read",
+  "mux_agents_write",
+  "mux_config_read",
+  "mux_config_write",
+];
+
+// ── Sub-agent disabled tool lists ──
+
+export const EDITOR_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
+  ...DELEGATION_TOOLS,
+  ...EXECUTION_TOOLS,
+  ...TASK_LIFECYCLE_TOOLS,
+];
+
+export const GREPER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
+  GREPER,
+  REVERIE,
+  BROWSER,
+  SUBMIT_REVIEW,
+  START_REVIEW_LOOP,
+  RUNNER_WAIT,
+  RUNNER_ABORT,
+];
+
+export const RUNNER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
+  RUNNER,
+  FILE_READ,
+  FILE_EDIT_REPLACE_STRING,
+  FILE_EDIT_INSERT,
+  WRITE,
+  ATTACH_FILE,
+  GLOB,
+  ...FUZZY_TOOLS,
+  ...DELEGATION_TOOLS,
+  SUBMIT_REVIEW_RESULT,
+  ...EXECUTION_TOOLS,
+  ...WEB_TOOLS,
+  ...ORCHESTRATION_TOOLS,
+  ...TASK_LIFECYCLE_TOOLS,
+  BASH,
+  "bash_output",
+  "bash_background_list",
+  "bash_background_terminate",
+  ...DESKTOP_INTERACTION_TOOLS,
+  ...MUX_ADMIN_TOOLS,
+];
+
+export const BROWSER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
+  GLOB,
+  GREPER,
+  ...FUZZY_TOOLS,
+  RUNNER,
+  BROWSER,
+  SUBMIT_REVIEW_RESULT,
+  ...DELEGATION_TOOLS,
+  ...MUTATION_TOOLS,
+  ...EXECUTION_TOOLS,
+  ...WEB_TOOLS,
+  ...ORCHESTRATION_TOOLS,
+  ...TASK_LIFECYCLE_TOOLS,
+  ...DESKTOP_INTERACTION_TOOLS,
+  ...MUX_ADMIN_TOOLS,
+  BASH,
+  "bash_output",
+  "bash_background_list",
+  "bash_background_terminate",
+  GREP,
+];
+
+export const REVERIE_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
+  REVERIE,
+  GREPER,
+  EDITOR,
+  BROWSER,
+  SUBMIT_REVIEW,
+  START_REVIEW_LOOP,
+  RUNNER,
+  RUNNER_WAIT,
+  RUNNER_ABORT,
+];
+
+export const REVIEWER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
+  SUBMIT_REVIEW,
+  EDITOR,
+  GREPER,
+  REVERIE,
+  BROWSER,
+  START_REVIEW_LOOP,
+  RUNNER,
+  RUNNER_WAIT,
+  RUNNER_ABORT,
+];
 
 // ── Builder ──
 

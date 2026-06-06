@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonSchema, PluginToolArgs, ReverieToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
+import { REVERIE_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -48,17 +49,7 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
       return delegateToSubAgent(config, deps, "explore", prompt, "Reverie", {
         experiments: {
           toolPolicy: {
-            disabledTools: [
-              "reverie",
-              "greper",
-              "editor",
-              "browser",
-              "submit_review",
-              "start_review_loop",
-              "runner",
-              "runner_wait",
-              "runner_abort",
-            ],
+            disabledTools: [...REVERIE_SUB_AGENT_DISABLED_TOOLS],
           },
         },
       });

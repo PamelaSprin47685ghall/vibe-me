@@ -1,5 +1,6 @@
 import type { GreperToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
+import { GREPER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -26,15 +27,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
       return delegateToSubAgent(config, deps, "explore", intent, "Greper", {
         experiments: {
           toolPolicy: {
-            disabledTools: [
-              "greper",
-              "reverie",
-              "browser",
-              "submit_review",
-              "start_review_loop",
-              "runner_wait",
-              "runner_abort",
-            ],
+            disabledTools: [...GREPER_SUB_AGENT_DISABLED_TOOLS],
           },
         },
       });

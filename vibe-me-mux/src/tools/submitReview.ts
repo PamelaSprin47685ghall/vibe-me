@@ -8,6 +8,7 @@ import {
   unlockReview,
   getReviewTask,
 } from "engine/review";
+import { REVIEWER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { delegateToSubAgent } from "./delegate.js";
 
 const AGENT_REPORT_REVIEW_INSTRUCTIONS = REVIEW_INSTRUCTIONS
@@ -101,17 +102,7 @@ export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
           {
             experiments: {
               toolPolicy: {
-                disabledTools: [
-                  "submit_review",
-                  "editor",
-                  "greper",
-                  "reverie",
-                  "browser",
-                  "start_review_loop",
-                  "runner",
-                  "runner_wait",
-                  "runner_abort",
-                ],
+                disabledTools: [...REVIEWER_SUB_AGENT_DISABLED_TOOLS],
               },
             },
           },

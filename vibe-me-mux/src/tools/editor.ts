@@ -1,5 +1,6 @@
 import type { EditorToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
+import { EDITOR_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -26,21 +27,7 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
       return delegateToSubAgent(config, deps, "exec", intent, "Editor", {
         experiments: {
           toolPolicy: {
-            disabledTools: [
-              "task",
-              "task_await",
-              "task_list",
-              "task_terminate",
-              "task_apply_git_patch",
-              "editor",
-              "greper",
-              "reverie",
-              "browser",
-              "submit_review",
-              "start_review_loop",
-              "runner_wait",
-              "runner_abort",
-            ],
+            disabledTools: [...EDITOR_SUB_AGENT_DISABLED_TOOLS],
           },
         },
       });

@@ -1,5 +1,6 @@
 import type { BrowserToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
+import { BROWSER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -23,20 +24,10 @@ export function createBrowserTool(deps: HostDependencies): ToolDefinition {
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const { intent } = args as BrowserToolArgs;
-      return delegateToSubAgent(config, deps, "desktop", intent, "Browser", {
+      return delegateToSubAgent(config, deps, "explore", intent, "Browser", {
         experiments: {
           toolPolicy: {
-            disabledTools: [
-              "browser",
-              "editor",
-              "greper",
-              "reverie",
-              "submit_review",
-              "start_review_loop",
-              "runner",
-              "runner_wait",
-              "runner_abort",
-            ],
+            disabledTools: [...BROWSER_SUB_AGENT_DISABLED_TOOLS],
           },
         },
       });

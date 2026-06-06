@@ -7,6 +7,7 @@ import {
 } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
 import { execute, cleanupJob } from "engine/runner";
+import { RUNNER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 const parameters: JsonSchema = {
@@ -117,15 +118,7 @@ export function createRunnerTool(deps: HostDependencies): ToolDefinition {
         title: "Runner",
         experiments: {
           toolPolicy: {
-            disabledTools: [
-              "runner",
-              "editor",
-              "greper",
-              "reverie",
-              "browser",
-              "submit_review",
-              "start_review_loop",
-            ],
+             disabledTools: [...RUNNER_SUB_AGENT_DISABLED_TOOLS],
           },
         },
       });
