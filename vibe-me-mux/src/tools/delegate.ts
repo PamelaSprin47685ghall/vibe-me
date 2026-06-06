@@ -8,7 +8,7 @@ import {
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 export interface DelegateOptions {
-  readonly experiments?: { readonly toolPolicy?: { readonly disabledTools?: readonly string[] } };
+  readonly experiments?: { readonly subagentRole?: string; readonly toolPolicy?: { readonly disabledTools?: readonly string[] } };
 }
 
 export async function delegateToSubAgent(

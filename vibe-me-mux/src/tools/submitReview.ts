@@ -101,6 +101,7 @@ export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
           "Review",
           {
             experiments: {
+              subagentRole: "reviewer",
               toolPolicy: {
                 disabledTools: [...REVIEWER_SUB_AGENT_DISABLED_TOOLS],
               },

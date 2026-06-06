@@ -4,6 +4,12 @@ export type { AgentToolPolicy };
 
 export type MuxAgentName = "exec" | "explore";
 
+export type SubAgentRole = "editor" | "greper" | "runner" | "browser" | "reverie" | "reviewer";
+
+export type MuxAgentToolPolicies = Record<MuxAgentName, {
+  main: AgentToolPolicy;
+} & Partial<Record<SubAgentRole, AgentToolPolicy>>>;
+
 // ── Tool name regex patterns (bare names — wrapped with ^...$ by applyToolPolicyToNames) ──
 
 const BASH = "bash";
@@ -15,7 +21,7 @@ const RUNNER_WAIT = "runner_wait";
 const RUNNER_ABORT = "runner_abort";
 const BROWSER = "browser";
 const SUBMIT_REVIEW = "submit_review";
-const SUBMIT_REVIEW_RESULT = "submit_review_result";
+
 const START_REVIEW_LOOP = "start_review_loop";
 const GREPER = "greper";
 const REVERIE = "reverie";
@@ -45,7 +51,7 @@ const TASK_APPLY_GIT_PATCH = "task_apply_git_patch";
 // Miscellaneous tool names
 const ADVISOR = "advisor";
 const NOTIFY = "notify";
-const AGENT_REPORT = "agent_report";
+
 const ANALYTICS_QUERY = "analytics_query";
 const GET_GOAL = "get_goal";
 const COMPLETE_GOAL = "complete_goal";
@@ -60,7 +66,6 @@ const TASK_FAMILY = "task_.*";
 // ── Composite groups ──
 
 const MUTATION_TOOLS: readonly string[] = [
-  EDITOR,
   WRITE,
   FILE_EDIT_REPLACE_STRING,
   FILE_EDIT_INSERT,
@@ -102,7 +107,6 @@ const ORCHESTRATION_TOOLS: readonly string[] = [
   TODO_WRITE,
   ADVISOR,
   NOTIFY,
-  AGENT_REPORT,
   GET_GOAL,
   COMPLETE_GOAL,
   REVIEW_PANE_UPDATE,
@@ -136,6 +140,9 @@ const MUX_ADMIN_TOOLS: readonly string[] = [
 ];
 
 // ── Sub-agent disabled tool lists ──
+// Defense-in-depth: disabledTools is applied AFTER per-role policy resolution.
+// The per-role pluginPolicies already restrict tool visibility; disabledTools
+// is the final safety net that overrides everything and prevents recursion.
 
 export const EDITOR_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
   ...DELEGATION_TOOLS,
@@ -163,7 +170,6 @@ export const RUNNER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
   GLOB,
   ...FUZZY_TOOLS,
   ...DELEGATION_TOOLS,
-  SUBMIT_REVIEW_RESULT,
   ...EXECUTION_TOOLS,
   ...WEB_TOOLS,
   ...ORCHESTRATION_TOOLS,
@@ -182,7 +188,6 @@ export const BROWSER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
   ...FUZZY_TOOLS,
   RUNNER,
   BROWSER,
-  SUBMIT_REVIEW_RESULT,
   ...DELEGATION_TOOLS,
   ...MUTATION_TOOLS,
   ...EXECUTION_TOOLS,
@@ -224,67 +229,244 @@ export const REVIEWER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
 
 // ── Builder ──
 
-export function buildAgentToolPolicies(): Record<MuxAgentName, AgentToolPolicy> {
+export function buildAgentToolPolicies(): MuxAgentToolPolicies {
   return {
-    // exec = OpenCode orchestrator + editor + runner (main agent)
+    // exec = OpenCode orchestrator (main) + editor + runner sub-agents.
     exec: {
-      add: [
-        FILE_READ,
-        ...MUTATION_TOOLS,
-        GREPER,
-        REVERIE,
-        SUBMIT_REVIEW,
-        START_REVIEW_LOOP,
-        ...WEB_TOOLS,
-        ...EXECUTION_TOOLS,
-        BROWSER,
-        GLOB,
-        ...FUZZY_TOOLS,
-        ASK_USER_QUESTION,
-        PROPOSE_PLAN,
-        TODO_READ,
-        TODO_WRITE,
-      ],
-      remove: [
-        BASH,
-        GREP,
-        STEALTH_FAMILY,
-        TASK,
-        TASK_FAMILY,
-        SUBMIT_REVIEW_RESULT,
-      ],
+      // Main = strict OpenCode orchestrator. Delegates mutations, but can use
+      // runner directly. No bash, no grep, no fuzzy tools, no stealth browser,
+      // no task lifecycle, no runner wait/abort.
+      main: {
+        add: [
+          FILE_READ,
+          GREPER,
+          REVERIE,
+          SUBMIT_REVIEW,
+          START_REVIEW_LOOP,
+          ...WEB_TOOLS,
+          BROWSER,
+          GLOB,
+          ASK_USER_QUESTION,
+          PROPOSE_PLAN,
+          TODO_READ,
+          TODO_WRITE,
+          FUZZY_FIND,
+          EDITOR,
+        ],
+        remove: [
+          BASH,
+          GREP,
+          FUZZY_GREP,
+          STEALTH_FAMILY,
+          TASK,
+          TASK_FAMILY,
+          RUNNER_WAIT,
+          RUNNER_ABORT,
+          WRITE,
+          FILE_EDIT_REPLACE_STRING,
+          FILE_EDIT_INSERT,
+          ATTACH_FILE,
+        ],
+      },
+
+      // editor = OpenCode editor agent. Can mutate files but cannot delegate
+      // further, cannot run executables, cannot manage task lifecycle.
+      editor: {
+        add: [
+          FILE_READ,
+          ...MUTATION_TOOLS,
+          GLOB,
+          TODO_READ,
+          TODO_WRITE,
+        ],
+        remove: [
+          BASH,
+          GREP,
+          ...FUZZY_TOOLS,
+          STEALTH_FAMILY,
+          TASK,
+          TASK_FAMILY,
+          ...DELEGATION_TOOLS,
+          ...EXECUTION_TOOLS,
+          ...WEB_TOOLS,
+          PROPOSE_PLAN,
+          ASK_USER_QUESTION,
+          FILE_EDIT_INSERT,
+        ],
+      },
+
+      // runner = OpenCode runner agent. Can ONLY use runner_wait + runner_abort.
+      // Strictest possible policy: nothing else is allowed.
+      runner: {
+        add: [],
+        remove: [
+          BASH,
+          GREP,
+          ...FUZZY_TOOLS,
+          STEALTH_FAMILY,
+          DESKTOP_FAMILY,
+          TASK,
+          TASK_FAMILY,
+          ...MUTATION_TOOLS,
+          ...DELEGATION_TOOLS,
+          RUNNER,
+          ...WEB_TOOLS,
+          ...ORCHESTRATION_TOOLS,
+          ...DESKTOP_INTERACTION_TOOLS,
+          ...MUX_ADMIN_TOOLS,
+        ],
+      },
     },
 
-    // explore = OpenCode reviewer + greper + browser + reverie (read-only sub-agent)
+    // explore = read-only sub-agent (main) + greper + browser + reverie + reviewer.
     explore: {
-      add: [
-        FILE_READ,
-        GLOB,
-        GREPER,
-        ...FUZZY_TOOLS,
-        RUNNER,
-        BROWSER,
-        STEALTH_FAMILY,
-        SUBMIT_REVIEW_RESULT,
-      ],
-      remove: [
-        BASH,
-        GREP,
-        ...MUTATION_TOOLS,
-        REVERIE,
-        SUBMIT_REVIEW,
-        START_REVIEW_LOOP,
-        RUNNER_WAIT,
-        RUNNER_ABORT,
-        ...WEB_TOOLS,
-        TASK,
-        TASK_FAMILY,
-        DESKTOP_FAMILY,
-        PROPOSE_PLAN,
-        TODO_READ,
-        TODO_WRITE,
-        ASK_USER_QUESTION,
-      ],
+      // Main = the explore policy (read-only sub-agent).
+      main: {
+        add: [
+          FILE_READ,
+          GLOB,
+          GREPER,
+          ...FUZZY_TOOLS,
+          RUNNER,
+          BROWSER,
+          STEALTH_FAMILY,
+        ],
+        remove: [
+          BASH,
+          GREP,
+          ...MUTATION_TOOLS,
+          REVERIE,
+          SUBMIT_REVIEW,
+          START_REVIEW_LOOP,
+          RUNNER_WAIT,
+          RUNNER_ABORT,
+          ...WEB_TOOLS,
+          TASK,
+          TASK_FAMILY,
+          DESKTOP_FAMILY,
+          PROPOSE_PLAN,
+          TODO_READ,
+          TODO_WRITE,
+          ASK_USER_QUESTION,
+        ],
+      },
+
+      // greper = OpenCode greper. Like explore but no delegation, no runner wait/abort.
+      greper: {
+        add: [
+          FILE_READ,
+          GLOB,
+          ...FUZZY_TOOLS,
+          RUNNER,
+        ],
+        remove: [
+          BASH,
+          GREP,
+          ...MUTATION_TOOLS,
+          GREPER,
+          REVERIE,
+          BROWSER,
+          SUBMIT_REVIEW,
+          START_REVIEW_LOOP,
+          RUNNER_WAIT,
+          RUNNER_ABORT,
+          ...WEB_TOOLS,
+          TASK,
+          TASK_FAMILY,
+          DESKTOP_FAMILY,
+          STEALTH_FAMILY,
+          PROPOSE_PLAN,
+          TODO_READ,
+          TODO_WRITE,
+          ASK_USER_QUESTION,
+        ],
+      },
+
+      // browser = OpenCode browser. Can ONLY use file_read + stealth_browser_mcp_*.
+      browser: {
+        add: [
+          FILE_READ,
+          STEALTH_FAMILY,
+        ],
+        remove: [
+          BASH,
+          GREP,
+          ...FUZZY_TOOLS,
+          DESKTOP_FAMILY,
+          TASK,
+          TASK_FAMILY,
+          ...MUTATION_TOOLS,
+          ...DELEGATION_TOOLS,
+          ...EXECUTION_TOOLS,
+          ...WEB_TOOLS,
+          ...ORCHESTRATION_TOOLS,
+          ...DESKTOP_INTERACTION_TOOLS,
+          ...MUX_ADMIN_TOOLS,
+          GLOB,
+          GREPER,
+        ],
+      },
+
+      // reverie = OpenCode reverie. Can use NOTHING. Empty add + broad remove.
+      reverie: {
+        add: [],
+        remove: [
+          BASH,
+          GREP,
+          ...FUZZY_TOOLS,
+          STEALTH_FAMILY,
+          DESKTOP_FAMILY,
+          TASK,
+          TASK_FAMILY,
+          ...MUTATION_TOOLS,
+          ...DELEGATION_TOOLS,
+          ...EXECUTION_TOOLS,
+          ...WEB_TOOLS,
+          ...ORCHESTRATION_TOOLS,
+          ...DESKTOP_INTERACTION_TOOLS,
+          ...MUX_ADMIN_TOOLS,
+          FILE_READ,
+          GLOB,
+          GREPER,
+        ],
+      },
+
+      // reviewer = OpenCode reviewer. Can use file_read + glob only.
+      reviewer: {
+        add: [
+          FILE_READ,
+          GLOB,
+        ],
+        remove: [
+          BASH,
+          GREP,
+          ...FUZZY_TOOLS,
+          STEALTH_FAMILY,
+          DESKTOP_FAMILY,
+          TASK,
+          TASK_FAMILY,
+          ...MUTATION_TOOLS,
+          ...DELEGATION_TOOLS,
+          ...EXECUTION_TOOLS,
+          ...WEB_TOOLS,
+          ...ORCHESTRATION_TOOLS,
+          ...DESKTOP_INTERACTION_TOOLS,
+          ...MUX_ADMIN_TOOLS,
+          GREPER,
+        ],
+      },
     },
   };
+}
+
+// ── Lookup ──
+
+export function getPluginToolPolicy(
+  agentId: string,
+  role?: string,
+): AgentToolPolicy | undefined {
+  const policies = buildAgentToolPolicies()[agentId as MuxAgentName];
+  if (!policies) return undefined;
+  if (role && role in policies) return policies[role as SubAgentRole];
+  return policies.main;
 }

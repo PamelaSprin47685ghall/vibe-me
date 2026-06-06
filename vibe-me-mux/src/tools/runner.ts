@@ -117,6 +117,7 @@ export function createRunnerTool(deps: HostDependencies): ToolDefinition {
         prompt,
         title: "Runner",
         experiments: {
+          subagentRole: "runner",
           toolPolicy: {
              disabledTools: [...RUNNER_SUB_AGENT_DISABLED_TOOLS],
           },

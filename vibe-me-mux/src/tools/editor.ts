@@ -26,6 +26,7 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
       const { intent } = args as EditorToolArgs;
       return delegateToSubAgent(config, deps, "exec", intent, "Editor", {
         experiments: {
+          subagentRole: "editor",
           toolPolicy: {
             disabledTools: [...EDITOR_SUB_AGENT_DISABLED_TOOLS],
           },

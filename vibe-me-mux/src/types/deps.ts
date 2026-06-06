@@ -73,7 +73,7 @@ export interface TaskCreateInput {
   readonly thinkingLevel: string;
   readonly prompt: string;
   readonly title: string;
-  readonly experiments?: { readonly toolPolicy?: { readonly disabledTools?: readonly string[] } };
+  readonly experiments?: { readonly subagentRole?: string; readonly toolPolicy?: { readonly disabledTools?: readonly string[] } };
 }
 
 export type TaskCreateResult =

@@ -26,6 +26,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
       const { intent } = args as GreperToolArgs;
       return delegateToSubAgent(config, deps, "explore", intent, "Greper", {
         experiments: {
+          subagentRole: "greper",
           toolPolicy: {
             disabledTools: [...GREPER_SUB_AGENT_DISABLED_TOOLS],
           },

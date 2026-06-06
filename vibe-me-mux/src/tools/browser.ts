@@ -26,6 +26,7 @@ export function createBrowserTool(deps: HostDependencies): ToolDefinition {
       const { intent } = args as BrowserToolArgs;
       return delegateToSubAgent(config, deps, "explore", intent, "Browser", {
         experiments: {
+          subagentRole: "browser",
           toolPolicy: {
             disabledTools: [...BROWSER_SUB_AGENT_DISABLED_TOOLS],
           },

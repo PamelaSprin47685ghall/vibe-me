@@ -151,11 +151,9 @@ export interface CapitalsContextHook {
 }
 
 export function createCapsContextHook(projectRoot: string): CapitalsContextHook {
-  let cachedPromise: Promise<string> | null = null;
   return {
     async handleSystemTransform(_input: { sessionID?: string }, output: { system: string[] }) {
-      cachedPromise ??= buildCapitalsContext(projectRoot);
-      const context = await cachedPromise;
+      const context = await buildCapitalsContext(projectRoot);
       if (!context) return;
       const marker = '<caps-context';
       if (output.system.some((s) => typeof s === 'string' && s.includes(marker))) return;
