@@ -34,7 +34,6 @@ interface NativePack {
 }
 
 function loadNativePack(): NativePack {
-  const pkgPath = __require.resolve('@kreuzberg/tree-sitter-language-pack');
   const { platform, arch } = process;
   const suffix =
     platform === 'darwin' && arch === 'arm64' ? 'darwin-arm64' :

@@ -12,6 +12,7 @@ import { createWebsearchTool } from "./tools/websearch.js";
 import { createWebfetchTool } from "./tools/webfetch.js";
 import { createFuzzyGrepTool } from "./tools/fuzzyGrep.js";
 import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
+import { createWriteTool } from "./tools/write.js";
 import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import type {
@@ -89,6 +90,7 @@ export function createRegistration(
     createWebfetchTool(deps),
     createFuzzyGrepTool(deps),
     createFuzzyFindTool(deps),
+    createWriteTool(deps),
     createStartReviewLoopTool(deps),
   ];
 
@@ -126,6 +128,7 @@ export type {
   WebfetchToolArgs,
   FuzzyGrepToolArgs,
   FuzzyFindToolArgs,
+  WriteToolArgs,
 } from "./types/contract.js";
 export type {
   ContextInjectorRegistration,

@@ -67,6 +67,11 @@ export interface WebfetchToolArgs {
   readonly timeout?: number;
 }
 
+export interface WriteToolArgs {
+  readonly file_path: string;
+  readonly content: string;
+}
+
 export interface FuzzyGrepToolArgs {
   readonly pattern?: string;
   readonly path?: string;
@@ -96,6 +101,7 @@ export type PluginToolArgs =
   | SubmitReviewToolArgs
   | WebsearchToolArgs
   | WebfetchToolArgs
+  | WriteToolArgs
   | FuzzyGrepToolArgs
   | FuzzyFindToolArgs;
 
