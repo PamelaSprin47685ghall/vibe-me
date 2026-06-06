@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --format esm --external @kreuzberg/tree-sitter-language-pack-wasm",
+    "build": "bun build src/index.ts --outdir dist --target node --format esm --external @kreuzberg/tree-sitter-language-pack",
     "typecheck": "tsc --noEmit",
     "test": "bun test src/",
     "lint": "bun x biome lint src/",
@@ -21,6 +21,7 @@
     "check:ci": "bun x biome check src/"
   },
   "dependencies": {
+    "@kreuzberg/tree-sitter-language-pack": "^1.8.1",
     "@opencode-ai/plugin": "^1.15.12",
     "engine": "file:../vibe-me-engine"
   },

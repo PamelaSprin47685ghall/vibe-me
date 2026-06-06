@@ -5,6 +5,7 @@
     "": {
       "name": "caps-context",
       "dependencies": {
+        "@kreuzberg/tree-sitter-language-pack": "^1.8.1",
         "@opencode-ai/plugin": "^1.15.12",
         "engine": "file:../vibe-me-engine",
       },
@@ -52,6 +53,8 @@
     "@ff-labs/fff-bin-win32-x64": ["@ff-labs/fff-bin-win32-x64@0.8.4", "", { "os": "win32", "cpu": "x64" }, "sha512-sQuJGaqgUB1R818WuanRoLh3wFAEGrKkP0ZeCYj8o5XJIfEcIkZ9X8/u3H2P6qCNe+1C2065//r3wjKYSDfTiQ=="],
 
     "@ff-labs/fff-node": ["@ff-labs/fff-node@0.8.4", "", { "dependencies": { "ffi-rs": "^1.0.0" }, "optionalDependencies": { "@ff-labs/fff-bin-darwin-arm64": "0.8.4", "@ff-labs/fff-bin-darwin-x64": "0.8.4", "@ff-labs/fff-bin-linux-arm64-gnu": "0.8.4", "@ff-labs/fff-bin-linux-arm64-musl": "0.8.4", "@ff-labs/fff-bin-linux-x64-gnu": "0.8.4", "@ff-labs/fff-bin-linux-x64-musl": "0.8.4", "@ff-labs/fff-bin-win32-arm64": "0.8.4", "@ff-labs/fff-bin-win32-x64": "0.8.4" }, "os": [ "linux", "win32", "darwin", ], "cpu": [ "x64", "arm64", ] }, "sha512-jWPtLjYqOcg2UNxP/SiDwXD688NdOU9A1wVgGTScjudhdtNUNkC8s225O1+FMDVxYT5uNPIRtPEndFa3pM6Zcg=="],
+
+    "@kreuzberg/tree-sitter-language-pack": ["@kreuzberg/tree-sitter-language-pack@1.8.1", "", { "peerDependencies": { "tree-sitter": "^0.25.0" }, "optionalPeers": ["tree-sitter"] }, "sha512-24qZIP3CvDUD/XokRJPc7rD82M4RJZHn4GxMox35Iicye/q2NLiEkjiE6BSeyMltBHXoVCXFkzDDgVCXrQhmMQ=="],
 
     "@kreuzberg/tree-sitter-language-pack-wasm": ["@kreuzberg/tree-sitter-language-pack-wasm@1.8.1", "", {}, "sha512-FqoZdnWsnAqAC9SovkWjznCryRegx/U1tjbPhgnzukcUK1pD+IijsO8qonvlL81cnXB2ogOioJ3i2Y/Q9u5JBQ=="],
 

@@ -72,14 +72,18 @@ function detectLangFromContentFallback(content: string, pack: NativePack): strin
 
 function findErrorNodes(node: NativeNode): NativeNode[] {
   const out: NativeNode[] = [];
-  if (node.isError() || node.isMissing()) {
-    out.push(node);
-    return out;
-  }
   const count = node.childCount();
+  let hasInnerError = false;
   for (let i = 0; i < count; i += 1) {
     const child = node.child(i);
-    if (child) out.push(...findErrorNodes(child));
+    if (child) {
+      const childErrors = findErrorNodes(child);
+      if (childErrors.length > 0) hasInnerError = true;
+      out.push(...childErrors);
+    }
+  }
+  if (node.isMissing() || (node.isError() && !hasInnerError)) {
+    out.push(node);
   }
   return out;
 }
