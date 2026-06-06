@@ -17,13 +17,6 @@ function mockCheckSyntax(errors: checkerModule.SyntaxError[]) {
   });
 }
 
-function mockCheckSyntaxFail() {
-  spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
-    ok: false,
-    reason: 'unsupported language',
-  });
-}
-
 function createMockCtx(directory: string): PluginInput {
   return {
     directory,
@@ -59,7 +52,7 @@ describe('createSyntaxCheckHook', () => {
         column: 1,
         endLine: 5,
         endColumn: 2,
-        severity: 'error',
+        severity: 'warning',
         message: "Expected ')'",
       },
     ]);
@@ -73,7 +66,7 @@ describe('createSyntaxCheckHook', () => {
     );
 
     expect(output.output).toContain('1 syntax issue(s) in test.ts');
-    expect(output.output).toContain("L5:1-5:2 [error] Expected ')'");
+    expect(output.output).toContain("L5:1-5:2 [warning] Expected ')'");
     expect(output.output).toContain('[syntax-check]');
   });
 
@@ -85,7 +78,7 @@ describe('createSyntaxCheckHook', () => {
         column: 5,
         endLine: 1,
         endColumn: 6,
-        severity: 'error',
+        severity: 'warning',
         message: 'Missing semicolon',
       },
     ]);
@@ -116,9 +109,13 @@ describe('createSyntaxCheckHook', () => {
     expect(output.output).toBe('edited successfully');
   });
 
-  it('skips when checkSyntax returns ok: false', async () => {
+  it('skips when checkSyntax returns empty errors (e.g. unsupported language)', async () => {
     writeFileSync(join(tmpDir, 'binary.bin'), '\x00\x01\x02');
-    mockCheckSyntaxFail();
+    spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
+      ok: true,
+      lang: '',
+      errors: [],
+    });
 
     const hook = createSyntaxCheckHook(createMockCtx(tmpDir));
     const output = createOutput('edited successfully');
@@ -187,7 +184,7 @@ describe('createSyntaxCheckHook', () => {
         column: 1,
         endLine: 1,
         endColumn: 2,
-        severity: 'error',
+        severity: 'warning',
         message: 'test error',
       },
     ]);
@@ -212,7 +209,7 @@ describe('createSyntaxCheckHook', () => {
         column: 1,
         endLine: 1,
         endColumn: 2,
-        severity: 'error',
+        severity: 'warning',
         message: 'test error',
       },
     ]);
@@ -237,13 +234,10 @@ describe('createSyntaxCheckHook', () => {
   });
 });
 
-describe('checkSyntax error path', () => {
-  it('returns ok:false for unsupported language', async () => {
+describe('checkSyntax return paths', () => {
+  it('always returns ok:true even for unsupported language', async () => {
     const result = await checkSyntax('content', '/tmp/file.unknown_ext');
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toContain('unsupported language');
-    }
+    expect(result.ok).toBe(true);
   });
 
   it('returns ok:true with empty errors for valid typescript', async () => {
@@ -253,5 +247,19 @@ describe('checkSyntax error path', () => {
       expect(result.errors).toEqual([]);
       expect(result.lang).toBeTruthy();
     }
+  });
+
+  it('detects python from content when file has no extension', async () => {
+    const pyCode = 'import os\nimport sys\n\ndef main():\n    print("Hello, World!")\n    for i in range(10):\n        if i % 2 == 0:\n            print(i)\n\nif __name__ == "__main__":\n    main()\n';
+    const result = await checkSyntax(pyCode, '/tmp/script');
+    expect(result.ok).toBe(true);
+    expect(result.lang).toBe('python');
+  });
+
+  it('detects javascript from content when file has no extension', async () => {
+    const jsCode = 'const { useState, useEffect } = require("react");\n\nmodule.exports = function App() {\n  const [count, setCount] = useState(0);\n  return count;\n};\n';
+    const result = await checkSyntax(jsCode, '/tmp/myfile');
+    expect(result.ok).toBe(true);
+    expect(result.lang).toBe('javascript');
   });
 });

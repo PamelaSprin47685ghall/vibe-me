@@ -7,15 +7,8 @@ export interface SyntaxDiagnostic {
   message: string;
 }
 
-export interface SyntaxCheckOk {
+export interface SyntaxCheckResult {
   ok: true;
   lang: string;
   errors: SyntaxDiagnostic[];
 }
-
-export interface SyntaxCheckFail {
-  ok: false;
-  reason: string;
-}
-
-export type SyntaxCheckResult = SyntaxCheckOk | SyntaxCheckFail;

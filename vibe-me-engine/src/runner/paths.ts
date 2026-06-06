@@ -11,14 +11,18 @@ function ensureDir(dir: string): void {
   mkdirSync(dir, { recursive: true });
 }
 
+function sanitizeId(id: string): string {
+  return id.replace(/\//g, '-');
+}
+
 export function getRunnerLogPath(sessionId: string): string {
   ensureDir(RUNNER_LOG_DIR);
-  return join(RUNNER_LOG_DIR, `runner-${sessionId}.log`);
+  return join(RUNNER_LOG_DIR, `runner-${sanitizeId(sessionId)}.log`);
 }
 
 export function getRunnerProjectDir(sessionId?: string): string {
   if (sessionId) {
-    const dir = join(RUNNER_LOG_DIR, `runner-${sessionId}`);
+    const dir = join(RUNNER_LOG_DIR, `runner-${sanitizeId(sessionId)}`);
     ensureDir(dir);
     return dir;
   }

@@ -4,12 +4,144 @@ import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, defaultCoordinator, type NudgeInp
 import { buildRunnerNudgePrompt, hasActiveJob, cleanupJob, getActiveJobs } from 'engine/runner';
 import { isReviewActive } from 'engine/review';
 import { type TodoItem, asMessageArray } from '../utils/session';
+import { lookupChildAgent } from '../utils/child-agent';
 import { managedRunnerSessions } from '../runner/index.js';
+
+const RETRY_PROGRESS_EVENTS = new Set([
+  'session.next.step.started',
+  'session.next.step.ended',
+  'session.next.text.started',
+  'session.next.text.delta',
+  'session.next.text.ended',
+  'session.next.reasoning.started',
+  'session.next.reasoning.delta',
+  'session.next.reasoning.ended',
+  'session.next.tool.input.started',
+  'session.next.tool.input.delta',
+  'session.next.tool.input.ended',
+  'session.next.tool.called',
+  'session.next.tool.progress',
+  'session.next.tool.success',
+]);
+
+const RETRY_PROGRESS_PARTS = new Set([
+  'step-start',
+  'step-finish',
+  'text',
+  'reasoning',
+  'tool',
+  'agent',
+  'subtask',
+  'file',
+  'snapshot',
+  'patch',
+]);
 
 export function createNudgeCoordinatorHook(ctx: PluginInput) {
   const nudgedSessions = new Set<string>();
   let lastNudgedSession: string | null = null;
   const retryPendingSessions = new Set<string>();
+  const stoppedSessions = new Set<string>();
+  const sessionAgents = new Map<string, string>();
+
+  function resumeSession(sessionID: string): void {
+    nudgedSessions.delete(sessionID);
+    retryPendingSessions.delete(sessionID);
+    stoppedSessions.delete(sessionID);
+    if (lastNudgedSession === sessionID) lastNudgedSession = null;
+  }
+
+  function rememberAgent(sessionID: string, agent: unknown): void {
+    if (typeof agent === 'string' && agent) sessionAgents.set(sessionID, agent);
+  }
+
+  function getEventAgent(props: Record<string, unknown>): string | undefined {
+    if (typeof props.agent === 'string') return props.agent;
+
+    const info = props.info as { agent?: unknown } | undefined;
+    if (typeof info?.agent === 'string') return info.agent;
+  }
+
+  function createPromptBody(sessionID: string, text: string) {
+    const agent = sessionAgents.get(sessionID) ?? lookupChildAgent(sessionID);
+    const parts = [{ type: 'text' as const, text }];
+    return agent ? { agent, parts } : { parts };
+  }
+
+  function stopSession(sessionID: string): void {
+    nudgedSessions.add(sessionID);
+    retryPendingSessions.delete(sessionID);
+    stoppedSessions.add(sessionID);
+    if (lastNudgedSession === sessionID) lastNudgedSession = null;
+  }
+
+  function isAbortEventError(error: unknown): boolean {
+    if (typeof error === 'string') return /\babort(?:ed)?\b/i.test(error);
+    if (!error || typeof error !== 'object') return false;
+
+    const name = (error as { name?: unknown }).name;
+    if (typeof name === 'string' && isAbortErrorName(name)) return true;
+
+    const nestedError = (error as { error?: unknown }).error;
+    if (nestedError && nestedError !== error && isAbortEventError(nestedError)) return true;
+
+    const data = (error as { data?: unknown }).data;
+    if (data && typeof data === 'object') {
+      const message = (data as { message?: unknown }).message;
+      if (typeof message === 'string' && /\babort(?:ed)?\b/i.test(message)) return true;
+    }
+
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' && /\babort(?:ed)?\b/i.test(message);
+  }
+
+  function isNudgePrompt(text: unknown): boolean {
+    return (
+      text === TODO_NUDGE_PROMPT ||
+      text === LOOP_NUDGE_PROMPT ||
+      text === buildRunnerNudgePrompt()
+    );
+  }
+
+  function getSessionID(type: string, props: Record<string, unknown>): string | undefined {
+    if (typeof props.sessionID === 'string') return props.sessionID;
+
+    const part = props.part as { sessionID?: unknown } | undefined;
+    if (typeof part?.sessionID === 'string') return part.sessionID;
+
+    const info = props.info as { id?: unknown; sessionID?: unknown } | undefined;
+    if (typeof info?.sessionID === 'string') return info.sessionID;
+    if (
+      ['session.created', 'session.updated', 'session.deleted'].includes(type) &&
+      typeof info?.id === 'string'
+    ) return info.id;
+  }
+
+  function getPartsText(parts: unknown): string | undefined {
+    if (!Array.isArray(parts)) return;
+
+    const text = parts
+      .filter((part): part is { type: string; text: string } => {
+        return (
+          typeof part === 'object' &&
+          part !== null &&
+          (part as { type?: unknown }).type === 'text' &&
+          typeof (part as { text?: unknown }).text === 'string'
+        );
+      })
+      .map((part) => part.text)
+      .join('\n');
+
+    return text || undefined;
+  }
+
+  function isRetryProgressEvent(type: string): boolean {
+    return RETRY_PROGRESS_EVENTS.has(type);
+  }
+
+  function isRetryProgressPart(type: unknown): boolean {
+    return RETRY_PROGRESS_PARTS.has(String(type));
+  }
 
   return {
     tool: {},
@@ -23,20 +155,33 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
       _output: { messages: unknown[] },
     ): Promise<void> => {},
 
-    handleChatMessage: (_input: { sessionID: string; agent?: string }): void => {},
+    handleChatMessage: (input: {
+      sessionID: string;
+      agent?: string;
+      parts?: unknown[];
+    }): void => {
+      const text = getPartsText(input.parts);
+      if (isNudgePrompt(text)) return;
+      rememberAgent(input.sessionID, input.agent);
+      resumeSession(input.sessionID);
+    },
 
     handleCommandExecuteBefore: async (
-      _input: { command: string; sessionID: string; arguments: string },
+      input: { command: string; sessionID: string; arguments: string },
       _output: { parts: Array<{ type: string; text?: string }> },
-    ): Promise<void> => {},
+    ): Promise<void> => {
+      resumeSession(input.sessionID);
+    },
 
     handleEvent: async (input: {
       event: { type: string; properties?: Record<string, unknown> };
     }): Promise<void> => {
       const { event } = input;
       const props = event.properties ?? {};
-      const sessionID = props.sessionID as string | undefined;
+      const sessionID = getSessionID(event.type, props);
       if (!sessionID) return;
+      rememberAgent(sessionID, getEventAgent(props));
+      const statusType = (props.status as { type?: string } | undefined)?.type;
 
       if (
         event.type === 'session.delete' ||
@@ -46,28 +191,86 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
       ) {
         cleanupJob(sessionID);
         defaultCoordinator.clearSession(sessionID);
-        nudgedSessions.delete(sessionID);
+        resumeSession(sessionID);
+        sessionAgents.delete(sessionID);
+        return;
+      }
+
+      if (event.type === 'session.next.prompted') {
+        const text = (props.prompt as { text?: unknown } | undefined)?.text;
+        if (!isNudgePrompt(text)) resumeSession(sessionID);
+        return;
+      }
+
+      if (
+        event.type === 'session.next.retried' ||
+        (event.type === 'session.status' && statusType === 'retry')
+      ) {
+        retryPendingSessions.add(sessionID);
+        return;
+      }
+
+      if (event.type === 'message.updated') {
+        const info = props.info as { error?: unknown } | undefined;
+        if (isAbortEventError(info?.error)) stopSession(sessionID);
+        return;
+      }
+
+      if (event.type === 'message.part.updated') {
+        const part = props.part as { type?: unknown; state?: unknown; error?: unknown } | undefined;
+        if (part?.type === 'retry') {
+          retryPendingSessions.add(sessionID);
+          return;
+        }
+
+        if (isAbortEventError(part?.error) || isAbortEventError(part?.state)) {
+          stopSession(sessionID);
+          return;
+        }
+
+        if (isRetryProgressPart(part?.type)) retryPendingSessions.delete(sessionID);
+        return;
+      }
+
+      if (event.type === 'session.next.step.failed') {
+        if (isAbortEventError(props.error)) stopSession(sessionID);
+        return;
+      }
+
+      if (event.type === 'session.next.tool.failed') {
+        if (isAbortEventError(props.error)) {
+          stopSession(sessionID);
+        } else {
+          retryPendingSessions.delete(sessionID);
+        }
+        return;
+      }
+
+      if (isRetryProgressEvent(event.type)) {
         retryPendingSessions.delete(sessionID);
         return;
       }
 
       if (
         event.type === 'session.idle' ||
-        (event.type === 'session.status' &&
-          (props.status as { type?: string } | undefined)?.type === 'idle')
+        (event.type === 'session.status' && statusType === 'idle')
       ) {
+        if (stoppedSessions.has(sessionID)) return;
         if (retryPendingSessions.has(sessionID)) return;
         if (nudgedSessions.has(sessionID)) return;
-        nudgedSessions.add(sessionID);
 
         const suppressor = defaultCoordinator.getOrCreateSuppressor(sessionID);
         if (suppressor.isSuppressed()) return;
+        nudgedSessions.add(sessionID);
 
         let todos: TodoItem[];
         try {
           const result = await ctx.client.session.todo({ path: { id: sessionID } });
           todos = (result.data ?? []) as TodoItem[];
-        } catch { return; }
+        } catch {
+          nudgedSessions.delete(sessionID);
+          return;
+        }
 
         let lastAssistantMessage: string | undefined;
         try {
@@ -75,6 +278,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
           const messages = asMessageArray(msgResult.data);
           const lastAssistant = [...messages].reverse().find((m) => m.info?.role === 'assistant');
           if (lastAssistant) {
+            rememberAgent(sessionID, (lastAssistant.info as { agent?: unknown }).agent);
             lastAssistantMessage = (lastAssistant.parts ?? [])
               .filter((p) => p.type === 'text' && p.text)
               .map((p) => p.text ?? '')
@@ -120,33 +324,35 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
           lastNudgedSession = sessionID;
           await ctx.client.session.prompt({
             path: { id: sessionID },
-            body: { parts: [{ type: 'text', text: promptText }] },
+            body: createPromptBody(sessionID, promptText),
           });
           nudgedSessions.delete(sessionID);
-        } catch {
-          /* abort — stay in nudgedSessions, user pressed Esc */
+        } catch (error) {
+          if (isAbortEventError(error)) {
+            stopSession(sessionID);
+          } else {
+            retryPendingSessions.add(sessionID);
+            nudgedSessions.delete(sessionID);
+          }
         }
         return;
       }
 
       if (
         event.type === 'session.status' &&
-        (props.status as { type?: string } | undefined)?.type === 'busy'
+        statusType === 'busy'
       ) {
-        // Only clear if busy wasn't caused by our own nudge prompt
         if (sessionID !== lastNudgedSession) {
           nudgedSessions.delete(sessionID);
         }
-        retryPendingSessions.delete(sessionID);
         lastNudgedSession = null;
         return;
       }
 
       if (event.type === 'session.error') {
         const error = props.error as { name?: string } | undefined;
-        if (isAbortErrorName(error?.name)) {
-          defaultCoordinator.suppress(sessionID);
-          retryPendingSessions.delete(sessionID);
+        if (isAbortEventError(error)) {
+          stopSession(sessionID);
         } else {
           retryPendingSessions.add(sessionID);
         }

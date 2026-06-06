@@ -1,5 +1,10 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { buildRunnerNudgePrompt, hasActiveJob, cleanupJob, getActiveJobs } from 'engine/runner';
+import {
+  buildRunnerNudgePrompt,
+  cleanupJob,
+  getActiveJobs,
+  hasActiveJob,
+} from 'engine/runner';
 
 export function createRunnerNudgeHook(ctx: PluginInput) {
   return {
@@ -25,7 +30,10 @@ export function createRunnerNudgeHook(ctx: PluginInput) {
         try {
           await ctx.client.session.prompt({
             path: { id: sessionID },
-            body: { parts: [{ type: 'text', text: buildRunnerNudgePrompt() }] },
+            body: {
+              agent: 'runner',
+              parts: [{ type: 'text', text: buildRunnerNudgePrompt() }],
+            },
           });
         } catch {}
         return;

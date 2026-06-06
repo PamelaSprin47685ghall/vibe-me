@@ -43,7 +43,12 @@ export function createSyntaxCheckHook(ctx: PluginInput) {
         content = await fs.readFile(path.resolve(ctx.directory, filePath), 'utf-8');
       } catch { return; }
 
-      const checkResult = await checkSyntax(content, filePath);
+      let checkResult;
+      try {
+        checkResult = await checkSyntax(content, filePath);
+      } catch {
+        return;
+      }
       const appended = appendSyntaxDiagnosticsToOutput(current, filePath, content, checkResult);
       if (appended !== current) {
         output.output = appended;

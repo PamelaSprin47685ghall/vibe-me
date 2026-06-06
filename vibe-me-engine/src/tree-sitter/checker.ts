@@ -1,105 +1,77 @@
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
+import hljs from 'highlight.js';
 import type { SyntaxDiagnostic, SyntaxCheckResult } from '../util/types.js';
 
-interface WasmNode {
+// @ts-ignore TS1343
+const __require = createRequire(import.meta.url);
+
+interface NativeNode {
   isError(): boolean;
   isMissing(): boolean;
   kind(): string;
   startPosition(): { row: number; column: number };
   endPosition(): { row: number; column: number };
   childCount(): number;
-  child(index: number): WasmNode | undefined;
+  child(index: number): NativeNode | undefined;
 }
 
-interface WasmTree {
-  rootNode(): WasmNode;
+interface NativeTree {
+  rootNode(): NativeNode;
 }
 
-interface WasmParser {
+interface NativeParser {
   setLanguage(lang: string): void;
-  parse(source: string): WasmTree | undefined;
+  parse(source: string): NativeTree | undefined;
 }
 
-interface WasmPack {
+interface NativePack {
   detectLanguageFromPath(path: string): string | undefined;
-  getParser(lang: string): WasmParser;
+  detectLanguageFromContent(content: string): string | undefined;
+  hasLanguage(name: string): boolean;
+  getParser(lang: string): NativeParser;
+  downloadAll(): number;
 }
 
-// @ts-ignore TS1343 — CJS compilers reject import.meta.url; ESM consumers see createRequire(import.meta.url)
-const __require = createRequire(import.meta.url);
+function loadNativePack(): NativePack {
+  const pkgPath = __require.resolve('@kreuzberg/tree-sitter-language-pack');
+  const { platform, arch } = process;
+  const suffix =
+    platform === 'darwin' && arch === 'arm64' ? 'darwin-arm64' :
+    platform === 'darwin' && arch === 'x64' ? 'darwin-x64' :
+    platform === 'linux' && arch === 'x64' ? 'linux-x64-gnu' :
+    platform === 'linux' && arch === 'arm64' ? 'linux-arm64-gnu' :
+    platform === 'win32' && arch === 'x64' ? 'win32-x64-msvc' :
+    platform === 'win32' && arch === 'arm64' ? 'win32-arm64-msvc' :
+    null;
+  if (!suffix) throw new Error(`Unsupported platform: ${platform}-${arch}`);
+  const nativePath = __require.resolve(
+    `@kreuzberg/tree-sitter-language-pack/ts-pack-core-node.${suffix}.node`,
+  );
+  return __require(nativePath) as NativePack;
+}
 
-const ENV_SHIM = `{
-  iswlower: function(c) { return c >= 97 && c <= 122 ? 1 : 0; },
-  iswupper: function(c) { return c >= 65 && c <= 90 ? 1 : 0; },
-  iswxdigit: function(c) { return (c >= 48 && c <= 57) || (c >= 65 && c <= 70) || (c >= 97 && c <= 102) ? 1 : 0; },
-  towlower: function(c) { return c >= 65 && c <= 90 ? c + 32 : c; },
-  strcmp: function(a, b) {
-    var mem = new Uint8Array(wasm.memory.buffer);
-    for (var i = 0;; i++) {
-      var ca = mem[a + i], cb = mem[b + i];
-      if (ca !== cb) return ca < cb ? -1 : 1;
-      if (ca === 0) return 0;
-    }
-  },
-  memchr: function(ptr, c, n) {
-    var mem = new Uint8Array(wasm.memory.buffer);
-    for (var i = 0; i < n; i++) { if (mem[ptr + i] === c) return ptr + i; }
-    return 0;
-  },
-  memcpy: function(dest, src, num) {
-    var mem = new Uint8Array(wasm.memory.buffer);
-    mem.copyWithin(dest, src, src + num);
-    return dest;
-  },
-  memmove: function(dest, src, num) {
-    var mem = new Uint8Array(wasm.memory.buffer);
-    var tmp = mem.slice(src, src + num);
-    mem.set(tmp, dest);
-    return dest;
-  },
-  memset: function(ptr, value, num) {
-    var mem = new Uint8Array(wasm.memory.buffer);
-    mem.fill(value & 0xff, ptr, ptr + num);
-    return ptr;
-  },
-  strlen: function(ptr) {
-    var mem = new Uint8Array(wasm.memory.buffer);
-    var len = 0;
-    while (mem[ptr + len] !== 0) len++;
-    return len;
-  },
-  emscripten_notify_memory_growth: function(_index) {},
-  __indirect_function_table: new WebAssembly.Table({ initial: 0, element: 'anyfunc' }),
-}`;
+let packPromise: Promise<NativePack> | null = null;
 
-async function loadTreeSitterPack(): Promise<WasmPack> {
-  const wasmPath = __require.resolve('@kreuzberg/tree-sitter-language-pack-wasm');
-  const patchedPath = wasmPath.replace('.js', '.patched.js');
-
-  if (!existsSync(patchedPath)) {
-    const source = readFileSync(wasmPath, 'utf-8');
-    const patched = source.replace(/require\("env"\)/g, () => ENV_SHIM);
-    writeFileSync(patchedPath, patched);
+function getPack(): Promise<NativePack> {
+  if (!packPromise) {
+    packPromise = (async () => {
+      const pack = loadNativePack();
+      try { pack.downloadAll(); } catch {}
+      return pack;
+    })();
   }
-
-  const mod = __require(patchedPath);
-  return {
-    detectLanguageFromPath: (path: string) => mod.detectLanguageFromPath(path),
-    getParser: (lang: string) => mod.getParser(lang),
-  };
-}
-
-let packPromise: Promise<WasmPack> | null = null;
-
-function getPack(): Promise<WasmPack> {
-  packPromise ??= loadTreeSitterPack();
   return packPromise;
 }
 
-function findErrorNodes(node: WasmNode): WasmNode[] {
-  const out: WasmNode[] = [];
+function detectLangFromContentFallback(content: string, pack: NativePack): string | null {
+  const result = hljs.highlightAuto(content);
+  if (!result.language || result.relevance < 5) return null;
+  return pack.hasLanguage(result.language) ? result.language : null;
+}
+
+function findErrorNodes(node: NativeNode): NativeNode[] {
+  const out: NativeNode[] = [];
   if (node.isError() || node.isMissing()) {
     out.push(node);
     return out;
@@ -113,26 +85,34 @@ function findErrorNodes(node: WasmNode): WasmNode[] {
 }
 
 export async function checkSyntax(content: string, filePath: string): Promise<SyntaxCheckResult> {
-  let pack: WasmPack;
+  let pack: NativePack;
   try {
     pack = await getPack();
-  } catch (err) {
-    return { ok: false, reason: `failed to load wasm pack: ${err instanceof Error ? err.message : String(err)}` };
+  } catch {
+    return { ok: true, lang: '', errors: [] };
   }
 
-  const lang = pack.detectLanguageFromPath(filePath);
-  if (!lang) return { ok: false, reason: `unsupported language: ${filePath}` };
-
-  const parser = pack.getParser(lang);
+  let lang: string;
   try {
-    parser.setLanguage(lang);
-  } catch (err) {
-    return { ok: false, reason: `setLanguage failed for ${lang}: ${err instanceof Error ? err.message : String(err)}` };
+    lang = pack.detectLanguageFromPath(filePath)
+      ?? pack.detectLanguageFromContent(content)
+      ?? detectLangFromContentFallback(content, pack)
+      ?? '';
+  } catch {
+    return { ok: true, lang: '', errors: [] };
+  }
+  if (!lang) return { ok: true, lang: '', errors: [] };
+
+  let parser: NativeParser;
+  try {
+    parser = pack.getParser(lang);
+  } catch {
+    return { ok: true, lang, errors: [] };
   }
 
   try {
     const tree = parser.parse(content);
-    if (!tree) return { ok: false, reason: 'parser returned undefined tree' };
+    if (!tree) return { ok: true, lang, errors: [] };
 
     const errors: SyntaxDiagnostic[] = findErrorNodes(tree.rootNode()).map((node) => {
       const start = node.startPosition();
@@ -142,13 +122,13 @@ export async function checkSyntax(content: string, filePath: string): Promise<Sy
         column: start.column + 1,
         endLine: end.row + 1,
         endColumn: end.column + 1,
-        severity: 'error',
+        severity: 'warning',
         message: node.isMissing() ? `Missing: ${node.kind()}` : node.kind(),
       };
     });
 
     return { ok: true, lang, errors };
-  } catch (err) {
-    return { ok: false, reason: `parse error: ${err instanceof Error ? err.message : String(err)}` };
+  } catch {
+    return { ok: true, lang, errors: [] };
   }
 }

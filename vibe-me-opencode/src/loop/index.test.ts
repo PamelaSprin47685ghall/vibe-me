@@ -323,6 +323,29 @@ describe('createLoopNudgeHook', () => {
     expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
   });
 
+  test('preserves the active agent when nudging', async () => {
+    const ctx = createMockContext();
+    ctx.client.session.todo = mock(() => ({ data: [] }));
+    const hook = createLoopNudgeHook(ctx);
+    activateReview('ses-1', 'task');
+
+    await hook.handleEvent({
+      event: {
+        type: 'session.next.step.started',
+        properties: { sessionID: 'ses-1', agent: 'editor' },
+      },
+    });
+
+    await hook.handleEvent({
+      event: { type: 'session.idle', properties: { sessionID: 'ses-1' } },
+    });
+
+    expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
+    expect(ctx.client.session.prompt.mock.calls[0]?.[0].body.agent).toBe(
+      'editor',
+    );
+  });
+
   test('does not nudge when there are open todos (todo nudge takes priority)', async () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({

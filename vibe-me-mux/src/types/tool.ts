@@ -20,6 +20,7 @@ export interface PluginEvent {
 
 export interface PluginEventHelpers {
   nudge: (workspaceId: string, message: string) => Promise<boolean>;
+  getTodos: (workspaceId: string) => Promise<Array<{ status: string }>>;
 }
 
 export type PluginEventHook = (

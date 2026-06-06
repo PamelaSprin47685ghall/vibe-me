@@ -1,26 +1,22 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import {
-  createAbortSuppressor,
-  isAbortError,
-  isAbortErrorName,
-} from 'engine/util';
-import {
+  activateReview,
+  addChild,
+  deactivateReview,
+  getReviewTask,
+  isReviewActive,
   LOOP_NUDGE_PROMPT,
   REVIEW_INSTRUCTIONS,
   REVIEWER_NUDGE_PROMPT,
   type ReviewResult,
-  activateReview,
-  addChild,
-  clearReviewSessions,
-  deactivateReview,
-  getReviewTask,
-  isReviewActive,
   resolvePendingReview,
   setPendingReview,
   tryLockReview,
   unlockReview,
 } from 'engine/review';
+import { isAbortError, isAbortErrorName } from 'engine/util';
+import { lookupChildAgent, registerChildAgent } from '../utils/child-agent';
 import {
   asMessageArray,
   asTodoArray,
@@ -28,7 +24,6 @@ import {
   extractToolContext,
   promptWithAbort,
 } from '../utils/session';
-import { registerChildAgent } from '../utils/child-agent';
 
 const COMMAND_NAME = 'loop';
 
@@ -36,8 +31,6 @@ const MAX_REVIEWER_NUDGES = 3;
 
 const REVIEWER_GRACE_MS = 1500;
 const GRACE_TIMEOUT = Symbol('grace_timeout');
-
-const SUPPRESS_AFTER_ABORT_MS = 5_000;
 
 class Deferred<T> {
   promise: Promise<T>;
@@ -217,7 +210,11 @@ async function runReviewerWithNudge(
     if (result.type === 'error') {
       deactivateReview(childID);
       if (isAbortError(result.error)) {
-        return { accepted: false, feedback: 'Review aborted.', terminated: true };
+        return {
+          accepted: false,
+          feedback: 'Review aborted.',
+          terminated: true,
+        };
       }
       return {
         accepted: false,
@@ -353,7 +350,47 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
 }
 
 export function createLoopNudgeHook(ctx: PluginInput) {
-  const suppressor = createAbortSuppressor(SUPPRESS_AFTER_ABORT_MS);
+  const stoppedSessions = new Set<string>();
+  const sessionAgents = new Map<string, string>();
+
+  function rememberAgent(sessionID: string, agent: unknown): void {
+    if (typeof agent === 'string' && agent) sessionAgents.set(sessionID, agent);
+  }
+
+  function getEventAgent(props: Record<string, unknown>): string | undefined {
+    if (typeof props.agent === 'string') return props.agent;
+
+    const info = props.info as { agent?: unknown } | undefined;
+    if (typeof info?.agent === 'string') return info.agent;
+  }
+
+  function createPromptBody(sessionID: string) {
+    const agent = sessionAgents.get(sessionID) ?? lookupChildAgent(sessionID);
+    const parts = [{ type: 'text' as const, text: LOOP_NUDGE_PROMPT }];
+    return agent ? { agent, parts } : { parts };
+  }
+
+  function isAbortEventError(error: unknown): boolean {
+    if (typeof error === 'string') return /\babort(?:ed)?\b/i.test(error);
+    if (!error || typeof error !== 'object') return false;
+
+    const name = (error as { name?: unknown }).name;
+    if (typeof name === 'string' && isAbortErrorName(name)) return true;
+
+    const nestedError = (error as { error?: unknown }).error;
+    if (nestedError && nestedError !== error && isAbortEventError(nestedError))
+      return true;
+
+    const data = (error as { data?: unknown }).data;
+    if (data && typeof data === 'object') {
+      const message = (data as { message?: unknown }).message;
+      if (typeof message === 'string' && /\babort(?:ed)?\b/i.test(message))
+        return true;
+    }
+
+    const message = (error as { message?: unknown }).message;
+    return typeof message === 'string' && /\babort(?:ed)?\b/i.test(message);
+  }
 
   return {
     handleEvent: async (input: {
@@ -363,9 +400,26 @@ export function createLoopNudgeHook(ctx: PluginInput) {
       const props = event.properties ?? {};
       const sessionID = props.sessionID as string | undefined;
       if (!sessionID) return;
+      rememberAgent(sessionID, getEventAgent(props));
+
+      if (event.type === 'session.next.prompted') {
+        const text = (props.prompt as { text?: unknown } | undefined)?.text;
+        if (text !== LOOP_NUDGE_PROMPT) stoppedSessions.delete(sessionID);
+        return;
+      }
+
+      if (event.type === 'session.next.step.failed') {
+        if (isAbortEventError(props.error)) stoppedSessions.add(sessionID);
+        return;
+      }
+
+      if (event.type === 'session.next.tool.failed') {
+        if (isAbortEventError(props.error)) stoppedSessions.add(sessionID);
+        return;
+      }
 
       if (event.type === 'session.idle') {
-        if (suppressor.isSuppressed()) return;
+        if (stoppedSessions.has(sessionID)) return;
         if (!isReviewActive(sessionID)) return;
 
         let todos: Array<{
@@ -398,20 +452,24 @@ export function createLoopNudgeHook(ctx: PluginInput) {
             .reverse()
             .find((m) => m.info?.role === 'assistant');
           if (lastAssistant) {
+            rememberAgent(
+              sessionID,
+              (lastAssistant.info as { agent?: unknown }).agent,
+            );
             const fullText = (lastAssistant.parts ?? [])
               .filter((p) => p.type === 'text' && p.text)
               .map((p) => p.text ?? '')
               .join('\n');
             if (fullText.includes('<skip-loop-check />')) return;
           }
-        } catch {
-          // best-effort
+        } catch (error) {
+          if (isAbortEventError(error)) stoppedSessions.add(sessionID);
         }
 
         try {
           await ctx.client.session.prompt({
             path: { id: sessionID },
-            body: { parts: [{ type: 'text', text: LOOP_NUDGE_PROMPT }] },
+            body: createPromptBody(sessionID),
           });
         } catch {
           // best-effort
@@ -420,10 +478,7 @@ export function createLoopNudgeHook(ctx: PluginInput) {
       }
 
       if (event.type === 'session.error') {
-        const error = props.error as { name?: string } | undefined;
-        if (isAbortErrorName(error?.name)) {
-          suppressor.suppress();
-        }
+        if (isAbortEventError(props.error)) stoppedSessions.add(sessionID);
       }
 
       if (
@@ -431,6 +486,8 @@ export function createLoopNudgeHook(ctx: PluginInput) {
         event.type === 'session.close' ||
         event.type === 'session.remove'
       ) {
+        stoppedSessions.delete(sessionID);
+        sessionAgents.delete(sessionID);
         deactivateReview(sessionID);
       }
     },

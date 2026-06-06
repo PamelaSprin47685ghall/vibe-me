@@ -40,8 +40,8 @@ describe("AOP Syntax Diagnostics Formatter Tests", () => {
     expect(formatted).toBe("[syntax-check] lib.rs: ok (rust)");
   });
 
-  it("should return null for a failed check result", () => {
-    const result: SyntaxCheckResult = { ok: false, reason: "unsupported language" };
+  it("should return null when check returns empty errors (language unsupported etc.)", () => {
+    const result: SyntaxCheckResult = { ok: true, lang: "", errors: [] };
 
     expect(formatSyntaxDiagnostics("foo.xyz", result)).toBeNull();
   });

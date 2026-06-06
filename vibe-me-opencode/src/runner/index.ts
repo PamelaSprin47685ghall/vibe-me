@@ -1,24 +1,24 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import {
-  buildRunnerPrompt,
-  buildRunnerNudgePrompt,
-  RUNNER_SYSTEM_PROMPT,
-  execute as executeCommand,
-  hasActiveJob,
-  getActiveJobs,
-  wait,
   abort,
+  buildRunnerNudgePrompt,
+  buildRunnerPrompt,
   cleanupJob,
   type ExecuteResult,
+  execute as executeCommand,
+  getActiveJobs,
+  hasActiveJob,
+  RUNNER_SYSTEM_PROMPT,
+  wait,
 } from 'engine/runner';
+import { registerChildAgent, unregisterChildAgent } from '../utils/child-agent';
 import {
   extractSessionText,
   extractToolContext,
   isAbortError,
   promptWithAbort,
 } from '../utils/session';
-import { registerChildAgent, unregisterChildAgent } from '../utils/child-agent';
 
 export { RUNNER_SYSTEM_PROMPT };
 
@@ -112,12 +112,16 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
           try {
             let nudgeCount = 0;
             const MAX_RUNNER_NUDGES = 10;
-            while (hasActiveJob(getActiveJobs, childID) && nudgeCount < MAX_RUNNER_NUDGES) {
+            while (
+              hasActiveJob(getActiveJobs, childID) &&
+              nudgeCount < MAX_RUNNER_NUDGES
+            ) {
               await promptWithAbort(
                 client,
                 {
                   path: { id: childID },
                   body: {
+                    agent: 'runner',
                     parts: [{ type: 'text', text: buildRunnerNudgePrompt() }],
                   },
                 },

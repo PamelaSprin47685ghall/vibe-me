@@ -85,10 +85,11 @@ describe("Aspect Output Normalization", () => {
     );
   });
 
-  it("should return null for failed check results", () => {
+  it("should return null for check with unsupported language (empty errors)", () => {
     const mockResult: SyntaxCheckResult = {
-      ok: false,
-      reason: "unsupported language",
+      ok: true,
+      lang: "",
+      errors: [],
     };
 
     const formatted = formatSyntaxDiagnostics("README.md", mockResult);

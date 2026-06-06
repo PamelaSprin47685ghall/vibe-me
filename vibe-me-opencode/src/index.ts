@@ -1,9 +1,9 @@
 import type { Plugin } from '@opencode-ai/plugin';
+import { createCapsContextHook } from 'engine/caps';
 import { createBrowserTool, getBrowserConfig } from './browser/index.js';
 import { createEditorTool, getEditorConfig } from './editor/index.js';
 import { createFuzzyFindTool, createFuzzyGrepTool } from './fuzzy/index.js';
 import { createGreperTool, getGreperConfig } from './greper/index.js';
-import { createCapsContextHook } from 'engine/caps';
 import {
   createLoopCommandManager,
   createSubmitReviewResultTool,
@@ -23,8 +23,8 @@ import {
   createRunnerWaitTool,
   getRunnerConfig,
 } from './runner/index.js';
-import { lookupChildAgent } from './utils/child-agent';
 import { createSyntaxCheckHook } from './tree-sitter/index.js';
+import { lookupChildAgent } from './utils/child-agent';
 
 type AgentName =
   | 'orchestrator'
@@ -323,8 +323,13 @@ const KunweiPlugin: Plugin = async (ctx) => {
     },
 
     'chat.message': async (input, output) => {
-      const agent = input.agent ?? lookupChildAgent(input.sessionID) ?? 'orchestrator';
-      nudgeHook.handleChatMessage({ sessionID: input.sessionID, agent });
+      const agent =
+        input.agent ?? lookupChildAgent(input.sessionID) ?? 'orchestrator';
+      nudgeHook.handleChatMessage({
+        sessionID: input.sessionID,
+        agent,
+        parts: output.parts,
+      });
       const defaults = isAgentName(agent) ? getAgentToolDefaults(agent) : null;
       if (!defaults) return;
       output.message.tools = mergeTools(output.message.tools, defaults);

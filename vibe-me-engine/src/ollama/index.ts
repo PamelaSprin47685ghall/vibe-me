@@ -28,8 +28,13 @@ export function getOllamaApiKey(): string {
   return process.env.OLLAMA_API_KEY ?? '';
 }
 
+function normalizeOllamaPath(pathname: string): string {
+  // Mux passes bare endpoint names, while other callers include the leading slash.
+  return pathname.startsWith('/') ? pathname : `/${pathname}`;
+}
+
 export async function ollamaPost(pathname: string, body: Record<string, unknown>, signal?: AbortSignal): Promise<Record<string, unknown>> {
-  const response = await fetch(`${OLLAMA_API_BASE}${pathname}`, {
+  const response = await fetch(`${OLLAMA_API_BASE}${normalizeOllamaPath(pathname)}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
