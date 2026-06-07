@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { formatSyntaxDiagnostics } from "./hook.js";
+import { extractFilePaths, formatSyntaxDiagnostics, isFileEditTool } from "./hook.js";
 import type { SyntaxCheckResult } from "../util/types.js";
 
 describe("AOP Syntax Diagnostics Formatter Tests", () => {
@@ -61,5 +61,25 @@ describe("AOP Syntax Diagnostics Formatter Tests", () => {
     expect(formatted).toContain("2 syntax issue(s) in app.py (python):");
     expect(formatted).toContain("  L1:1-1:10 [error] E001");
     expect(formatted).toContain("  L5:3-5:8 [warning] E002");
+  });
+});
+
+describe("AOP Syntax Diagnostics Tool Matching", () => {
+  it("should recognize apply_patch and extract changed file paths", () => {
+    expect(isFileEditTool("apply_patch")).toBe(true);
+    expect(extractFilePaths({
+      patchText: [
+        "*** Begin Patch",
+        "*** Add File: src/new.ts",
+        "+export const value = 1;",
+        "*** Update File: src/existing.ts",
+        "@@",
+        "-old",
+        "+new",
+        "*** Move to: src/renamed.ts",
+        "*** Delete File: src/deleted.ts",
+        "*** End Patch",
+      ].join("\n"),
+    })).toEqual(["src/new.ts", "src/existing.ts", "src/renamed.ts"]);
   });
 });

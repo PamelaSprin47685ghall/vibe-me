@@ -9,12 +9,15 @@ export function buildRunnerNudgePrompt(): string {
   return RUNNER_NUDGE_PROMPT;
 }
 
-export function hasActiveJob(getActiveJobs: () => Map<string, { status: string; parentSessionId?: string }>, sessionId: string): boolean {
+export function hasActiveJob(getActiveJobs: () => Map<string, { status: string; parentSessionId?: string; taskId?: string }>, sessionId: string): boolean {
   const jobs = getActiveJobs();
   const job = jobs.get(sessionId);
   if (job?.status === 'running') return true;
   for (const [, j] of jobs) {
     if (j.parentSessionId === sessionId && j.status === 'running') return true;
+  }
+  for (const [, j] of jobs) {
+    if (j.taskId === sessionId && j.status === 'running') return true;
   }
   return false;
 }

@@ -1,42 +1,44 @@
 import { getCodingAgentModule } from './pi-resolve.js';
+import { createAbortError, type ChildSession, type CreateChildSessionConfig, type PiLike, type PluginContext, type ReadAssistantTextOptions, type RunSubagentConfig, type SessionEntry, type SessionManagerLike } from './shared.js';
 
-export function readAssistantText(sessionManager, { startIndex = 0, joiner = '\n\n' } = {}) {
-    const entries = sessionManager?.getEntries?.() || [];
-    const chunks = [];
+export function readAssistantText(sessionManager: SessionManagerLike, { startIndex = 0, joiner = '\n\n' }: ReadAssistantTextOptions = {}): string | null {
+    const entries = sessionManager?.getEntries?.() ?? [];
+    const chunks: string[] = [];
     for (let index = startIndex; index < entries.length; index += 1) {
-        const entry = entries[index];
-        if (entry?.type !== 'message') continue;
-        if (entry.message?.role !== 'assistant') continue;
-        for (const part of entry.message?.content || []) {
+        const entry = entries[index] as SessionEntry | undefined;
+        const role = entry?.message?.role ?? entry?.info?.role;
+        if (role !== 'assistant') continue;
+        const content = entry?.message?.content ?? entry?.parts ?? [];
+        for (const part of content) {
             if (part?.type === 'text' && part.text) chunks.push(part.text);
         }
     }
     return chunks.length > 0 ? chunks.join(joiner) : null;
 }
 
-export async function runSubagent(pi, ctx, config) {
+export async function runSubagent(pi: PiLike, ctx: PluginContext, config: RunSubagentConfig): Promise<string> {
     const child = await createChildSession(pi, ctx, config);
     const { promise: abortPromise, reject } = config.signal
-        ? Promise.withResolvers()
+        ? Promise.withResolvers<string>()
         : { promise: null, reject: null };
 
     if (config.signal) {
         if (config.signal.aborted) {
-            reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+            reject?.(createAbortError());
         } else {
             config.signal.addEventListener('abort', () => {
-                reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+                reject?.(createAbortError());
             }, { once: true });
         }
     }
 
-    const wrap = (p) => abortPromise ? Promise.race([p, abortPromise]) : p;
+    const wrap = <T>(promise: Promise<T>) => abortPromise ? Promise.race<T | string>([promise, abortPromise]) : promise;
 
     try {
         await wrap(child.session.prompt(config.prompt));
-        if (config.waitForResult) return await wrap(config.waitForResult(child.session, child.dispose));
+        if (config.waitForResult) return await wrap(config.waitForResult(child.session, child.dispose)) as string;
         await wrap(child.session.waitForIdle());
-        return readAssistantText(child.session.sessionManager);
+        return readAssistantText(child.session.sessionManager) ?? '(no output)';
     } finally {
         if (!config.waitForResult) {
             child.session.abort?.();
@@ -45,7 +47,7 @@ export async function runSubagent(pi, ctx, config) {
     }
 }
 
-export async function createChildSession(pi, ctx, config) {
+export async function createChildSession(pi: PiLike, ctx: PluginContext, config: CreateChildSessionConfig): Promise<ChildSession> {
     const createAgentSession = pi?.pi?.createAgentSession;
     if (!createAgentSession) throw new Error('createAgentSession unavailable');
     const { SessionManager } = await getCodingAgentModule();

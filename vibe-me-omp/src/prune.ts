@@ -2,8 +2,10 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { getPiBase } from './pi-resolve.js';
 
+type PruneConfig = Record<string, number>;
+
 export async function patchDisablePrune() {
-    const pruning = await import(pathToFileURL(path.join(getPiBase(), 'pi-agent-core/src/compaction/pruning.ts')).href);
+    const pruning = await import(pathToFileURL(path.join(getPiBase(), 'pi-agent-core/src/compaction/pruning.ts')).href) as { DEFAULT_PRUNE_CONFIG?: PruneConfig };
     const config = pruning.DEFAULT_PRUNE_CONFIG;
     if (!config) return;
     for (const key of ['protectTokens', 'minimumSavings']) {

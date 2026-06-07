@@ -42,12 +42,6 @@ const FILE_EDIT_REPLACE_STRING = "file_edit_replace_string";
 const FILE_EDIT_INSERT = "file_edit_insert";
 const ATTACH_FILE = "attach_file";
 
-// Task lifecycle tool names
-const TASK_AWAIT = "task_await";
-const TASK_LIST = "task_list";
-const TASK_TERMINATE = "task_terminate";
-const TASK_APPLY_GIT_PATCH = "task_apply_git_patch";
-
 // Miscellaneous tool names
 const ADVISOR = "advisor";
 const NOTIFY = "notify";
@@ -61,7 +55,6 @@ const REVIEW_PANE_GET = "review_pane_get";
 // Family prefix patterns (match any tool name starting with the prefix)
 const STEALTH_FAMILY = "stealth_browser_mcp_.*";
 const DESKTOP_FAMILY = "desktop_.*";
-const TASK_FAMILY = "task_.*";
 
 // ── Composite groups ──
 
@@ -90,14 +83,6 @@ const DELEGATION_TOOLS: readonly string[] = [
   BROWSER,
   SUBMIT_REVIEW,
   START_REVIEW_LOOP,
-];
-
-const TASK_LIFECYCLE_TOOLS: readonly string[] = [
-  TASK,
-  TASK_AWAIT,
-  TASK_LIST,
-  TASK_TERMINATE,
-  TASK_APPLY_GIT_PATCH,
 ];
 
 const ORCHESTRATION_TOOLS: readonly string[] = [
@@ -145,9 +130,9 @@ const MUX_ADMIN_TOOLS: readonly string[] = [
 // is the final safety net that overrides everything and prevents recursion.
 
 export const EDITOR_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
+  TASK,
   ...DELEGATION_TOOLS,
   ...EXECUTION_TOOLS,
-  ...TASK_LIFECYCLE_TOOLS,
 ];
 
 export const GREPER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
@@ -170,10 +155,8 @@ export const RUNNER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
   GLOB,
   ...FUZZY_TOOLS,
   ...DELEGATION_TOOLS,
-  ...EXECUTION_TOOLS,
   ...WEB_TOOLS,
   ...ORCHESTRATION_TOOLS,
-  ...TASK_LIFECYCLE_TOOLS,
   BASH,
   "bash_output",
   "bash_background_list",
@@ -193,7 +176,6 @@ export const BROWSER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
   ...EXECUTION_TOOLS,
   ...WEB_TOOLS,
   ...ORCHESTRATION_TOOLS,
-  ...TASK_LIFECYCLE_TOOLS,
   ...DESKTOP_INTERACTION_TOOLS,
   ...MUX_ADMIN_TOOLS,
   BASH,
@@ -259,7 +241,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           FUZZY_GREP,
           STEALTH_FAMILY,
           TASK,
-          TASK_FAMILY,
           RUNNER_WAIT,
           RUNNER_ABORT,
           WRITE,
@@ -285,35 +266,12 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           ...FUZZY_TOOLS,
           STEALTH_FAMILY,
           TASK,
-          TASK_FAMILY,
           ...DELEGATION_TOOLS,
           ...EXECUTION_TOOLS,
           ...WEB_TOOLS,
           PROPOSE_PLAN,
           ASK_USER_QUESTION,
           FILE_EDIT_INSERT,
-        ],
-      },
-
-      // runner = OpenCode runner agent. Can ONLY use runner_wait + runner_abort.
-      // Strictest possible policy: nothing else is allowed.
-      runner: {
-        add: [],
-        remove: [
-          BASH,
-          GREP,
-          ...FUZZY_TOOLS,
-          STEALTH_FAMILY,
-          DESKTOP_FAMILY,
-          TASK,
-          TASK_FAMILY,
-          ...MUTATION_TOOLS,
-          ...DELEGATION_TOOLS,
-          RUNNER,
-          ...WEB_TOOLS,
-          ...ORCHESTRATION_TOOLS,
-          ...DESKTOP_INTERACTION_TOOLS,
-          ...MUX_ADMIN_TOOLS,
         ],
       },
     },
@@ -342,7 +300,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           RUNNER_ABORT,
           ...WEB_TOOLS,
           TASK,
-          TASK_FAMILY,
           DESKTOP_FAMILY,
           PROPOSE_PLAN,
           TODO_READ,
@@ -372,7 +329,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           RUNNER_ABORT,
           ...WEB_TOOLS,
           TASK,
-          TASK_FAMILY,
           DESKTOP_FAMILY,
           STEALTH_FAMILY,
           PROPOSE_PLAN,
@@ -394,7 +350,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           ...FUZZY_TOOLS,
           DESKTOP_FAMILY,
           TASK,
-          TASK_FAMILY,
           ...MUTATION_TOOLS,
           ...DELEGATION_TOOLS,
           ...EXECUTION_TOOLS,
@@ -417,7 +372,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           STEALTH_FAMILY,
           DESKTOP_FAMILY,
           TASK,
-          TASK_FAMILY,
           ...MUTATION_TOOLS,
           ...DELEGATION_TOOLS,
           ...EXECUTION_TOOLS,
@@ -444,7 +398,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           STEALTH_FAMILY,
           DESKTOP_FAMILY,
           TASK,
-          TASK_FAMILY,
           ...MUTATION_TOOLS,
           ...DELEGATION_TOOLS,
           ...EXECUTION_TOOLS,
@@ -453,6 +406,26 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           ...DESKTOP_INTERACTION_TOOLS,
           ...MUX_ADMIN_TOOLS,
           GREPER,
+        ],
+      },
+      // runner = read-only runner agent. Can ONLY use runner_wait + runner_abort.
+      // Strictest possible policy: nothing else is allowed.
+      runner: {
+        add: [RUNNER_WAIT, RUNNER_ABORT],
+        remove: [
+          BASH,
+          GREP,
+          ...FUZZY_TOOLS,
+          STEALTH_FAMILY,
+          DESKTOP_FAMILY,
+          TASK,
+          ...MUTATION_TOOLS,
+          ...DELEGATION_TOOLS,
+          RUNNER,
+          ...WEB_TOOLS,
+          ...ORCHESTRATION_TOOLS,
+          ...DESKTOP_INTERACTION_TOOLS,
+          ...MUX_ADMIN_TOOLS,
         ],
       },
     },

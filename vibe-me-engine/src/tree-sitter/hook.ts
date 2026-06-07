@@ -1,7 +1,7 @@
 import { checkSyntax } from './checker.js';
 import type { SyntaxCheckResult } from '../util/types.js';
 
-const FILE_EDIT_TOOLS = new Set(['edit', 'write', 'Write', 'ast_edit', 'ast_grep_replace', 'file_edit_replace_string', 'file_edit_insert']);
+const FILE_EDIT_TOOLS = new Set(['edit', 'write', 'Write', 'ast_edit', 'ast_grep_replace', 'file_edit_replace_string', 'file_edit_insert', 'apply_patch']);
 export const SYNTAX_CHECK_MARKER = '[syntax-check]';
 
 export function isFileEditTool(tool: string): boolean {
@@ -9,9 +9,24 @@ export function isFileEditTool(tool: string): boolean {
 }
 
 export function extractFilePath(args: Record<string, unknown> | undefined | null): string | null {
-  if (!args || typeof args !== 'object') return null;
+  return extractFilePaths(args)[0] ?? null;
+}
+
+export function extractFilePaths(args: Record<string, unknown> | undefined | null): string[] {
+  if (!args || typeof args !== 'object') return [];
   const candidate = (args.path ?? args.file_path ?? args.filePath) as string | undefined;
-  return typeof candidate === 'string' && candidate.length > 0 ? candidate : null;
+  if (typeof candidate === 'string' && candidate.length > 0) return [candidate];
+
+  const patchText = args.patchText;
+  if (typeof patchText !== 'string') return [];
+
+  return Array.from(
+    new Set(
+      patchText
+        .split('\n')
+        .flatMap((line) => line.match(/^\*\*\* (?:Add File|Update File|Move to): (.+)$/)?.[1] ?? [])
+    )
+  );
 }
 
 export function hasSyntaxCheckMarker(text: string): boolean {

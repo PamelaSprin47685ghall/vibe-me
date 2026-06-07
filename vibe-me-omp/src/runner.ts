@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import {
-  RUNNER_EARLY_TIMEOUT_MS,
   RUNNER_MAX_WAIT_MS,
   RUNNER_MIN_WAIT_MS,
   RUNNER_LANGUAGES,
@@ -14,15 +13,18 @@ import {
   hasActiveJob,
   stripHeadTailPipes,
   wait,
+  type ExecuteResult,
+  type RunnerLanguage,
 } from 'engine/runner';
+import { createAbortError, hasErrorName, type PiLike, type PluginContext, type SharedHelpers, type ToolResult } from './shared.js';
 
 export { stripHeadTailPipes };
 
 export const RUNNER_TOOL_NAMES = ['runner', 'runner_wait', 'runner_abort'];
 
-const runnerJobs = new Map();
+const runnerJobs = new Map<string, { status: string }>();
 
-export async function cleanupRunnerJob(sessionId) {
+export async function cleanupRunnerJob(sessionId: string) {
   await cleanupJob(sessionId);
   runnerJobs.delete(sessionId);
 }
@@ -32,24 +34,28 @@ export function resetRunnerJobs() {
   runnerJobs.clear();
 }
 
-export function hasRunningRunnerJob(sessionId) {
+export function hasRunningRunnerJob(sessionId: string) {
   return hasActiveJob(getActiveJobs, sessionId) || runnerJobs.has(sessionId);
 }
 
-export function setRunnerJobStateForTest(sessionId, status = 'running') {
+export function setRunnerJobStateForTest(sessionId: string, status = 'running') {
   const logPath = getRunnerLogPath(`test-${sessionId}`);
   fs.writeFileSync(logPath, '');
   runnerJobs.set(sessionId, { status });
 }
 
-export async function waitRunnerJob(sessionId, ms) {
+export async function waitRunnerJob(sessionId: string, ms: number) {
   return await wait({ sessionId, ms });
 }
 
-export function registerRunnerTools(pi, helpers) {
+function isRunnerLanguage(language: string | undefined): language is RunnerLanguage {
+  return typeof language === 'string' && (RUNNER_LANGUAGES as readonly string[]).includes(language);
+}
+
+export function registerRunnerTools(pi: PiLike, helpers: SharedHelpers) {
   const { asErrorResult, createChildSession, getSessionIdFromContext, readAssistantText } = helpers;
 
-  pi.on('session_shutdown', (_event, ctx) => {
+  pi.on('session_shutdown', (_event: unknown, ctx: PluginContext) => {
     const sessionId = getSessionIdFromContext(ctx);
     if (sessionId) cleanupRunnerJob(sessionId).catch(() => {});
   });
@@ -64,34 +70,35 @@ export function registerRunnerTools(pi, helpers) {
       dependencies: pi.typebox.Type.Optional(pi.typebox.Type.Array(pi.typebox.Type.String({ description: 'Language dependencies.' }))),
       what_to_summarize: pi.typebox.Type.String({ description: 'What to summarize from output.' }),
     }),
-    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-      const language = RUNNER_LANGUAGES.includes(params.language) ? params.language : 'shell';
+    async execute(_toolCallId: string, params: { language?: string; program: string; dependencies?: string[]; what_to_summarize: string }, signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
+      const language: RunnerLanguage = isRunnerLanguage(params.language) ? params.language : 'shell';
       try {
         const child = await createChildSession(pi, ctx, {
           toolNames: ['runner_wait', 'runner_abort'],
           systemPrompt: [RUNNER_SYSTEM_PROMPT, ...(ctx?.getSystemPrompt?.() || [])],
         });
         try {
-          const childSessionId = child.session.sessionManager.getSessionId();
+          const childSessionId = child.session.sessionManager.getSessionId?.();
+          if (!childSessionId) throw new Error('Runner child session unavailable');
           const { promise: abortPromise, reject } = signal
-            ? Promise.withResolvers()
+            ? Promise.withResolvers<never>()
             : { promise: null, reject: null };
 
           if (signal) {
             if (signal.aborted) {
               abort(childSessionId);
-              reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+              reject?.(createAbortError());
             } else {
               signal.addEventListener('abort', () => {
                 abort(childSessionId);
-                reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
+                reject?.(createAbortError());
               }, { once: true });
             }
           }
 
-          const wrap = (p) => abortPromise ? Promise.race([p, abortPromise]) : p;
+          const wrap = <T>(promise: Promise<T>) => abortPromise ? Promise.race([promise, abortPromise]) : promise;
 
-          const runResult = await wrap(execute({
+          const runResult: ExecuteResult = await wrap(execute({
             sessionId: childSessionId,
             program: params.program,
             language,
@@ -107,7 +114,7 @@ export function registerRunnerTools(pi, helpers) {
           child.dispose?.();
         }
       } catch (error) {
-        if (error?.name === 'AbortError') {
+        if (hasErrorName(error, 'AbortError')) {
           return { content: [{ type: 'text', text: 'Runner aborted.' }] };
         }
         return asErrorResult(error);
@@ -123,7 +130,7 @@ export function registerRunnerTools(pi, helpers) {
     parameters: pi.typebox.Type.Object({
       ms: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Wait time in milliseconds.' })),
     }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { ms?: number }, _signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       const sessionId = getSessionIdFromContext(ctx);
       if (!sessionId) return { content: [{ type: 'text', text: 'No runner session found.' }], isError: true };
       try {
@@ -142,7 +149,7 @@ export function registerRunnerTools(pi, helpers) {
     description: 'Abort background runner task.',
     defaultInactive: true,
     parameters: pi.typebox.Type.Object({}),
-    async execute(_toolCallId, _params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, _params: Record<string, never>, _signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       const sessionId = getSessionIdFromContext(ctx);
       if (!sessionId) return { content: [{ type: 'text', text: 'No runner session found.' }], isError: true };
       try {

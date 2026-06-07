@@ -4,11 +4,8 @@ import {
   getOllamaApiKey,
   ollamaPost,
   validateFetchUrl,
-  OLLAMA_API_BASE,
-  isPrivateIPv4,
-  isPrivateIPv6,
-  validateHostname,
 } from 'engine/ollama';
+import type { PiLike, SharedHelpers, ToolResult } from './shared.js';
 
 export const OLLAMA_TOOL_NAMES = ['websearch', 'webfetch'];
 
@@ -16,7 +13,7 @@ export function getOllamaKey() {
   return getOllamaApiKey();
 }
 
-export function registerOllamaTools(pi, helpers) {
+export function registerOllamaTools(pi: PiLike, helpers: Pick<SharedHelpers, 'asErrorResult'>) {
   const { asErrorResult } = helpers;
 
   pi.registerTool({
@@ -27,7 +24,7 @@ export function registerOllamaTools(pi, helpers) {
       query: pi.typebox.Type.String({ description: 'Natural language search query.' }),
       numResults: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Maximum results to return.' })),
     }),
-    async execute(_toolCallId, params, signal) {
+    async execute(_toolCallId: string, params: { query: string; numResults?: number }, signal: AbortSignal | undefined): Promise<ToolResult> {
       try {
         const data = await ollamaPost('/web_search', { query: params.query, max_results: params.numResults ?? 10 }, signal);
         return { content: [{ type: 'text', text: formatSearchResults((data.results || []) as Array<{ title: string; url: string; content: string }>) }], details: data };
@@ -48,7 +45,7 @@ export function registerOllamaTools(pi, helpers) {
       prompt: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Optional extraction task.' })),
       timeout: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Timeout in seconds.' })),
     }),
-    async execute(_toolCallId, params, signal) {
+    async execute(_toolCallId: string, params: { url: string; extract_main?: boolean; prefer_llms_txt?: string; prompt?: string; timeout?: number }, signal: AbortSignal | undefined): Promise<ToolResult> {
       try {
         const urlError = await validateFetchUrl(params.url);
         if (urlError) return asErrorResult(new Error(urlError));

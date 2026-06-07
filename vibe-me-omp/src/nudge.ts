@@ -1,33 +1,26 @@
 import {
   LOOP_NUDGE_PROMPT,
-  activateReview,
-  addChild,
-  clearReviewSessions as _clearReviewSessions,
-  deactivateReview,
-  getOrCreateAbortSuppressor as _getOrCreateSuppressor,
   isReviewActive,
-  resolvePendingReview,
-  setLastFeedback,
-  setPendingReview,
   tryLockReview,
   unlockReview,
-  getReviewTask,
 } from 'engine/review';
 import { getLatestTodoPhasesFromEntries, readAssistantText } from 'engine/session';
 import { NudgeCoordinator } from 'engine/todo';
 import { buildRunnerNudgePrompt } from 'engine/runner';
+import type { PiLike, SessionManagerLike } from './shared.js';
 
-const TERMINAL_TODO_STATUSES = new Set(['completed', 'cancelled', 'abandoned']);
+type TodoTask = { status: string };
+type TodoPhase = { tasks?: TodoTask[] };
 
 const coordinator = new NudgeCoordinator();
 
-function flattenTodoTasks(phases) {
-  return phases.flatMap((phase) => phase.tasks || []);
+function flattenTodoTasks(phases: TodoPhase[]): TodoTask[] {
+  return phases.flatMap((phase) => phase.tasks || []).filter((task): task is TodoTask => typeof task.status === 'string');
 }
 
-export function handleLoopNudge(pi, _state, sessionId, sessionManager, isLoopActive) {
+export function handleLoopNudge(pi: PiLike, _state: unknown, sessionId: string, sessionManager: SessionManagerLike, isLoopActive: (sessionId: string) => boolean) {
   const entries = sessionManager.getEntries?.() ?? [];
-  const tasks = flattenTodoTasks(getLatestTodoPhasesFromEntries(entries));
+  const tasks = flattenTodoTasks(getLatestTodoPhasesFromEntries(entries) as TodoPhase[]);
   const lastAssistantMessage = readAssistantText(entries) ?? undefined;
 
   const action = coordinator.shouldNudge(sessionId, {
@@ -46,7 +39,7 @@ export function handleLoopNudge(pi, _state, sessionId, sessionManager, isLoopAct
   }
 }
 
-export function handleRunnerNudge(pi, _state, sessionId, hasRunningJob) {
+export function handleRunnerNudge(pi: PiLike, _state: unknown, sessionId: string, hasRunningJob: (sessionId: string) => boolean) {
   const action = coordinator.shouldNudge(sessionId, {
     todos: [],
     hasActiveRunner: hasRunningJob(sessionId),
@@ -62,7 +55,7 @@ export function handleRunnerNudge(pi, _state, sessionId, hasRunningJob) {
   }
 }
 
-export function clearNudgeSession(sessionId) {
+export function clearNudgeSession(sessionId: string) {
   coordinator.clearSession(sessionId);
 }
 

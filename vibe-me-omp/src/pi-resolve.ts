@@ -10,8 +10,8 @@ const PI_BASE_CANDIDATES: string[] = [
     join(home, '.bun/install/global/node_modules/@oh-my-pi'),
 ].filter((p): p is string => !!p);
 
-let resolvedBase;
-function resolveBase() {
+let resolvedBase: string | undefined;
+function resolveBase(): string {
     if (resolvedBase) return resolvedBase;
     const found = PI_BASE_CANDIDATES.find(existsSync);
     if (!found) {
@@ -24,15 +24,21 @@ function resolveBase() {
     return resolvedBase;
 }
 
-let cachedModule;
+type CodingAgentModule = {
+    SessionManager: {
+        create: (cwd: string) => unknown;
+    };
+};
+
+let cachedModule: CodingAgentModule | undefined;
 
 export function getPiBase() {
     return resolveBase();
 }
 
-export async function getCodingAgentModule() {
+export async function getCodingAgentModule(): Promise<CodingAgentModule> {
     if (cachedModule) return cachedModule;
-    const module = await import(pathToFileURL(join(resolveBase(), 'pi-coding-agent/src/index.ts')).href);
+    const module = await import(pathToFileURL(join(resolveBase(), 'pi-coding-agent/src/index.ts')).href) as CodingAgentModule;
     cachedModule = module;
     return module;
 }

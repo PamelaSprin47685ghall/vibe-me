@@ -152,3 +152,5 @@ export type { HostDependencies, RuntimeHandle } from "./types/deps.js";
 export type { AgentToolPolicy } from "./types/tool.js";
 export type { MuxAgentName, SubAgentRole, MuxAgentToolPolicies } from "./agentToolPolicies.js";
 export { buildAgentToolPolicies, getPluginToolPolicy } from "./agentToolPolicies.js";
+export { findCapsFiles, type CapsFileInfo } from "engine/caps";
+export { buildCapsFileReadData, type CapsFileReadEntry } from "./context/capsFileReadMessages.js";

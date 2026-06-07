@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { PluginToolConfiguration } from "../types/tool.js";
+import { GREPER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME } from "../types/contract.js";
 import type {
   HostDependencies,
   TaskCreateInput,
   TaskCreateResult,
   TaskServiceLike,
+  TaskWaitOptions,
   TaskWaitResult,
 } from "../types/deps.js";
 import { createGreperTool } from "./greper.js";
@@ -25,10 +27,7 @@ const mockTaskService: {
     typeof mock<
       (
         taskId: string,
-        opts: {
-          requestingWorkspaceId: string;
-          abortSignal?: AbortSignal;
-        },
+        opts: TaskWaitOptions,
       ) => Promise<TaskWaitResult>
     >
   >;
@@ -39,10 +38,7 @@ const mockTaskService: {
   waitForAgentReport: mock<
     (
       taskId: string,
-      opts: {
-        requestingWorkspaceId: string;
-        abortSignal?: AbortSignal;
-      },
+      opts: TaskWaitOptions,
     ) => Promise<TaskWaitResult>
   >(),
 };
@@ -100,16 +96,21 @@ describe("greper tool", () => {
       parentWorkspaceId: "ws-test",
       kind: "agent",
       agentId: "explore",
-      modelString: "anthropic:claude-sonnet-4-5",
-      thinkingLevel: "medium",
       prompt: "find all usages of getUserName function",
       title: "Greper",
+      experiments: {
+        subagentRole: "greper",
+        toolPolicy: {
+          disabledTools: [...GREPER_SUB_AGENT_DISABLED_TOOLS],
+        },
+      },
     });
     expect(mockTaskService.waitForAgentReport).toHaveBeenCalledWith(
       "task-123",
       {
         requestingWorkspaceId: "ws-test",
         abortSignal: undefined,
+        backgroundOnMessageQueued: false,
       },
     );
     expect(result).toBe("Found 3 matches in src/utils.ts");

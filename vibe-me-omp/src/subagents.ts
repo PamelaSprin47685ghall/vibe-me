@@ -6,10 +6,11 @@ import {
   GREPER_SYSTEM_PROMPT,
   REVERIE_SYSTEM_PROMPT,
 } from 'engine/subagent';
+import type { PiLike, PluginContext, SharedHelpers, ToolResult } from './shared.js';
 
 export const SUBAGENT_TOOL_NAMES = ['editor', 'greper', 'reverie', 'browse'];
 
-export function registerSubagentTools(pi, helpers) {
+export function registerSubagentTools(pi: PiLike, helpers: SharedHelpers) {
   const { asErrorResult, runSubagent } = helpers;
 
   pi.registerTool({
@@ -19,7 +20,7 @@ export function registerSubagentTools(pi, helpers) {
     parameters: pi.typebox.Type.Object({
       intent: pi.typebox.Type.String({ description: 'Describe the desired code changes with full context.' }),
     }),
-    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { intent: string }, signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       try {
         return {
           content: [{
@@ -44,7 +45,7 @@ export function registerSubagentTools(pi, helpers) {
     parameters: pi.typebox.Type.Object({
       intent: pi.typebox.Type.String({ description: 'Describe what code or files to find with full context.' }),
     }),
-    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { intent: string }, signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       try {
         return {
           content: [{
@@ -70,9 +71,9 @@ export function registerSubagentTools(pi, helpers) {
       intent: pi.typebox.Type.String({ description: 'Question or reasoning task.' }),
       files: pi.typebox.Type.Array(pi.typebox.Type.String({ description: 'File path to include as context.' })),
     }),
-    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { intent: string; files: string[] }, signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       try {
-        const parts = await Promise.all((params.files || []).map(async (file) => {
+        const parts = await Promise.all((params.files || []).map(async (file): Promise<string> => {
           const fullPath = path.resolve(ctx.cwd, file);
           try {
             return `=== ${file} ===\n\n${await fs.readFile(fullPath, 'utf-8')}`;
@@ -104,7 +105,7 @@ export function registerSubagentTools(pi, helpers) {
     parameters: pi.typebox.Type.Object({
       intent: pi.typebox.Type.String({ description: 'Describe the web task with full context.' }),
     }),
-    async execute(_toolCallId, params, signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { intent: string }, signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       try {
         if (typeof pi.getAllTools !== 'function' || !pi.getAllTools().includes('browser')) {
           return { content: [{ type: 'text', text: 'Built-in browser tool is unavailable in this session.' }], isError: true };

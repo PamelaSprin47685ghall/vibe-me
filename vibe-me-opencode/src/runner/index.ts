@@ -12,7 +12,11 @@ import {
   RUNNER_SYSTEM_PROMPT,
   wait,
 } from 'engine/runner';
-import { registerChildAgent, unregisterChildAgent } from '../utils/child-agent';
+import {
+  registerChildAgent,
+  resolveSubsessionParentID,
+  unregisterChildAgent,
+} from '../utils/child-agent';
 import {
   extractSessionText,
   extractToolContext,
@@ -62,16 +66,18 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
         ctx.directory,
       );
 
+      const parentID = resolveSubsessionParentID(sessionID);
+
       const createResult = await client.session.create({
         query: { directory },
         body: {
-          parentID: sessionID,
+          parentID,
           title: 'Runner',
         },
       });
       const childID = createResult.data?.id;
       if (!childID) return 'Failed to create child session';
-      registerChildAgent(childID, 'runner');
+      registerChildAgent(childID, 'runner', parentID);
 
       try {
         const language = args.language ?? 'shell';

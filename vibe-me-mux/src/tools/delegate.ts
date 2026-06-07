@@ -8,6 +8,7 @@ import {
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 export interface DelegateOptions {
+  readonly aiSettingsAgentId?: string;
   readonly experiments?: { readonly subagentRole?: string; readonly toolPolicy?: { readonly disabledTools?: readonly string[] } };
 }
 
@@ -19,18 +20,23 @@ export async function delegateToSubAgent(
   title: string,
   options?: DelegateOptions,
 ): Promise<string> {
-  const resolveDelegatedAgentAiSettings =
-    createResolveDelegatedAgentAiSettings(deps);
   const workspaceId = requireWorkspaceId(config, title.toLowerCase());
   const taskService = requireTaskService(config, title.toLowerCase());
-  const aiSettings = await resolveDelegatedAgentAiSettings(config, agentId);
+  const aiSettings = options?.aiSettingsAgentId
+    ? await createResolveDelegatedAgentAiSettings(deps)(
+        config,
+        options.aiSettingsAgentId,
+      )
+    : undefined;
 
   const createResult = await taskService.create({
     parentWorkspaceId: workspaceId,
     kind: "agent",
     agentId,
-    modelString: aiSettings.modelString,
-    thinkingLevel: aiSettings.thinkingLevel,
+    ...(aiSettings && {
+      modelString: aiSettings.modelString,
+      thinkingLevel: aiSettings.thinkingLevel,
+    }),
     prompt,
     title,
     experiments: options?.experiments,
@@ -46,6 +52,7 @@ export async function delegateToSubAgent(
       {
         requestingWorkspaceId: workspaceId,
         abortSignal: config.abortSignal,
+        backgroundOnMessageQueued: false,
       },
     );
     return result.reportMarkdown;

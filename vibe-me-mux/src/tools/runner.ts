@@ -6,9 +6,8 @@ import {
   requireWorkspaceId,
 } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
-import { execute, cleanupJob } from "engine/runner";
+import { execute, cleanupJob, globalJobRegistry } from "engine/runner";
 import { RUNNER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
-import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -40,10 +39,7 @@ const parameters: JsonSchema = {
   additionalProperties: false,
 };
 
-export function createRunnerTool(deps: HostDependencies): ToolDefinition {
-  const resolveDelegatedAgentAiSettings =
-    createResolveDelegatedAgentAiSettings(deps);
-
+export function createRunnerTool(_deps: HostDependencies): ToolDefinition {
   return {
     name: "runner",
     description:
@@ -56,8 +52,6 @@ export function createRunnerTool(deps: HostDependencies): ToolDefinition {
       const workspaceId = requireWorkspaceId(config, "runner");
       const jobId = `${workspaceId}/${randomUUID()}`;
       const taskService = requireTaskService(config, "runner");
-      const aiSettings = await resolveDelegatedAgentAiSettings(config, "exec");
-
       const execResult = await execute({
         sessionId: jobId,
         parentSessionId: workspaceId,
@@ -86,8 +80,10 @@ export function createRunnerTool(deps: HostDependencies): ToolDefinition {
             `Initial output (first 5 seconds):`,
             execResult.output,
             "",
+            `Job ID: ${execResult.jobId}`,
+            "",
             "You can use runner_wait to check for new output from the running process " +
-              "by passing the jobId. Make sure to keep waiting until the task completes.",
+              "by passing the above jobId. Make sure to keep waiting until the task completes.",
           ]
             .filter(Boolean)
             .join("\n")
@@ -111,9 +107,7 @@ export function createRunnerTool(deps: HostDependencies): ToolDefinition {
       const createResult = await taskService.create({
         parentWorkspaceId: workspaceId,
         kind: "agent",
-        agentId: "exec",
-        modelString: aiSettings.modelString,
-        thinkingLevel: aiSettings.thinkingLevel,
+        agentId: "explore",
         prompt,
         title: "Runner",
         experiments: {
@@ -129,12 +123,16 @@ export function createRunnerTool(deps: HostDependencies): ToolDefinition {
         return `Failed to create runner task: ${createResult.error}`;
       }
 
+      const job = globalJobRegistry.get(jobId);
+      if (job) job.taskId = createResult.data.taskId;
+
       try {
         const result = await taskService.waitForAgentReport(
           createResult.data.taskId,
           {
             requestingWorkspaceId: workspaceId,
             abortSignal: config.abortSignal,
+            backgroundOnMessageQueued: false,
           },
         );
         return result.reportMarkdown;

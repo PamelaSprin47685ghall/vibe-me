@@ -16,7 +16,11 @@ import {
   unlockReview,
 } from 'engine/review';
 import { isAbortError, isAbortErrorName } from 'engine/util';
-import { lookupChildAgent, registerChildAgent } from '../utils/child-agent';
+import {
+  lookupChildAgent,
+  registerChildAgent,
+  resolveSubsessionParentID,
+} from '../utils/child-agent';
 import {
   asMessageArray,
   asTodoArray,
@@ -309,10 +313,11 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
           });
         }
 
+        const parentID = resolveSubsessionParentID(sessionID);
         const createResult = await client.session.create({
           query: { directory },
           body: {
-            parentID: sessionID,
+            parentID,
             title: 'Reviewer',
           },
         });
@@ -321,7 +326,7 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
           return 'Failed to create reviewer session';
         }
         addChild(sessionID, childID);
-        registerChildAgent(childID, 'reviewer');
+        registerChildAgent(childID, 'reviewer', parentID);
 
         const result = await runReviewerWithNudge(
           client,

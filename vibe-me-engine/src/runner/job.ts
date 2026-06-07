@@ -14,6 +14,7 @@ export class ActiveJob {
   public readonly abortController = new AbortController();
   public bytesRead = 0;
   public finalOutput = '';
+  public taskId?: string;
   public closePromise: Promise<void> = Promise.resolve();
 
   private writeStream: WriteStream | null;

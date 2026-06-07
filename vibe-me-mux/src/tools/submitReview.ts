@@ -100,6 +100,7 @@ export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
           reviewPrompt,
           "Review",
           {
+            aiSettingsAgentId: "plan",
             experiments: {
               subagentRole: "reviewer",
               toolPolicy: {

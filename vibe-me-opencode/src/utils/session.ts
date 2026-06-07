@@ -1,7 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
+import { type Entry, readAssistantText } from 'engine/session';
 import { isAbortError } from 'engine/util';
-import { readAssistantText, type Entry } from 'engine/session';
-import { registerChildAgent } from './child-agent';
+import { registerChildAgent, resolveSubsessionParentID } from './child-agent';
 
 export { isAbortError };
 
@@ -96,7 +96,8 @@ export async function promptWithAbort(
 
     signal.addEventListener('abort', onAbort);
 
-    client.session.prompt(args)
+    client.session
+      .prompt(args)
       .then(() => {
         if (!settled) {
           settled = true;
@@ -128,16 +129,17 @@ export async function runSubagent(
   client: PluginInput['client'],
   params: SubagentParams,
 ): Promise<string> {
+  const parentID = resolveSubsessionParentID(params.sessionID);
   const createResult = await client.session.create({
     query: { directory: params.directory },
     body: {
-      parentID: params.sessionID,
+      parentID,
       title: params.title,
     },
   });
   const childID = createResult.data?.id;
   if (!childID) return 'Failed to create child session';
-  registerChildAgent(childID, params.agent);
+  registerChildAgent(childID, params.agent, parentID);
 
   try {
     await promptWithAbort(

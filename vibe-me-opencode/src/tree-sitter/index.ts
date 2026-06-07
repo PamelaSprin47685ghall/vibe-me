@@ -4,10 +4,10 @@ import path from 'node:path';
 import type { PluginInput } from '@opencode-ai/plugin';
 import {
   checkSyntax,
-  extractFilePath,
+  extractFilePaths,
+  formatSyntaxDiagnostics,
   hasSyntaxCheckMarker,
   isFileEditTool,
-  appendSyntaxDiagnosticsToOutput,
 } from 'engine/tree-sitter';
 
 interface ToolExecuteAfterInput {
@@ -16,6 +16,7 @@ interface ToolExecuteAfterInput {
     path?: string;
     file_path?: string;
     filePath?: string;
+    patchText?: string;
     [key: string]: unknown;
   };
 }
@@ -35,24 +36,24 @@ export function createSyntaxCheckHook(ctx: PluginInput) {
       if (typeof current !== 'string') return;
       if (hasSyntaxCheckMarker(current)) return;
 
-      const filePath = extractFilePath(input.args);
-      if (!filePath) return;
+      const filePaths = extractFilePaths(input.args);
+      if (filePaths.length === 0) return;
 
-      let content: string;
-      try {
-        content = await fs.readFile(path.resolve(ctx.directory, filePath), 'utf-8');
-      } catch { return; }
+      const diagnostics: string[] = [];
 
-      let checkResult;
-      try {
-        checkResult = await checkSyntax(content, filePath);
-      } catch {
-        return;
+      for (const filePath of filePaths) {
+        let content: string;
+        try {
+          content = await fs.readFile(path.resolve(ctx.directory, filePath), 'utf-8');
+        } catch { continue; }
+
+        try {
+          const formatted = formatSyntaxDiagnostics(filePath, await checkSyntax(content, filePath));
+          if (formatted) diagnostics.push(formatted);
+        } catch { continue; }
       }
-      const appended = appendSyntaxDiagnosticsToOutput(current, filePath, content, checkResult);
-      if (appended !== current) {
-        output.output = appended;
-      }
+
+      if (diagnostics.length > 0) output.output = `${current}\n\n${diagnostics.join('\n\n')}`;
     },
   };
 }

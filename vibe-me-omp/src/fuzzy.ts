@@ -1,5 +1,6 @@
 import { FuzzySearchCoordinator, resolveExternalBasePath } from 'engine/fuzzy';
 import { globalIteratorStore } from 'engine/util';
+import type { PiLike, PluginContext, ToolResult } from './shared.js';
 
 const FUZZY_FIND_DESCRIPTION = `Search for files by fuzzy path text matching. Returns file paths ranked by relevance and frecency. Supports partial matches on file names and directory paths. Regex and glob syntax are not supported.
 
@@ -13,7 +14,7 @@ First call: provide pattern and optional filters.
 Later calls: provide only iterator.
 Every result ends with iterator="..."; iteration is finished when it becomes iterator="".`;
 
-export function createFuzzyFindTool(pi) {
+export function createFuzzyFindTool(pi: PiLike) {
   return {
     name: 'fuzzy_find',
     label: 'Fuzzy Find',
@@ -24,7 +25,7 @@ export function createFuzzyFindTool(pi) {
       limit: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Maximum number of results to return per call (default: 30)' })),
       iterator: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Opaque single-use iterator from a previous fuzzy_find result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
     }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { pattern?: string; path?: string; limit?: number; iterator?: string }, _signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       const scopeId = ctx.sessionId || ctx.workspaceId;
       if (!scopeId) throw new Error('fuzzy_find requires an active session');
       const result = await FuzzySearchCoordinator.fuzzyFind(params, { cwd: ctx.cwd, scopeId });
@@ -36,7 +37,7 @@ export function createFuzzyFindTool(pi) {
   };
 }
 
-export function createFuzzyGrepTool(pi) {
+export function createFuzzyGrepTool(pi: PiLike) {
   return {
     name: 'fuzzy_grep',
     label: 'Fuzzy Grep',
@@ -53,7 +54,7 @@ export function createFuzzyGrepTool(pi) {
       limit: pi.typebox.Type.Optional(pi.typebox.Type.Number({ description: 'Maximum number of matches to return per call.' })),
       iterator: pi.typebox.Type.Optional(pi.typebox.Type.String({ description: 'Opaque single-use iterator from a previous fuzzy_grep result. On continuation, pass only this field. Iteration is finished when the result shows iterator="".' })),
     }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { pattern?: string; path?: string; exclude?: string | string[]; caseSensitive?: boolean; context?: number; limit?: number; iterator?: string }, _signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       const scopeId = ctx.sessionId || ctx.workspaceId;
       if (!scopeId) throw new Error('fuzzy_grep requires an active session');
       const result = await FuzzySearchCoordinator.fuzzyGrep(params, { cwd: ctx.cwd, scopeId });
@@ -72,8 +73,8 @@ export function resetFuzzyState() {
 export const _test = {
   resetFuzzyState,
   resolveExternalBasePath,
-  storeCursor: (state: any) => globalIteratorStore.store('global', 'omp_c', state),
+  storeCursor: (state: unknown) => globalIteratorStore.store('global', 'omp_c', state),
   consumeCursor: (id: string) => globalIteratorStore.consume(id),
-  storeFindCursor: (state: any) => globalIteratorStore.store('global', 'omp_f', state),
+  storeFindCursor: (state: unknown) => globalIteratorStore.store('global', 'omp_f', state),
   consumeFindCursor: (id: string) => globalIteratorStore.consume(id),
 };

@@ -1,6 +1,6 @@
 import type { Plugin } from '@opencode-ai/plugin';
-import { createCapsContextHook } from 'engine/caps';
 import { createBrowserTool, getBrowserConfig } from './browser/index.js';
+import { createCapsMessagesInjector } from './caps/index.js';
 import { createEditorTool, getEditorConfig } from './editor/index.js';
 import { createFuzzyFindTool, createFuzzyGrepTool } from './fuzzy/index.js';
 import { createGreperTool, getGreperConfig } from './greper/index.js';
@@ -296,7 +296,7 @@ function isAgentName(name: string): name is AgentName {
 
 const KunweiPlugin: Plugin = async (ctx) => {
   const mcps = getMcpConfig();
-  const capitalsContextHook = createCapsContextHook(ctx.directory);
+  const capsInjector = createCapsMessagesInjector(ctx.directory);
   const nudgeHook = createNudgeCoordinatorHook(ctx);
   const loopCommandManager = createLoopCommandManager(ctx);
   const syntaxCheckHook = createSyntaxCheckHook(ctx);
@@ -452,6 +452,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
       _input: Record<string, never>,
       output: { messages: unknown[] },
     ): Promise<void> => {
+      await capsInjector.handleMessagesTransform(output);
       const typedOutput = output as {
         messages: Array<{
           info: { role: string; agent?: string; sessionID?: string };
@@ -465,13 +466,6 @@ const KunweiPlugin: Plugin = async (ctx) => {
       await nudgeHook.handleMessagesTransform({
         messages: typedOutput.messages,
       });
-    },
-
-    'experimental.chat.system.transform': async (
-      input: { sessionID?: string },
-      output: { system: string[] },
-    ): Promise<void> => {
-      await capitalsContextHook.handleSystemTransform(input, output);
     },
 
     'tool.execute.after': async (

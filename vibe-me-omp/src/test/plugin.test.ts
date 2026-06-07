@@ -194,6 +194,17 @@ describe('kunwei extension', () => {
 });
 
 describe('kunwei helpers', () => {
+    it('reads assistant text from opencode session entries', () => {
+        const sessionManager = {
+            getEntries: () => [
+                { info: { role: 'user' }, parts: [{ type: 'text', text: 'prompt' }] },
+                { info: { role: 'assistant' }, parts: [{ type: 'text', text: 'done' }] },
+            ],
+        };
+
+        assert.equal(_test.readAssistantText(sessionManager), 'done');
+    });
+
     it('strips head and tail pipes', () => {
         assert.equal(_test.stripHeadTailPipes('cat a | head -n 20').script, 'cat a');
         assert.equal(_test.stripHeadTailPipes('cat a | head -n 20 | tail -5').script, 'cat a');

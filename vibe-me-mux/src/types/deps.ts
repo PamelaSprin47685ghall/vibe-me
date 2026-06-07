@@ -69,8 +69,8 @@ export interface TaskCreateInput {
   readonly parentWorkspaceId: string;
   readonly kind: "agent";
   readonly agentId: string;
-  readonly modelString: string;
-  readonly thinkingLevel: string;
+  readonly modelString?: string;
+  readonly thinkingLevel?: string;
   readonly prompt: string;
   readonly title: string;
   readonly experiments?: { readonly subagentRole?: string; readonly toolPolicy?: { readonly disabledTools?: readonly string[] } };
@@ -83,6 +83,8 @@ export type TaskCreateResult =
 export interface TaskWaitOptions {
   readonly requestingWorkspaceId: string;
   readonly abortSignal?: AbortSignal;
+  readonly backgroundOnMessageQueued?: boolean;
+  readonly timeoutMs?: number;
 }
 
 export interface TaskWaitResult {

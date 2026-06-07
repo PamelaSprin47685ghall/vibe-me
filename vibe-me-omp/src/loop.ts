@@ -15,6 +15,7 @@ import {
   setLastFeedback,
 } from 'engine/review';
 import { readAssistantText } from 'engine/session';
+import type { PiLike, PluginContext, PromiseWithResolversLike, SharedHelpers, ToolResult } from './shared.js';
 
 export { isReviewActive, tryLockReview, unlockReview, deactivateReview, clearReviewSessions, getReviewTask, addChild, activateReview, resolvePendingReview, setPendingReview, setLastFeedback };
 
@@ -25,7 +26,7 @@ const REVIEWER_SUBSEQUENT_GRACE_MS = 10000;
 
 export const LOOP_TOOL_NAMES = ['submit_review', 'submit_review_result'];
 
-function activateLoopMode(pi, sessionId, task, notify) {
+function activateLoopMode(pi: PiLike, sessionId: string, task: string, notify: PluginContext['ui']['notify']) {
   activateReview(sessionId, task);
   pi.sendMessage({
     customType: 'kunwei-loop-activate',
@@ -41,7 +42,7 @@ function activateLoopMode(pi, sessionId, task, notify) {
   notify('loop mode is active. Finish the task and call submit_review.', 'info');
 }
 
-function handleLoopCommand(pi, sessionId, task, notify) {
+function handleLoopCommand(pi: PiLike, sessionId: string | null, task: string, notify: PluginContext['ui']['notify']) {
   if (!sessionId) return;
   if (!task) {
     deactivateReview(sessionId);
@@ -55,23 +56,26 @@ function handleLoopCommand(pi, sessionId, task, notify) {
   activateLoopMode(pi, sessionId, task, notify);
 }
 
-function attachReviewChild(parentSessionId, childSessionId, pendingResolve) {
+function attachReviewChild(parentSessionId: string, childSessionId: string, pendingResolve: (result: ReviewResult) => void) {
   addChild(parentSessionId, childSessionId);
   setPendingReview(childSessionId, pendingResolve);
 }
 
-function detachReviewChild(parentSessionId, childSessionId) {
+function detachReviewChild(_parentSessionId: string, childSessionId: string) {
   resolvePendingReview(childSessionId, { accepted: false, feedback: 'Review session closed.', terminated: true });
   unlockReview(childSessionId);
 }
 
-async function runReviewLoop(pi, sessionId, report, affectedFiles, task, ctx, helpers) {
-  const { createChildSession, readAssistantText: readText } = helpers;
-  let resolveReview;
-  const deferred = new Promise((resolve) => { resolveReview = resolve; });
-  const child = await createChildSession(pi, ctx, { toolNames: ['read', 'submit_review_result'] });
-  const childSessionId = child.session.sessionManager.getSessionId();
+type ReviewResult = { accepted?: boolean; feedback?: string | null; terminated?: boolean };
 
+async function runReviewLoop(pi: PiLike, sessionId: string, report: string, affectedFiles: string[], task: string | null | undefined, ctx: PluginContext, helpers: SharedHelpers): Promise<ReviewResult> {
+  const { createChildSession, readAssistantText: readText } = helpers;
+  let resolveReview: ((result: ReviewResult) => void) | undefined;
+  const deferred = new Promise<ReviewResult>((resolve) => { resolveReview = resolve; });
+  const child = await createChildSession(pi, ctx, { toolNames: ['read', 'submit_review_result'] });
+  const childSessionId = child.session.sessionManager.getSessionId?.();
+
+  if (!childSessionId || !resolveReview) throw new Error('Review child session unavailable');
   attachReviewChild(sessionId, childSessionId, resolveReview);
 
   let nudges = 0;
@@ -87,7 +91,7 @@ async function runReviewLoop(pi, sessionId, report, affectedFiles, task, ctx, he
 
     await child.session.prompt(prompt);
     while (nudges < REVIEWER_MAX_NUDGES) {
-      const race = await Promise.race([
+      const race = await Promise.race<{ type: 'done'; value: ReviewResult } | { type: 'idle' }>([
         deferred.then((value) => ({ type: 'done', value })),
         child.session.waitForIdle().then(() => ({ type: 'idle' })),
       ]);
@@ -98,7 +102,7 @@ async function runReviewLoop(pi, sessionId, report, affectedFiles, task, ctx, he
         deferred.then((value) => ({ type: 'done', value }) as const),
         new Promise<{ type: 'timeout' }>((resolve) => setTimeout(() => resolve({ type: 'timeout' }), graceMs)),
       ]);
-      if ((afterGrace as { type: string }).type === 'done') return (afterGrace as { value: any }).value;
+      if (afterGrace.type === 'done') return afterGrace.value;
       await child.session.prompt(REVIEWER_NUDGE_PROMPT);
     }
     return { feedback: readText(child.session.sessionManager) || 'Reviewer failed to finish.', terminated: true };
@@ -113,16 +117,16 @@ export function resetReviewStates() {
   clearReviewSessions();
 }
 
-export function setPendingReviewStateForTest(sessionId, parentId, pendingPromise) {
+export function setPendingReviewStateForTest(sessionId: string, parentId: string, pendingPromise: PromiseWithResolversLike<ReviewResult> | ((result: ReviewResult) => void)) {
   addChild(parentId, sessionId);
-  const resolve = typeof pendingPromise === 'function' ? pendingPromise : (result) => pendingPromise.resolve?.(result);
+  const resolve = typeof pendingPromise === 'function' ? pendingPromise : (result: ReviewResult) => pendingPromise.resolve?.(result);
   setPendingReview(sessionId, resolve);
 }
 
-export function registerLoopFeatures(pi, helpers) {
+export function registerLoopFeatures(pi: PiLike, helpers: SharedHelpers) {
   const { getSessionIdFromContext, stringArraySchema } = helpers;
 
-  pi.on('session_shutdown', (_event, ctx) => {
+  pi.on('session_shutdown', (_event: unknown, ctx: PluginContext) => {
     const sessionId = getSessionIdFromContext(ctx);
     if (sessionId) {
       deactivateReview(sessionId);
@@ -130,7 +134,7 @@ export function registerLoopFeatures(pi, helpers) {
     }
   });
 
-  pi.on('input', async (event, ctx) => {
+  pi.on('input', async (event: { text: string }, ctx: PluginContext) => {
     const text = event.text.trim();
     if (!text.startsWith(`/${LOOP_COMMAND}`)) return;
     const sessionId = getSessionIdFromContext(ctx);
@@ -140,7 +144,7 @@ export function registerLoopFeatures(pi, helpers) {
 
   pi.registerCommand(LOOP_COMMAND, {
     description: 'Enable loop review mode for the current session',
-    handler: async (args, ctx) => {
+    handler: async (args: string, ctx: PluginContext) => {
       const sessionId = getSessionIdFromContext(ctx);
       handleLoopCommand(pi, sessionId, args.trim(), ctx.ui.notify.bind(ctx.ui));
     },
@@ -154,7 +158,7 @@ export function registerLoopFeatures(pi, helpers) {
       report: pi.typebox.Type.String({ description: 'Detailed description of what was changed.' }),
       affectedFiles: stringArraySchema(pi, 'Modified or created file path.'),
     }),
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { report: string; affectedFiles: string[] }, _signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       const sessionId = getSessionIdFromContext(ctx);
       if (!sessionId || !isReviewActive(sessionId)) {
         return { content: [{ type: 'text', text: 'Loop review is not active for this session.' }], isError: true };
@@ -190,17 +194,17 @@ export function registerLoopFeatures(pi, helpers) {
       ])),
     }),
     defaultInactive: true,
-    async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+    async execute(_toolCallId: string, params: { feedback?: string | null }, _signal: AbortSignal | undefined, _onUpdate: unknown, ctx: PluginContext): Promise<ToolResult> {
       const sessionId = getSessionIdFromContext(ctx);
       if (!sessionId) {
         return { content: [{ type: 'text', text: 'No pending review to resolve.' }], isError: true };
       }
-      const feedback = typeof params.feedback === 'string' && params.feedback.trim() ? params.feedback : null;
+      const feedback = typeof params.feedback === 'string' && params.feedback.trim() ? params.feedback : undefined;
       const resolved = resolvePendingReview(sessionId, { accepted: feedback == null, feedback });
       if (!resolved) {
         return { content: [{ type: 'text', text: 'No pending review to resolve.' }], isError: true };
       }
-      setLastFeedback(sessionId, feedback);
+      setLastFeedback(sessionId, feedback ?? null);
       return { content: [{ type: 'text', text: feedback == null ? 'Review submitted: accepted.' : 'Review submitted: rejected with feedback.' }], display: false };
     },
   });

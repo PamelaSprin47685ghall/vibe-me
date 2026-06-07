@@ -1,9 +1,17 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
-import { promptWithAbort } from './session';
+import {
+  registerChildAgent,
+  resolveSubsessionParentID,
+  unregisterChildAgent,
+} from './child-agent';
+import { promptWithAbort, runSubagent } from './session';
 
 function createMockClient() {
   return {
     session: {
+      create: mock(() => Promise.resolve({ data: { id: 'child-session' } })),
+      messages: mock(() => Promise.resolve({ data: [] })),
+      abort: mock(() => Promise.resolve()),
       prompt: mock(() => Promise.resolve()),
     },
   } as any;
@@ -11,6 +19,10 @@ function createMockClient() {
 
 afterEach(() => {
   mock.restore();
+  unregisterChildAgent('root-session');
+  unregisterChildAgent('child-session');
+  unregisterChildAgent('grandchild-session');
+  unregisterChildAgent('nested-session');
 });
 
 describe('promptWithAbort', () => {
@@ -86,5 +98,65 @@ describe('promptWithAbort', () => {
     await expect(
       promptWithAbort(client, { parts: [] }, controller.signal),
     ).rejects.toThrow('Prompt failed');
+  });
+});
+
+describe('resolveSubsessionParentID', () => {
+  test('returns the original session ID for unknown sessions', () => {
+    expect(resolveSubsessionParentID('root-session')).toBe('root-session');
+  });
+
+  test('returns the root parent for a registered child session', () => {
+    registerChildAgent('child-session', 'editor', 'root-session');
+
+    expect(resolveSubsessionParentID('child-session')).toBe('root-session');
+  });
+
+  test('flattens nested child sessions to the root parent', () => {
+    registerChildAgent('nested-session', 'editor', 'root-session');
+    registerChildAgent('child-session', 'editor', 'nested-session');
+
+    expect(resolveSubsessionParentID('child-session')).toBe('root-session');
+  });
+});
+
+describe('runSubagent', () => {
+  test('creates child sessions under the flattened root parent', async () => {
+    const client = createMockClient();
+    registerChildAgent('child-session', 'editor', 'root-session');
+    client.session.create = mock(() =>
+      Promise.resolve({ data: { id: 'grandchild-session' } }),
+    );
+    client.session.prompt = mock(() => Promise.resolve());
+    client.session.messages = mock(() =>
+      Promise.resolve({
+        data: [
+          {
+            info: { role: 'assistant' },
+            parts: [{ type: 'text', text: 'done' }],
+          },
+        ],
+      }),
+    );
+
+    const result = await runSubagent(client, {
+      agent: 'editor',
+      title: 'Editor',
+      parts: [{ type: 'text', text: 'test' }],
+      directory: '/tmp',
+      sessionID: 'child-session',
+    });
+
+    expect(client.session.create).toHaveBeenCalledWith({
+      query: { directory: '/tmp' },
+      body: {
+        parentID: 'root-session',
+        title: 'Editor',
+      },
+    });
+    expect(resolveSubsessionParentID('grandchild-session')).toBe(
+      'root-session',
+    );
+    expect(result).toBe('done');
   });
 });
