@@ -10,14 +10,19 @@ export function createEditorTool(ctx: PluginInput): ToolDefinition {
 
   return tool({
     description:
-      'Receive a natural-language intent for code changes and delegate to the editor agent. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent. Failure to do so will cause severe confusion.',
+      'Receive an array of natural-language intents for code changes and delegate each to the editor agent. Each intent in the array runs independently in parallel. Pass as many intents as you can at once — they will be executed concurrently. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.',
 
     args: {
-      intent: tool.schema
-        .string()
+      intents: tool.schema
+        .array(tool.schema.string())
+        .min(1)
         .describe(
-          'A natural-language intent describing the desired code changes. Must include all relevant background, design rationale, file paths, and specific requirements. Do not assume the agent knows anything about the project context.',
+          'Array of independent code-change intents, each run in parallel via its own editor subagent session. Include all relevant background, design rationale, file paths, and specific requirements.',
         ),
+      _ui: tool.schema
+        .string()
+        .optional()
+        .describe('Internal: populated by hook'),
     },
 
     async execute(args, context) {
@@ -26,14 +31,20 @@ export function createEditorTool(ctx: PluginInput): ToolDefinition {
         ctx.directory,
       );
 
-      return runSubagent(client, {
-        agent: 'editor',
-        title: 'Editor',
-        parts: [{ type: 'text', text: args.intent }],
-        directory,
-        sessionID,
-        abortSignal,
-      });
+      const results = await Promise.all(
+        args.intents.map((intent) =>
+          runSubagent(client, {
+            agent: 'editor',
+            title: 'Editor',
+            parts: [{ type: 'text', text: intent }],
+            directory,
+            sessionID,
+            abortSignal,
+          }),
+        ),
+      );
+
+      return results.join('\n---\n');
     },
   });
 }

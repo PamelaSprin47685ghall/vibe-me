@@ -23,6 +23,11 @@ describe('getGreperConfig', () => {
     const cfg = getGreperConfig();
     expect(cfg.agents.greper.prompt).toContain('Do NOT use runner');
   });
+
+  test('returns expected agent name', () => {
+    const cfg = getGreperConfig();
+    expect(cfg.agents.greper.name).toBe('greper');
+  });
 });
 
 describe('createGreperTool', () => {
@@ -55,7 +60,7 @@ describe('createGreperTool', () => {
     const ctx = mockCtx();
     const greper = createGreperTool(ctx);
     const result = await greper.execute(
-      { intent: 'Where is isEven defined?' },
+      { intents: ['Where is isEven defined?'] },
       {} as any,
     );
     expect(result).toContain('isEven');
@@ -66,7 +71,7 @@ describe('createGreperTool', () => {
   test('sends query to child session', async () => {
     const ctx = mockCtx();
     const greper = createGreperTool(ctx);
-    await greper.execute({ intent: 'Find the auth middleware' }, {} as any);
+    await greper.execute({ intents: ['Find the auth middleware'] }, {} as any);
     const promptArg = ctx.client.session.prompt.mock.calls[0][0];
     const text = promptArg.body.parts[0].text;
     expect(text).toBe('Find the auth middleware');
@@ -75,8 +80,19 @@ describe('createGreperTool', () => {
   test('uses greper agent', async () => {
     const ctx = mockCtx();
     const greper = createGreperTool(ctx);
-    await greper.execute({ intent: 'search test' }, {} as any);
+    await greper.execute({ intents: ['search test'] }, {} as any);
     const promptArg = ctx.client.session.prompt.mock.calls[0][0];
     expect(promptArg.body.agent).toBe('greper');
+  });
+
+  test('handles multiple intents and joins results', async () => {
+    const ctx = mockCtx();
+    const greper = createGreperTool(ctx);
+    const result = await greper.execute(
+      { intents: ['Find isEven', 'Find auth middleware'] },
+      {} as any,
+    );
+    expect(result).toContain('isEven');
+    expect(result).toContain('---');
   });
 });

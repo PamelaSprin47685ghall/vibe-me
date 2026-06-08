@@ -18,6 +18,11 @@ describe('getEditorConfig', () => {
       task: 'deny',
     });
   });
+
+  test('returns expected agent name', () => {
+    const cfg = getEditorConfig();
+    expect(cfg.agents.editor.name).toBe('editor');
+  });
 });
 
 describe('createEditorTool', () => {
@@ -50,7 +55,7 @@ describe('createEditorTool', () => {
     const ctx = mockCtx();
     const editor = createEditorTool(ctx);
     const result = await editor.execute(
-      { intent: 'Rename bar to baz in src/foo.ts' },
+      { intents: ['Rename bar to baz in src/foo.ts'] },
       {} as any,
     );
     expect(result).toContain('Changed src/foo.ts');
@@ -62,7 +67,7 @@ describe('createEditorTool', () => {
     const ctx = mockCtx();
     const editor = createEditorTool(ctx);
     await editor.execute(
-      { intent: 'Add isEven function to src/utils.ts' },
+      { intents: ['Add isEven function to src/utils.ts'] },
       {} as any,
     );
     const promptArg = ctx.client.session.prompt.mock.calls[0][0];
@@ -73,8 +78,19 @@ describe('createEditorTool', () => {
   test('uses editor agent', async () => {
     const ctx = mockCtx();
     const editor = createEditorTool(ctx);
-    await editor.execute({ intent: 'Fix bug in main.ts' }, {} as any);
+    await editor.execute({ intents: ['Fix bug in main.ts'] }, {} as any);
     const promptArg = ctx.client.session.prompt.mock.calls[0][0];
     expect(promptArg.body.agent).toBe('editor');
+  });
+
+  test('handles multiple intents and joins results', async () => {
+    const ctx = mockCtx();
+    const editor = createEditorTool(ctx);
+    const result = await editor.execute(
+      { intents: ['Refactor foo.ts', 'Update bar.ts'] },
+      {} as any,
+    );
+    expect(result).toContain('Changed src/foo.ts');
+    expect(result).toContain('---');
   });
 });

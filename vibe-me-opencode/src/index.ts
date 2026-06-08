@@ -475,6 +475,19 @@ const KunweiPlugin: Plugin = async (ctx) => {
       });
     },
 
+    'tool.execute.before': async (
+      input: { tool: string; sessionID: string; callID: string },
+      // biome-ignore lint/suspicious/noExplicitAny: matches SDK Hooks type
+      output: { args: any },
+    ): Promise<void> => {
+      if (
+        (input.tool === 'editor' || input.tool === 'greper') &&
+        Array.isArray(output.args?.intents)
+      ) {
+        output.args._ui = (output.args.intents as string[]).join('; ');
+      }
+    },
+
     'tool.execute.after': async (
       input: { tool: string; sessionID?: string; callID: string },
       output: {
