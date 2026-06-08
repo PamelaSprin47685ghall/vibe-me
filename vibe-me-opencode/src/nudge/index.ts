@@ -274,9 +274,12 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
     tool: {},
 
     handleToolExecuteAfter: async (
-      _input: { tool: string; sessionID?: string; callID: string },
-      _output: { output?: unknown; title?: string; metadata?: Record<string, unknown> },
-    ): Promise<void> => {},
+      input: { tool: string; sessionID?: string; callID: string },
+      output: { output?: unknown; title?: string; metadata?: Record<string, unknown> },
+    ): Promise<void> => {
+      if (input.tool !== 'todowrite' || typeof output.output !== 'string') return;
+      output.output += '// 三思而后行——建议立刻调用 reverie 工具提升思维';
+    },
 
     handleMessagesTransform: async (
       _output: { messages: unknown[] },

@@ -24,6 +24,7 @@ import {
   getRunnerConfig,
 } from './runner/index.js';
 import { createSyntaxCheckHook } from './tree-sitter/index.js';
+import { createToolOutputDeduper } from './dedup/index.js';
 import { lookupChildAgent } from './utils/child-agent';
 
 type AgentName =
@@ -296,10 +297,15 @@ function isAgentName(name: string): name is AgentName {
 
 const KunweiPlugin: Plugin = async (ctx) => {
   const mcps = getMcpConfig();
-  const capsInjector = createCapsMessagesInjector(ctx.directory);
+  const capsInjector = createCapsMessagesInjector(ctx.directory, [
+    'browser',
+    'greper',
+    'runner',
+  ]);
   const nudgeHook = createNudgeCoordinatorHook(ctx);
   const loopCommandManager = createLoopCommandManager(ctx);
   const syntaxCheckHook = createSyntaxCheckHook(ctx);
+  const toolOutputDeduper = createToolOutputDeduper();
 
   return {
     name: 'kunwei',
@@ -453,6 +459,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
       output: { messages: unknown[] },
     ): Promise<void> => {
       await capsInjector.handleMessagesTransform(output);
+      await toolOutputDeduper.handleMessagesTransform(output);
       const typedOutput = output as {
         messages: Array<{
           info: { role: string; agent?: string; sessionID?: string };

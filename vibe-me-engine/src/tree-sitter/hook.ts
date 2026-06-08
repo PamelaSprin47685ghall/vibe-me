@@ -1,11 +1,11 @@
 import { checkSyntax } from './checker.js';
 import type { SyntaxCheckResult } from '../util/types.js';
 
-const FILE_EDIT_TOOLS = new Set(['edit', 'write', 'Write', 'ast_edit', 'ast_grep_replace', 'file_edit_replace_string', 'file_edit_insert', 'apply_patch']);
+const FILE_EDIT_TOOLS = new Set(['edit', 'write', 'ast_edit', 'ast_grep_replace', 'file_edit_replace_string', 'file_edit_insert', 'apply_patch']);
 export const SYNTAX_CHECK_MARKER = '[syntax-check]';
 
 export function isFileEditTool(tool: string): boolean {
-  return FILE_EDIT_TOOLS.has(tool);
+  return FILE_EDIT_TOOLS.has(tool.toLowerCase());
 }
 
 export function extractFilePath(args: Record<string, unknown> | undefined | null): string | null {
