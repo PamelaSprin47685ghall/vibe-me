@@ -7,6 +7,28 @@
   "plugin": [
     "/home/kunweiz/Desktop/vibe/vibe-me/vibe-me-opencode/dist/index.js"
   ],
+  "provider": {
+    "ag": {
+      "npm": "@ai-sdk/anthropic",
+      "options": {
+        "timeout": 1000000,
+        "headerTimeout": 60000,
+        "chunkTimeout": 60000,
+        "baseURL": "http://127.0.0.1:8045/v1",
+        "apiKey": "sk-cf267f4383d64c0cba5a6890e868fa47"
+      },
+      "models": {
+        "gemini-3.5-flash-low": {
+          "reasoning": true,
+          "name": "Gemini 3.5 Flash (Antigravity)",
+          "limit": {
+            "context": 1000000,
+            "output": 65536
+          }
+        }
+      }
+    }
+  },
   "agent": {
     "browser": {
       "model": "ollama-cloud/kimi-k2.6"
@@ -30,7 +52,7 @@
       "disable": true
     },
     "title": {
-      "disable": true
+      "model": "ollama-cloud/deepseek-v4-flash"
     },
     "summary": {
       "disable": true

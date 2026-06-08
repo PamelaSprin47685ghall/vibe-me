@@ -301,6 +301,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
     'browser',
     'greper',
     'runner',
+    'title',
   ]);
   const nudgeHook = createNudgeCoordinatorHook(ctx);
   const loopCommandManager = createLoopCommandManager(ctx);
@@ -359,8 +360,8 @@ const KunweiPlugin: Plugin = async (ctx) => {
           tools: mergeTools(
             (
               opencodeConfig.agent?.orchestrator as
-                | Record<string, unknown>
-                | undefined
+              | Record<string, unknown>
+              | undefined
             )?.tools as Record<string, unknown> | undefined,
             getAgentToolDefaults('orchestrator'),
           ),
@@ -368,8 +369,8 @@ const KunweiPlugin: Plugin = async (ctx) => {
             ...getAgentPermissionDefaults('orchestrator'),
             ...((
               opencodeConfig.agent?.orchestrator as
-                | Record<string, unknown>
-                | undefined
+              | Record<string, unknown>
+              | undefined
             )?.permission as Record<string, unknown> | undefined),
           },
           mcps: [],
