@@ -147,6 +147,12 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
         }
 
         const summary = await extractSessionText(client, childID, directory);
+        if (language === 'shell') {
+          const firstWord = args.program.trim().split(/\s+/)[0];
+          if (['head', 'tail', 'sed', 'cat', 'grep', 'rg', 'find'].includes(firstWord)) {
+            return `// 绝对禁止使用 runner 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！\n${summary || '(no output)'}`;
+          }
+        }
         return summary || '(no output)';
       } catch (err) {
         if (isAbortError(err)) {
