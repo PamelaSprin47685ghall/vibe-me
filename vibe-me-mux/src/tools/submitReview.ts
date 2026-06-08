@@ -29,8 +29,15 @@ const AGENT_REPORT_REVIEW_INSTRUCTIONS = REVIEW_INSTRUCTIONS
     'You MUST call agent_report before finishing.',
   );
 
-function isPassingReviewReport(report: string): boolean {
-  return /^["'*\s]*PASS["'*\s.]*$/i.test(report.trim());
+export function isPassingReviewReport(report: string): boolean {
+  const trimmed = report.trim();
+  if (/\b(REJECT|FAIL|DENIED|DO NOT ACCEPT)\b/i.test(trimmed)) return false;
+  const passIndex = trimmed.search(/\bPASS\b/i);
+  if (passIndex >= 0 && passIndex < 200) {
+    const afterPass = trimmed.slice(passIndex + 4);
+    if (!/\bFAIL\b/i.test(afterPass)) return true;
+  }
+  return false;
 }
 
 function buildReviewPrompt(

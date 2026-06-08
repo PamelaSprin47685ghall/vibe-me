@@ -13,6 +13,7 @@ import { createWebfetchTool } from "./tools/webfetch.js";
 import { createFuzzyGrepTool } from "./tools/fuzzyGrep.js";
 import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
 import { createWriteTool } from "./tools/write.js";
+import { createReadTool } from "./tools/read.js";
 import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import { createLoopCommand } from "./commands/loop.js";
@@ -85,6 +86,8 @@ function createWebOverrideWrapper(
 export function createRegistration(
   deps: HostDependencies,
 ): PluginRegistration {
+  const readDef = createReadTool(deps);
+
   const tools: ToolDefinition[] = [
     createEditorTool(deps),
     createGreperTool(deps),
@@ -100,6 +103,7 @@ export function createRegistration(
     createFuzzyFindTool(deps),
     createWriteTool(deps),
     createStartReviewLoopTool(deps),
+    readDef,
   ];
 
   const websearchDef = createWebsearchTool(deps);
@@ -113,10 +117,11 @@ export function createRegistration(
       ...createSyntaxCheckWrappers(deps.log),
       createWebOverrideWrapper(websearchDef, "web_search"),
       createWebOverrideWrapper(webfetchDef, "web_fetch"),
+      createWebOverrideWrapper(readDef, "file_read"),
     ],
     contextInjector: createCapsInjector(),
     eventHook: createEventHook(),
-    slashCommands: [createLoopCommand()],
+    slashCommands: createLoopCommand(deps),
     agentToolPolicies: buildAgentToolPolicies(),
   };
 }
@@ -139,6 +144,7 @@ export type {
   FuzzyGrepToolArgs,
   FuzzyFindToolArgs,
   WriteToolArgs,
+  ReadToolArgs,
 } from "./types/contract.js";
 export type {
   ContextInjectorRegistration,
@@ -148,9 +154,10 @@ export type {
   PluginSlashCommandDefinition,
   PluginToolConfiguration,
 } from "./types/tool.js";
-export type { HostDependencies, RuntimeHandle } from "./types/deps.js";
+export type { HostDependencies, RuntimeHandle, TaskServiceLike, TaskCreateInput, TaskWaitOptions, TaskCreateResult } from "./types/deps.js";
 export type { AgentToolPolicy } from "./types/tool.js";
 export type { MuxAgentName, SubAgentRole, MuxAgentToolPolicies } from "./agentToolPolicies.js";
 export { buildAgentToolPolicies, getPluginToolPolicy } from "./agentToolPolicies.js";
 export { findCapsFiles, type CapsFileInfo } from "engine/caps";
 export { buildCapsFileReadData, type CapsFileReadEntry } from "./context/capsFileReadMessages.js";
+export { deduplicateReadOutputs } from "./dedup/index.js";

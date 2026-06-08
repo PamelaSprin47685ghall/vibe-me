@@ -89,7 +89,7 @@ describe("greper tool", () => {
     });
 
     const result = await greperDef.execute(createToolConfig(), {
-      intent: "find all usages of getUserName function",
+      intents: ["find all usages of getUserName function"],
     });
 
     expect(mockTaskService.create).toHaveBeenCalledWith({
@@ -123,7 +123,7 @@ describe("greper tool", () => {
     });
 
     const result = await greperDef.execute(createToolConfig(), {
-      intent: "search for config files",
+      intents: ["search for config files"],
     });
 
     expect(result).toBe(
@@ -142,7 +142,7 @@ describe("greper tool", () => {
     );
 
     const result = await greperDef.execute(createToolConfig(), {
-      intent: "find all TODO comments",
+      intents: ["find all TODO comments"],
     });
 
     expect(result).toBe(
@@ -162,7 +162,7 @@ describe("greper tool", () => {
     let caught: unknown;
     try {
       await greperDef.execute(createToolConfig(), {
-        intent: "search for imports",
+        intents: ["search for imports"],
       });
     } catch (error) {
       caught = error;

@@ -9,12 +9,17 @@ import type { HostDependencies } from "../types/deps.js";
 import { execute, cleanupJob, globalJobRegistry } from "engine/runner";
 import { RUNNER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 
+const EXTENDED_SHELL_READ_COMMANDS = new Set([
+  "head", "tail", "sed", "cat", "grep", "rg", "find",
+  "less", "more", "diff", "wc", "ls", "tree",
+]);
+
 const parameters: JsonSchema = {
   type: "object",
   properties: {
     language: {
       type: "string",
-      enum: ["shell", "python"],
+      enum: ["shell", "python", "javascript"],
       description: "Execution language",
     },
     program: {
@@ -135,7 +140,12 @@ export function createRunnerTool(_deps: HostDependencies): ToolDefinition {
             backgroundOnMessageQueued: false,
           },
         );
-        return result.reportMarkdown;
+        const report = result.reportMarkdown;
+        const effectiveLanguage = a.language ?? "shell";
+        if (effectiveLanguage !== "shell") return report;
+        const firstWord = a.program.trim().split(/\s+/)[0]?.split("/")?.pop();
+        if (!firstWord || !EXTENDED_SHELL_READ_COMMANDS.has(firstWord)) return report;
+        return `// 绝对禁止使用 runner 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！\n${report}`;
       } catch (error) {
         if (isForegroundWaitBackgroundedError(error)) {
           return `Runner task (${createResult.data.taskId}) moved to background. Use task tools to monitor it.`;

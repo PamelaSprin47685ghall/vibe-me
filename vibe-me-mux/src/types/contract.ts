@@ -17,11 +17,11 @@ export interface BrowserToolArgs {
 }
 
 export interface EditorToolArgs {
-  readonly intent: string;
+  readonly intents: readonly string[];
 }
 
 export interface GreperToolArgs {
-  readonly intent: string;
+  readonly intents: readonly string[];
 }
 
 export interface ReverieToolArgs {
@@ -30,7 +30,7 @@ export interface ReverieToolArgs {
 }
 
 export interface RunnerToolArgs {
-  readonly language: "shell" | "python";
+  readonly language: "shell" | "python" | "javascript";
   readonly program: string;
   readonly dependencies?: string[];
   readonly what_to_summarize: string;
@@ -89,6 +89,12 @@ export interface FuzzyFindToolArgs {
   readonly iterator?: string;
 }
 
+export interface ReadToolArgs {
+  readonly path: string;
+  readonly offset?: number;
+  readonly limit?: number;
+}
+
 export type PluginToolArgs =
   | BrowserToolArgs
   | EditorToolArgs
@@ -103,7 +109,8 @@ export type PluginToolArgs =
   | WebfetchToolArgs
   | WriteToolArgs
   | FuzzyGrepToolArgs
-  | FuzzyFindToolArgs;
+  | FuzzyFindToolArgs
+  | ReadToolArgs;
 
 // ── Tool definition ──
 

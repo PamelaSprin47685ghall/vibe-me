@@ -4,6 +4,7 @@ import type { JsonSchema, PluginToolArgs, ToolDefinition, WriteToolArgs } from "
 import type { HostDependencies } from "../types/deps.js";
 import { checkSyntax, formatSyntaxDiagnostics } from "engine/tree-sitter";
 
+
 const parameters: JsonSchema = {
   type: "object",
   properties: {
@@ -29,6 +30,7 @@ export function createWriteTool(_deps: HostDependencies): ToolDefinition {
     execute: async (config, args: PluginToolArgs) => {
       const { file_path, content } = args as WriteToolArgs;
       const resolved = path.resolve(config.cwd, file_path);
+
 
       await fs.mkdir(path.dirname(resolved), { recursive: true });
       await fs.writeFile(resolved, content, "utf-8");

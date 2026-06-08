@@ -5,6 +5,13 @@ import type { HostDependencies } from "../types/deps.js";
 import { REVERIE_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { delegateToSubAgent } from "./delegate.js";
 
+const MAX_REVERIE_FILE_BYTES = 1_048_576;
+
+function isWithinDirectory(child: string, parent: string): boolean {
+  const rel = path.relative(parent, child);
+  return !rel.startsWith("..") && !path.isAbsolute(rel);
+}
+
 const parameters: JsonSchema = {
   type: "object",
   properties: {
@@ -38,6 +45,13 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
         files.map(async (file) => {
           const resolvedPath = path.resolve(config.cwd, file);
           try {
+            if (!isWithinDirectory(resolvedPath, config.cwd)) {
+              return `=== ${file} ===\n\n(outside project directory — skipped)`;
+            }
+            const stat = await fs.stat(resolvedPath);
+            if (!stat.isFile() || stat.size > MAX_REVERIE_FILE_BYTES) {
+              return `=== ${file} ===\n\n(skipped: too large or not a regular file)`;
+            }
             const content = await fs.readFile(resolvedPath, "utf-8");
             return `=== ${file} ===\n\n${content}`;
           } catch {

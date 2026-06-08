@@ -50,11 +50,14 @@ describe("createRegistration", () => {
     });
   });
 
-  test("registers /loop slash command descriptor", () => {
+  test("registers /loop and /loop-review slash command descriptors", () => {
     const registration = createRegistration(mockDependencies as never);
     const loop = registration.slashCommands.find((c) => c.key === "loop");
     expect(loop).toBeDefined();
     expect(loop?.description).toBeTruthy();
+    const loopReview = registration.slashCommands.find((c) => c.key === "loop-review");
+    expect(loopReview).toBeDefined();
+    expect(loopReview?.description).toBeTruthy();
   });
 
   test("web overrides keep explicit object parameters", () => {

@@ -6,6 +6,10 @@ import type { PluginEventHook } from "./types/tool.js";
 
 export function createEventHook(): PluginEventHook {
   const runnerNudgedWorkspaces = new Set<string>();
+  const stoppedWorkspaces = new Set<string>();
+  const retryPendingWorkspaces = new Set<string>();
+  const deliveredCounts = new Map<string, number>();
+  const lastNudgeSignature = new Map<string, string>();
 
   return async (event, helpers) => {
     const { type, workspaceId } = event;
@@ -30,6 +34,8 @@ export function createEventHook(): PluginEventHook {
           runnerNudgedWorkspaces.delete(workspaceId);
         }
 
+        if (stoppedWorkspaces.has(workspaceId)) break;
+
         if (hasActiveRunner) {
           const context: NudgeInputContext = {
             todos: [],
@@ -40,9 +46,13 @@ export function createEventHook(): PluginEventHook {
           const action = defaultCoordinator.shouldNudge(workspaceId, context);
 
           if (action === "nudge-runner" && !runnerNudgedWorkspaces.has(workspaceId)) {
+            const signature = `runner:${lastAssistantMessage.slice(0, 200)}`;
+            if (lastNudgeSignature.get(workspaceId) === signature) break;
             try {
               if (await helpers.nudge(workspaceId, buildRunnerNudgePrompt())) {
                 runnerNudgedWorkspaces.add(workspaceId);
+                lastNudgeSignature.set(workspaceId, signature);
+                deliveredCounts.set(workspaceId, (deliveredCounts.get(workspaceId) ?? 0) + 1);
               }
             } catch {}
           }
@@ -75,8 +85,13 @@ export function createEventHook(): PluginEventHook {
                 : null;
         if (!promptText) break;
 
+        const signature = `${todos.length}:${lastAssistantMessage.slice(0, 200)}`;
+        if (lastNudgeSignature.get(workspaceId) === signature) break;
+
         try {
           await helpers.nudge(workspaceId, promptText);
+          lastNudgeSignature.set(workspaceId, signature);
+          deliveredCounts.set(workspaceId, (deliveredCounts.get(workspaceId) ?? 0) + 1);
         } catch {}
         break;
       }
@@ -85,10 +100,13 @@ export function createEventHook(): PluginEventHook {
         deactivateReview(workspaceId);
         globalIteratorStore.clearScope(workspaceId);
         runnerNudgedWorkspaces.delete(workspaceId);
+        stoppedWorkspaces.add(workspaceId);
+        retryPendingWorkspaces.delete(workspaceId);
         break;
       case "error":
         if ((event.properties as { readonly errorType?: string } | undefined)?.errorType === "aborted") {
           defaultCoordinator.suppress(workspaceId);
+          stoppedWorkspaces.add(workspaceId);
         }
         break;
     }

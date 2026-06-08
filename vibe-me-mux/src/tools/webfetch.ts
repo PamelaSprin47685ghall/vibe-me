@@ -1,6 +1,6 @@
 import type { JsonSchema, PluginToolArgs, ToolDefinition, WebfetchToolArgs } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
-import { ollamaPost } from "engine/ollama";
+import { ollamaPost, formatFetchResponse, validateFetchUrl } from "engine/ollama";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -40,8 +40,11 @@ export function createWebfetchTool(_deps: HostDependencies): ToolDefinition {
     description:
       "Fetch a URL with better extraction for static/docs pages. Supports llms.txt probing, content-focused HTML extraction, metadata, redirects, and an optional prompt processed by a cheap secondary model.",
     parameters,
-    execute: async (_config, args: PluginToolArgs) => {
+    execute: async (config, args: PluginToolArgs) => {
       const a = args as WebfetchToolArgs;
+      const urlError = await validateFetchUrl(a.url);
+      if (urlError) return JSON.stringify({ success: false, error: urlError });
+
       const fetchBody: Record<string, unknown> = { url: a.url };
       if (a.extract_main != null) fetchBody.extract_main = a.extract_main;
       if (a.prefer_llms_txt != null)
@@ -50,8 +53,8 @@ export function createWebfetchTool(_deps: HostDependencies): ToolDefinition {
       if (a.timeout != null) fetchBody.timeout = a.timeout;
 
       try {
-        const data = await ollamaPost("web_fetch", fetchBody);
-        return JSON.stringify({ success: true, data });
+        const data = await ollamaPost("web_fetch", fetchBody, config.abortSignal);
+        return formatFetchResponse(data);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : String(error);

@@ -35,7 +35,7 @@ void mock.module("./delegate.js", () => ({
   delegateToSubAgent: mockDelegateToSubAgent,
 }));
 
-import { createSubmitReviewTool } from "./submitReview.js";
+import { createSubmitReviewTool, isPassingReviewReport } from "./submitReview.js";
 
 beforeEach(() => {
   mockDeactivateReview.mockReset();
@@ -49,6 +49,28 @@ beforeEach(() => {
   mockIsReviewActive.mockReturnValue(true);
   mockTryLockReview.mockReturnValue(true);
   mockDelegateToSubAgent.mockResolvedValue("PASS");
+});
+
+describe("isPassingReviewReport", () => {
+  test.each([
+    ["PASS", true],
+    ["PASS. The code looks good.", true],
+    ["  PASS  ", true],
+    ['"PASS"', true],
+    ["FAIL: broken", false],
+    ["REJECT: missing tests", false],
+    ["DENIED: not acceptable", false],
+    ["DO NOT ACCEPT: issues found", false],
+    ["PASS, but FAIL later", false],
+    ["The code is PASS", true],
+    ["", false],
+    ["not a review report", false],
+    ["PASS\nSome details here", true],
+    ["FAIL", false],
+    ["PASS and then FAIL in the same report", false],
+  ])("isPassingReviewReport(%j) === %s", (input, expected) => {
+    expect(isPassingReviewReport(input)).toBe(expected);
+  });
 });
 
 describe("submit_review", () => {
