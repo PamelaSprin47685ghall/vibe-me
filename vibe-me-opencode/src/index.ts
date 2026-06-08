@@ -414,21 +414,6 @@ const KunweiPlugin: Plugin = async (ctx) => {
 
       loopCommandManager.registerCommand(opencodeConfig);
 
-      // Register /auto-continue command
-      const configCommand = opencodeConfig.command as
-        | Record<string, unknown>
-        | undefined;
-      if (!configCommand?.['auto-continue']) {
-        if (!opencodeConfig.command) {
-          opencodeConfig.command = {};
-        }
-        (opencodeConfig.command as Record<string, unknown>)['auto-continue'] = {
-          template: 'Call the auto_continue tool with enabled=true',
-          description:
-            'Enable auto-continuation — orchestrator keeps working through incomplete todos',
-        };
-      }
-
       const agentConfig = opencodeConfig.agent as Record<string, unknown>;
       for (const [name, entry] of Object.entries(agentConfig)) {
         if (typeof entry !== 'object' || !entry) continue;
