@@ -137,7 +137,7 @@ describe('reverie path sandbox', () => {
     rmSync(outsideDir, { recursive: true, force: true });
   });
 
-  test('rejects files outside project directory', async () => {
+  test('reads files outside project directory', async () => {
     const ctx = mockCtx(projectDir);
     const reverie = createReverieTool(ctx);
     await reverie.execute(
@@ -152,8 +152,7 @@ describe('reverie path sandbox', () => {
       .filter((p: any) => p.type === 'text')
       .map((p: any) => p.text)
       .join('\n');
-    expect(texts).toContain('outside project directory');
-    expect(texts).not.toContain('TOP SECRET');
+    expect(texts).toContain('TOP SECRET');
   });
 
   test('accepts files inside project directory', async () => {

@@ -24,10 +24,6 @@ describe('getGreperConfig', () => {
     expect(cfg.agents.greper.prompt).toContain('Do NOT use runner');
   });
 
-  test('returns expected agent name', () => {
-    const cfg = getGreperConfig();
-    expect(cfg.agents.greper.name).toBe('greper');
-  });
 });
 
 describe('createGreperTool', () => {

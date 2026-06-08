@@ -8,11 +8,8 @@ import {
 import type { HostDependencies } from "../types/deps.js";
 import { execute, cleanupJob, globalJobRegistry } from "engine/runner";
 import { RUNNER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
-
-const EXTENDED_SHELL_READ_COMMANDS = new Set([
-  "head", "tail", "sed", "cat", "grep", "rg", "find",
-  "less", "more", "diff", "wc", "ls", "tree",
-]);
+import { EXTENDED_SHELL_READ_COMMANDS } from "engine/runner/read-commands";
+import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -44,7 +41,9 @@ const parameters: JsonSchema = {
   additionalProperties: false,
 };
 
-export function createRunnerTool(_deps: HostDependencies): ToolDefinition {
+export function createRunnerTool(deps: HostDependencies): ToolDefinition {
+  const resolveDelegatedAgentAiSettings = createResolveDelegatedAgentAiSettings(deps);
+
   return {
     name: "runner",
     description:
@@ -109,10 +108,13 @@ export function createRunnerTool(_deps: HostDependencies): ToolDefinition {
             .filter(Boolean)
             .join("\n");
 
+      const aiSettings = await resolveDelegatedAgentAiSettings(config, "explore");
       const createResult = await taskService.create({
         parentWorkspaceId: workspaceId,
         kind: "agent",
         agentId: "explore",
+        ...(aiSettings?.modelString != null && { modelString: aiSettings.modelString }),
+        ...(aiSettings?.thinkingLevel != null && { thinkingLevel: aiSettings.thinkingLevel }),
         prompt,
         title: "Runner",
         experiments: {

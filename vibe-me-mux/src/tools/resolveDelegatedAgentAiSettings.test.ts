@@ -113,7 +113,51 @@ beforeEach(() => {
 });
 
 describe("resolveDelegatedAgentAiSettings", () => {
-  test("explore inherits exec workspace settings instead of legacy workspace aiSettings", async () => {
+  test("explore direct settings take priority over inherited exec workspace settings", async () => {
+    mockLoadConfigOrDefault.mockImplementation(() => ({
+      projects: new Map([
+        [
+          "/repo",
+          {
+            workspaces: [
+              {
+                id: "ws-1",
+                aiSettingsByAgent: {
+                  exec: {
+                    model: "openai:gpt-parent",
+                    thinkingLevel: "high",
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      ]),
+      agentAiDefaults: {},
+      subagentAiDefaults: {
+        explore: {
+          modelString: "anthropic:claude-explore",
+          thinkingLevel: "medium",
+        },
+      },
+    }));
+    mockResolveAgentInheritanceChain.mockResolvedValue([
+      { id: "explore" },
+      { id: "exec" },
+    ]);
+
+    const result = await resolveDelegatedAgentAiSettings(
+      createToolConfig(),
+      "explore",
+    );
+
+    expect(result).toEqual({
+      modelString: "anthropic:claude-explore",
+      thinkingLevel: "medium",
+    });
+  });
+
+  test("explore falls back to inherited exec workspace settings only when explore is unspecified", async () => {
     mockLoadConfigOrDefault.mockImplementation(() => ({
       projects: new Map([
         [

@@ -1,6 +1,6 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { isAbortErrorName } from 'engine/util';
-import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, defaultCoordinator, type NudgeInputContext } from 'engine/todo';
+import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, REVERIE_NUDGE, defaultCoordinator, type NudgeInputContext } from 'engine/todo';
 import { buildRunnerNudgePrompt, hasActiveJob, cleanupJob, getActiveJobs } from 'engine/runner';
 import { isReviewActive } from 'engine/review';
 import { type TodoItem, asMessageArray } from '../utils/session';
@@ -278,7 +278,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
       output: { output?: unknown; title?: string; metadata?: Record<string, unknown> },
     ): Promise<void> => {
       if (input.tool !== 'todowrite' || typeof output.output !== 'string') return;
-      output.output += '// 三思而后行——建议立刻调用 reverie 工具提升思维';
+      output.output += REVERIE_NUDGE;
     },
 
     handleMessagesTransform: async (

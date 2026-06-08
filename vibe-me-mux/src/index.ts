@@ -14,6 +14,7 @@ import { createFuzzyGrepTool } from "./tools/fuzzyGrep.js";
 import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
 import { createWriteTool } from "./tools/write.js";
 import { createReadTool } from "./tools/read.js";
+import { getStealthBrowserMcpCommand } from "engine/mcp";
 import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import { createTodoWriteNudgeWrapper } from "./wrappers/todoWriteNudge.js";
@@ -46,23 +47,9 @@ export interface PluginRegistration {
   readonly agentToolPolicies: MuxAgentToolPolicies;
 }
 
-const STEALTH_BROWSER_MCP_REPO = "https://github.com/vibheksoni/stealth-browser-mcp.git";
-const STEALTH_BROWSER_MCP_REF = process.env.STEALTH_BROWSER_MCP_REF ?? "master";
-
-export const stealthBrowserMcpCommand = [
-  "uvx",
-  "--python",
-  "3.13",
-  "--from",
-  `git+${STEALTH_BROWSER_MCP_REPO}@${STEALTH_BROWSER_MCP_REF}`,
-  "python",
-  "-m",
-  "server",
-].join(" ");
-
 export function getMcpServers(): Readonly<Record<string, string>> {
   return {
-    "stealth-browser-mcp": stealthBrowserMcpCommand,
+    "stealth-browser-mcp": getStealthBrowserMcpCommand(),
   };
 }
 
@@ -87,7 +74,8 @@ function createWebOverrideWrapper(
 export function createRegistration(
   deps: HostDependencies,
 ): PluginRegistration {
-  const readDef = createReadTool(deps);
+  let hostFileReadExecute: ((args: unknown, options?: { readonly abortSignal?: AbortSignal }) => Promise<unknown>) | undefined;
+  const readDef = createReadTool(deps, (args, opts) => hostFileReadExecute!(args, opts));
 
   const tools: ToolDefinition[] = [
     createEditorTool(deps),
@@ -107,8 +95,8 @@ export function createRegistration(
     readDef,
   ];
 
-  const websearchDef = createWebsearchTool(deps);
-  const webfetchDef = createWebfetchTool(deps);
+  const websearchDef = tools.find(t => t.name === "websearch")!;
+  const webfetchDef = tools.find(t => t.name === "webfetch")!;
 
   return {
     toolNames: tools.map((t) => t.name),
@@ -118,7 +106,13 @@ export function createRegistration(
       ...createSyntaxCheckWrappers(deps.log),
       createWebOverrideWrapper(websearchDef, "web_search"),
       createWebOverrideWrapper(webfetchDef, "web_fetch"),
-      createWebOverrideWrapper(readDef, "file_read"),
+      {
+        targetTool: "file_read",
+        wrapper: (hostTool) => {
+          hostFileReadExecute = (hostTool as { execute: (...a: readonly unknown[]) => Promise<unknown> }).execute.bind(hostTool);
+          return { execute: async () => "disabled" } as ToolLike;
+        },
+      },
       createTodoWriteNudgeWrapper(),
     ],
     contextInjector: createCapsInjector(),

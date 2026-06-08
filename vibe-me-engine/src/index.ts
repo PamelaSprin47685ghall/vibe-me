@@ -8,3 +8,7 @@ export * from './todo/index.js';
 export * from './session/index.js';
 export * from './util/index.js';
 export * from './subagent/index.js';
+export * from './mcp/index.js';
+export * from './reverie-files.js';
+export * from './runner/read-commands.js';
+export * from './agent-policy/index.js';

@@ -1,3 +1,5 @@
+export const REVERIE_NUDGE = '// 三思而后行——建议立刻调用 reverie 工具提升思维';
+
 export const TODO_NUDGE_CHECK_TAG = '<skip-todo-check />';
 export const TERMINAL_TODO_STATUSES = new Set(['completed', 'cancelled', 'abandoned']);
 

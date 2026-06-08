@@ -2,11 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonSchema, PluginToolArgs, ToolDefinition, ReadToolArgs } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
-
-const EXCLUDED_DIR_NAMES = new Set([
-  ".git", "node_modules", "__pycache__", ".DS_Store", "target", "dist", "out",
-  ".venv", "venv", ".cache", ".next", ".turbo", ".parcel-cache",
-].map((s) => s.toLowerCase()));
+import { isExcludedDir } from "engine/util";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -40,7 +36,7 @@ function formatTime(ms: number): string {
 
 async function listDirectoryEntries(dirPath: string): Promise<string> {
   const entries = await fs.readdir(dirPath, { withFileTypes: true });
-  const filtered = entries.filter((e) => !EXCLUDED_DIR_NAMES.has(e.name.toLowerCase()));
+  const filtered = entries.filter((e) => !isExcludedDir(e.name));
 
   const items = await Promise.all(
     filtered.map(async (entry) => {
@@ -101,7 +97,10 @@ async function readFileWithLineNumbers(filePath: string, offset?: number, limit?
     .join("\n");
 }
 
-export function createReadTool(_deps: HostDependencies): ToolDefinition {
+export function createReadTool(
+  _deps: HostDependencies,
+  hostFileReadExecute?: (args: unknown, options?: { readonly abortSignal?: AbortSignal }) => Promise<unknown>,
+): ToolDefinition {
   return {
     name: "read",
     description:
@@ -123,6 +122,14 @@ export function createReadTool(_deps: HostDependencies): ToolDefinition {
       }
 
       if (stat.isFile()) {
+        if (hostFileReadExecute) {
+          const result = (await hostFileReadExecute(
+            { path: filePath, offset, limit },
+            { abortSignal: config.abortSignal },
+          )) as { success: boolean; content?: string; error?: string };
+          if (result.success) return result.content!;
+          return `Error: ${result.error}`;
+        }
         return readFileWithLineNumbers(resolved, offset, limit);
       }
 

@@ -22,12 +22,16 @@ export function createResolveDelegatedAgentAiSettings(deps: HostDependencies) {
       : undefined;
 
     const agentIds = await resolveInheritanceChain(deps, config, agentId);
+    const inheritedAgentIds = agentIds.slice(1);
 
     const sources = [
-      resolveInheritedWorkspaceAiSettings(agentIds, workspace),
+      resolveWorkspaceAiSettings(agentId, workspace),
       configFile.subagentAiDefaults?.[agentId],
-      resolveInheritedConfigAiSettings(agentIds, configFile.agentAiDefaults),
+      configFile.agentAiDefaults?.[agentId],
       await resolveDescriptorAiSettings(deps, config, agentId),
+      resolveInheritedWorkspaceAiSettings(inheritedAgentIds, workspace),
+      resolveInheritedConfigAiSettings(inheritedAgentIds, configFile.subagentAiDefaults),
+      resolveInheritedConfigAiSettings(inheritedAgentIds, configFile.agentAiDefaults),
     ];
 
     return {
@@ -106,6 +110,22 @@ function resolveInheritedConfigAiSettings(
   return undefined;
 }
 
+function resolveWorkspaceAiSettings(
+  agentId: string,
+  workspace:
+    | {
+        readonly aiSettingsByAgent?: Record<
+          string,
+          { readonly model: string; readonly thinkingLevel?: string }
+        >;
+        readonly aiSettings?: { readonly model: string; readonly thinkingLevel?: string };
+      }
+    | undefined,
+): NamedSettings | undefined {
+  const e = workspace?.aiSettingsByAgent?.[agentId];
+  return e ? { modelString: e.model, thinkingLevel: e.thinkingLevel } : undefined;
+}
+
 function resolveInheritedWorkspaceAiSettings(
   agentIds: readonly string[],
   workspace:
@@ -119,8 +139,8 @@ function resolveInheritedWorkspaceAiSettings(
     | undefined,
 ): NamedSettings | undefined {
   for (const id of agentIds) {
-    const e = workspace?.aiSettingsByAgent?.[id];
-    if (e) return { modelString: e.model, thinkingLevel: e.thinkingLevel };
+    const e = resolveWorkspaceAiSettings(id, workspace);
+    if (e) return e;
   }
   return undefined;
 }

@@ -26,178 +26,16 @@ import {
 import { createSyntaxCheckHook } from './tree-sitter/index.js';
 import { createToolOutputDeduper } from './dedup/index.js';
 import { lookupChildAgent } from './utils/child-agent';
-
-type AgentName =
-  | 'orchestrator'
-  | 'editor'
-  | 'reviewer'
-  | 'greper'
-  | 'browser'
-  | 'runner'
-  | 'reverie';
+import {
+  AGENT_POLICIES,
+  getAgentPolicy,
+  applyUniversalPermissionDeny,
+  isAgentRole,
+  type AgentRole,
+} from 'engine/agent-policy';
 
 type ToolDefaults = Record<string, boolean>;
-
-const AGENT_TOOL_DEFAULTS: Record<AgentName, ToolDefaults> = {
-  orchestrator: {
-    read: true,
-    editor: true,
-    greper: true,
-    reverie: true,
-    submit_review: true,
-    webfetch: true,
-    websearch: true,
-    runner: true,
-    browser: true,
-    glob: true,
-    'stealth_browser_mcp_*': false,
-    fuzzy_find: false,
-    fuzzy_grep: false,
-    grep: false,
-    edit: false,
-    write: false,
-    task: false,
-    runner_wait: false,
-    runner_abort: false,
-    submit_review_result: false,
-  },
-  editor: {
-    read: true,
-    write: true,
-    edit: true,
-    runner: true,
-    glob: true,
-    fuzzy_find: true,
-    fuzzy_grep: true,
-    grep: false,
-    editor: false,
-    greper: false,
-    reverie: false,
-    submit_review: false,
-    submit_review_result: false,
-    webfetch: false,
-    websearch: false,
-    browser: false,
-    task: false,
-    runner_wait: false,
-    runner_abort: false,
-    'stealth_browser_mcp_*': false,
-  },
-  reviewer: {
-    read: true,
-    submit_review_result: true,
-    write: false,
-    edit: false,
-    editor: false,
-    greper: false,
-    reverie: false,
-    submit_review: false,
-    webfetch: false,
-    websearch: false,
-    runner: false,
-    browser: false,
-    glob: false,
-    grep: false,
-    fuzzy_find: false,
-    fuzzy_grep: false,
-    task: false,
-    runner_wait: false,
-    runner_abort: false,
-    'stealth_browser_mcp_*': false,
-  },
-  greper: {
-    read: true,
-    runner: true,
-    glob: true,
-    fuzzy_find: true,
-    fuzzy_grep: true,
-    write: false,
-    edit: false,
-    editor: false,
-    greper: false,
-    reverie: false,
-    submit_review: false,
-    submit_review_result: false,
-    webfetch: false,
-    websearch: false,
-    browser: false,
-    grep: false,
-    task: false,
-    runner_wait: false,
-    runner_abort: false,
-    'stealth_browser_mcp_*': false,
-  },
-  browser: {
-    read: true,
-    'stealth_browser_mcp_*': true,
-    write: false,
-    edit: false,
-    editor: false,
-    greper: false,
-    reverie: false,
-    submit_review: false,
-    submit_review_result: false,
-    webfetch: false,
-    websearch: false,
-    runner: false,
-    browser: false,
-    glob: false,
-    grep: false,
-    fuzzy_find: false,
-    fuzzy_grep: false,
-    task: false,
-    runner_wait: false,
-    runner_abort: false,
-  },
-  runner: {
-    runner_wait: true,
-    runner_abort: true,
-    read: false,
-    write: false,
-    edit: false,
-    editor: false,
-    greper: false,
-    reverie: false,
-    submit_review: false,
-    submit_review_result: false,
-    webfetch: false,
-    websearch: false,
-    runner: false,
-    browser: false,
-    glob: false,
-    grep: false,
-    fuzzy_find: false,
-    fuzzy_grep: false,
-    task: false,
-    'stealth_browser_mcp_*': false,
-  },
-  reverie: {
-    read: false,
-    write: false,
-    edit: false,
-    editor: false,
-    greper: false,
-    reverie: false,
-    submit_review: false,
-    submit_review_result: false,
-    webfetch: false,
-    websearch: false,
-    runner: false,
-    browser: false,
-    glob: false,
-    grep: false,
-    fuzzy_find: false,
-    fuzzy_grep: false,
-    task: false,
-    runner_wait: false,
-    runner_abort: false,
-    'stealth_browser_mcp_*': false,
-  },
-};
-
-function getAgentToolDefaults(agent: AgentName): ToolDefaults {
-  return AGENT_TOOL_DEFAULTS[agent];
-}
+type AgentName = AgentRole;
 
 function mergeTools(
   current: Record<string, unknown> | undefined,
@@ -210,89 +48,12 @@ function mergeTools(
   return merged;
 }
 
-const AGENT_PERMISSION_DEFAULTS: Record<AgentName, Record<string, string>> = {
-  orchestrator: {
-    bash: 'deny',
-    edit: 'deny',
-    write: 'deny',
-    grep: 'deny',
-    'stealth-browser-mcp_*': 'deny',
-    runner_wait: 'deny',
-    runner_abort: 'deny',
-    task: 'deny',
-    glob: 'allow',
-    fuzzy_find: 'deny',
-    fuzzy_grep: 'deny',
-    question: 'allow',
-  },
-  editor: { bash: 'deny', grep: 'deny', task: 'deny' },
-  reviewer: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
-  greper: {
-    bash: 'deny',
-    edit: 'deny',
-    write: 'deny',
-    grep: 'deny',
-    task: 'deny',
-  },
-  browser: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
-  runner: { edit: 'deny', write: 'deny', task: 'deny' },
-  reverie: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
-};
-
-function getAgentPermissionDefaults(agent: AgentName): Record<string, string> {
-  return { ...AGENT_PERMISSION_DEFAULTS[agent] };
+function getAgentPermissionDefaults(agent: AgentRole): Record<string, string> {
+  return { ...AGENT_POLICIES[agent].permissions };
 }
 
-function applyUniversalPermissionDeny(
-  agent: AgentName,
-  permission: Record<string, string>,
-): void {
-  if (permission.bash === undefined) permission.bash = 'deny';
-  if (
-    agent !== 'browser' &&
-    permission['stealth-browser-mcp_*'] === undefined
-  ) {
-    permission['stealth-browser-mcp_*'] = 'deny';
-  }
-  if (agent !== 'runner') {
-    if (permission.runner_wait === undefined) permission.runner_wait = 'deny';
-    if (permission.runner_abort === undefined) permission.runner_abort = 'deny';
-  }
-  if (agent !== 'reviewer' && permission.submit_review_result === undefined) {
-    permission.submit_review_result = 'deny';
-  }
-  if (
-    agent !== 'editor' &&
-    agent !== 'greper' &&
-    permission.glob === undefined
-  ) {
-    permission.glob = 'deny';
-  }
-  if (agent === 'editor' || agent === 'greper') {
-    if (permission.fuzzy_find === undefined) permission.fuzzy_find = 'allow';
-    if (permission.fuzzy_grep === undefined) permission.fuzzy_grep = 'allow';
-  } else {
-    if (permission.fuzzy_find === undefined) permission.fuzzy_find = 'deny';
-    if (permission.fuzzy_grep === undefined) permission.fuzzy_grep = 'deny';
-  }
-  if (permission.grep === undefined) permission.grep = 'deny';
-  if (agent !== 'orchestrator' && permission.question === undefined) {
-    permission.question = 'deny';
-  }
-}
-
-const KNOWN_AGENT_NAMES: AgentName[] = [
-  'orchestrator',
-  'editor',
-  'reviewer',
-  'greper',
-  'browser',
-  'runner',
-  'reverie',
-];
-
-function isAgentName(name: string): name is AgentName {
-  return (KNOWN_AGENT_NAMES as string[]).includes(name);
+function getAgentToolDefaults(agent: AgentRole): ToolDefaults {
+  return getAgentPolicy(agent).tools;
 }
 
 const KunweiPlugin: Plugin = async (ctx) => {
@@ -337,7 +98,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
         agent,
         parts: output.parts,
       });
-      const defaults = isAgentName(agent) ? getAgentToolDefaults(agent) : null;
+      const defaults = isAgentRole(agent) ? getAgentToolDefaults(agent) : null;
       if (!defaults) return;
       output.message.tools = mergeTools(output.message.tools, defaults);
     },
@@ -420,7 +181,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
         const agent = entry as Record<string, unknown>;
         const perm =
           (agent.permission as Record<string, string> | undefined) ?? {};
-        if (isAgentName(name)) {
+        if (isAgentRole(name)) {
           const defaults = getAgentPermissionDefaults(name);
           for (const [key, value] of Object.entries(defaults)) {
             if (perm[key] === undefined) perm[key] = value;
@@ -431,7 +192,7 @@ const KunweiPlugin: Plugin = async (ctx) => {
         }
         agent.permission = perm;
 
-        if (isAgentName(name)) {
+        if (isAgentRole(name)) {
           agent.tools = mergeTools(
             agent.tools as Record<string, unknown> | undefined,
             getAgentToolDefaults(name),

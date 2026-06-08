@@ -8,6 +8,17 @@ import { REVIEWER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 
 const PRE_REVIEW_TIMEOUT_MS = 5 * 60 * 1000;
 
+const LOOP_FOOTER = [
+  "- report: a detailed description of what you did and why",
+  "- affectedFiles: list of every file you modified or created",
+  "",
+  "A reviewer will examine your submission. If accepted, you are done. If rejected, you will receive specific feedback to address.",
+];
+
+function buildLoopMessage(task: string, ...bodyLines: string[]): string {
+  return [`Task (loop): ${task}`, "", ...bodyLines, ...LOOP_FOOTER].join("\n");
+}
+
 function createLoopOnlyCommand(): PluginSlashCommandDefinition {
   return {
     key: "loop",
@@ -26,15 +37,7 @@ function createLoopOnlyCommand(): PluginSlashCommandDefinition {
       }
 
       activateReview(workspaceId, task);
-      return [
-        `Task (loop): ${task}`,
-        "",
-        "Loop mode is active. Complete the task above, then call submit_review with:",
-        "- report: a detailed description of what you did and why",
-        "- affectedFiles: list of every file you modified or created",
-        "",
-        "A reviewer will examine your submission. If accepted, you are done. If rejected, you will receive specific feedback to address.",
-      ].join("\n");
+      return buildLoopMessage(task, "Loop mode is active. Complete the task above, then call submit_review with:");
     },
   };
 }
@@ -58,15 +61,7 @@ function createLoopReviewCommand(deps: HostDependencies): PluginSlashCommandDefi
 
       if (!deps.taskService) {
         activateReview(workspaceId, task);
-        return [
-          `Task (loop): ${task}`,
-          "",
-          "Loop mode is active (pre-review unavailable — no task service). Complete the task above, then call submit_review with:",
-          "- report: a detailed description of what you did and why",
-          "- affectedFiles: list of every file you modified or created",
-          "",
-          "A reviewer will examine your submission. If accepted, you are done. If rejected, you will receive specific feedback to address.",
-        ].join("\n");
+        return buildLoopMessage(task, "Loop mode is active (pre-review unavailable — no task service). Complete the task above, then call submit_review with:");
       }
 
       const config: PluginToolConfiguration = {
@@ -109,30 +104,10 @@ function createLoopReviewCommand(deps: HostDependencies): PluginSlashCommandDefi
       activateReview(workspaceId, task);
 
       if (isPassingReviewReport(preReviewReport)) {
-        return [
-          `Task (loop): ${task}`,
-          "",
-          "Loop mode is active. Pre-review passed. Complete the task above, then call submit_review with:",
-          "- report: a detailed description of what you did and why",
-          "- affectedFiles: list of every file you modified or created",
-          "",
-          "A reviewer will examine your submission. If accepted, you are done. If rejected, you will receive specific feedback to address.",
-        ].join("\n");
+        return buildLoopMessage(task, "Loop mode is active. Pre-review passed. Complete the task above, then call submit_review with:");
       }
 
-      return [
-        `Task (loop): ${task}`,
-        "",
-        "Pre-review feedback:",
-        "",
-        preReviewReport,
-        "",
-        "Loop mode is active. Address the pre-review feedback above while completing the task. Then call submit_review with:",
-        "- report: a detailed description of what you did and why",
-        "- affectedFiles: list of every file you modified or created",
-        "",
-        "A reviewer will examine your submission. If accepted, you are done. If rejected, you will receive specific feedback to address.",
-      ].join("\n");
+      return buildLoopMessage(task, "Pre-review feedback:", "", preReviewReport, "", "Loop mode is active. Address the pre-review feedback above while completing the task. Then call submit_review with:");
     },
   };
 }

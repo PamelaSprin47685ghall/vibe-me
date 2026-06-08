@@ -1,0 +1,15 @@
+export const EXTENDED_SHELL_READ_COMMANDS: ReadonlySet<string> = new Set([
+  'head',
+  'tail',
+  'sed',
+  'cat',
+  'grep',
+  'rg',
+  'find',
+  'less',
+  'more',
+  'diff',
+  'wc',
+  'ls',
+  'tree',
+]);

@@ -1,3 +1,4 @@
+import { AGENT_POLICIES } from "engine/agent-policy";
 import type { AgentToolPolicy } from "./types/tool.js";
 
 export type { AgentToolPolicy };
@@ -30,7 +31,6 @@ const WEBFETCH = "webfetch";
 const FUZZY_GREP = "fuzzy_grep";
 const FUZZY_FIND = "fuzzy_find";
 const FILE_READ = "read";
-const FILE_READ_HOST = "file_read";
 const GLOB = "glob";
 const TODO_READ = "todo_read";
 const TODO_WRITE = "todo_write";
@@ -130,26 +130,13 @@ const MUX_ADMIN_TOOLS: readonly string[] = [
 // The per-role pluginPolicies already restrict tool visibility; disabledTools
 // is the final safety net that overrides everything and prevents recursion.
 
-export const EDITOR_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
-  TASK,
-  ...DELEGATION_TOOLS,
-  ...EXECUTION_TOOLS,
-];
+export const EDITOR_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.editor.disabledTools;
 
-export const GREPER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
-  GREPER,
-  REVERIE,
-  BROWSER,
-  SUBMIT_REVIEW,
-  START_REVIEW_LOOP,
-  RUNNER_WAIT,
-  RUNNER_ABORT,
-];
+export const GREPER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.greper.disabledTools;
 
 export const RUNNER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
   RUNNER,
   FILE_READ,
-  FILE_READ_HOST,
   FILE_EDIT_REPLACE_STRING,
   FILE_EDIT_INSERT,
   WRITE,
@@ -167,51 +154,11 @@ export const RUNNER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
   ...MUX_ADMIN_TOOLS,
 ];
 
-export const BROWSER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
-  GLOB,
-  GREPER,
-  ...FUZZY_TOOLS,
-  RUNNER,
-  BROWSER,
-  ...DELEGATION_TOOLS,
-  ...MUTATION_TOOLS,
-  ...EXECUTION_TOOLS,
-  ...WEB_TOOLS,
-  ...ORCHESTRATION_TOOLS,
-  ...DESKTOP_INTERACTION_TOOLS,
-  ...MUX_ADMIN_TOOLS,
-  BASH,
-  "bash_output",
-  "bash_background_list",
-  "bash_background_terminate",
-  GREP,
-];
+export const BROWSER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.browser.disabledTools;
 
-export const REVERIE_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
-  REVERIE,
-  GREPER,
-  EDITOR,
-  BROWSER,
-  SUBMIT_REVIEW,
-  START_REVIEW_LOOP,
-  RUNNER,
-  RUNNER_WAIT,
-  RUNNER_ABORT,
-  FILE_READ,
-  FILE_READ_HOST,
-];
+export const REVERIE_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.reverie.disabledTools;
 
-export const REVIEWER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
-  SUBMIT_REVIEW,
-  EDITOR,
-  GREPER,
-  REVERIE,
-  BROWSER,
-  START_REVIEW_LOOP,
-  RUNNER,
-  RUNNER_WAIT,
-  RUNNER_ABORT,
-];
+export const REVIEWER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.reviewer.disabledTools;
 
 // ── Builder ──
 
@@ -225,7 +172,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
       main: {
         add: [
           FILE_READ,
-          FILE_READ_HOST,
           GREPER,
           REVERIE,
           SUBMIT_REVIEW,
@@ -260,7 +206,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
       editor: {
         add: [
           FILE_READ,
-          FILE_READ_HOST,
           ...MUTATION_TOOLS,
           GLOB,
           TODO_READ,
@@ -288,7 +233,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
       main: {
         add: [
           FILE_READ,
-          FILE_READ_HOST,
           GLOB,
           GREPER,
           ...FUZZY_TOOLS,
@@ -319,7 +263,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
       greper: {
         add: [
           FILE_READ,
-          FILE_READ_HOST,
           GLOB,
           ...FUZZY_TOOLS,
           RUNNER,
@@ -350,7 +293,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
       browser: {
         add: [
           FILE_READ,
-          FILE_READ_HOST,
           STEALTH_FAMILY,
         ],
         remove: [
@@ -389,7 +331,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           ...DESKTOP_INTERACTION_TOOLS,
           ...MUX_ADMIN_TOOLS,
           FILE_READ,
-          FILE_READ_HOST,
           GLOB,
           GREPER,
         ],
@@ -399,7 +340,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
       reviewer: {
         add: [
           FILE_READ,
-          FILE_READ_HOST,
           GLOB,
         ],
         remove: [

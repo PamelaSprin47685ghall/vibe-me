@@ -1,18 +1,11 @@
-import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
+import { resolve } from 'node:path';
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import { REVERIE_SYSTEM_PROMPT } from 'engine/subagent';
+import { readReverieFiles } from 'engine/reverie-files';
 import { extractToolContext, runSubagent } from '../utils/session';
 
 export { REVERIE_SYSTEM_PROMPT };
-
-const MAX_REVERIE_FILE_BYTES = 1_048_576;
-
-function isWithinDirectory(child: string, parent: string): boolean {
-  const rel = path.relative(parent, child);
-  return !rel.startsWith('..') && !path.isAbsolute(rel);
-}
 
 export function createReverieTool(ctx: PluginInput): ToolDefinition {
   const client = ctx.client;
@@ -30,7 +23,7 @@ export function createReverieTool(ctx: PluginInput): ToolDefinition {
       files: tool.schema
         .array(tool.schema.string())
         .describe(
-          'File paths to provide as context for the contemplation. Must resolve inside the project directory. Include any design docs, relevant code, or background material the agent needs to understand the question.',
+          'File paths to provide as context. Include any design docs, relevant code, or background material the agent needs to understand the question.',
         ),
     },
 
@@ -42,35 +35,18 @@ export function createReverieTool(ctx: PluginInput): ToolDefinition {
 
       const parts: Array<{ type: 'text'; text: string }> = [];
 
+      const readResults = await readReverieFiles(directory, args.files);
+      const readResultMap = new Map(readResults.map(r => [r.filePath, r.content]));
+
       for (const file of args.files) {
-        const fullPath = path.resolve(directory, file);
-        if (!isWithinDirectory(fullPath, directory)) {
-          parts.push({
-            type: 'text',
-            text: `=== ${file} ===\n\n(outside project directory — skipped)`,
-          });
-          continue;
-        }
-        try {
-          const stat = await fs.stat(fullPath);
-          if (!stat.isFile() || stat.size > MAX_REVERIE_FILE_BYTES) {
-            parts.push({
-              type: 'text',
-              text: `=== ${file} ===\n\n(skipped: too large or not a regular file)`,
-            });
-            continue;
-          }
-          const content = await fs.readFile(fullPath, 'utf-8');
-          parts.push({
-            type: 'text',
-            text: `=== ${file} ===\n\n${content}`,
-          });
-        } catch {
-          parts.push({
-            type: 'text',
-            text: `=== ${file} ===\n\n(unable to read)`,
-          });
-        }
+        const absolute = resolve(directory, file);
+        const content = readResultMap.get(absolute);
+        parts.push({
+          type: 'text',
+          text: content != null
+            ? `=== ${file} ===\n\n${content}`
+            : `=== ${file} ===\n\n(skipped)`,
+        });
       }
 
       if (parts.length > 0) {

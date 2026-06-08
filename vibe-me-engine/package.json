@@ -16,7 +16,11 @@
     "./todo": "./src/todo/index.ts",
     "./session": "./src/session/index.ts",
     "./subagent": "./src/subagent/index.ts",
-    "./util": "./src/util/index.ts"
+    "./util": "./src/util/index.ts",
+    "./mcp": "./src/mcp/index.ts",
+    "./reverie-files": "./src/reverie-files.ts",
+    "./runner/read-commands": "./src/runner/read-commands.ts",
+    "./agent-policy": "./src/agent-policy/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

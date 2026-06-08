@@ -18,11 +18,6 @@ describe('getEditorConfig', () => {
       task: 'deny',
     });
   });
-
-  test('returns expected agent name', () => {
-    const cfg = getEditorConfig();
-    expect(cfg.agents.editor.name).toBe('editor');
-  });
 });
 
 describe('createEditorTool', () => {

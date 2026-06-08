@@ -1,16 +1,9 @@
-import fs from "node:fs/promises";
 import path from "node:path";
 import type { JsonSchema, PluginToolArgs, ReverieToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
 import { REVERIE_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { delegateToSubAgent } from "./delegate.js";
-
-const MAX_REVERIE_FILE_BYTES = 1_048_576;
-
-function isWithinDirectory(child: string, parent: string): boolean {
-  const rel = path.relative(parent, child);
-  return !rel.startsWith("..") && !path.isAbsolute(rel);
-}
+import { readReverieFiles } from "engine/reverie-files";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -41,24 +34,13 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const { intent, files } = args as ReverieToolArgs;
-      const fileSections = await Promise.all(
-        files.map(async (file) => {
-          const resolvedPath = path.resolve(config.cwd, file);
-          try {
-            if (!isWithinDirectory(resolvedPath, config.cwd)) {
-              return `=== ${file} ===\n\n(outside project directory — skipped)`;
-            }
-            const stat = await fs.stat(resolvedPath);
-            if (!stat.isFile() || stat.size > MAX_REVERIE_FILE_BYTES) {
-              return `=== ${file} ===\n\n(skipped: too large or not a regular file)`;
-            }
-            const content = await fs.readFile(resolvedPath, "utf-8");
-            return `=== ${file} ===\n\n${content}`;
-          } catch {
-            return `=== ${file} ===\n\n(unable to read)`;
-          }
-        }),
-      );
+      const readResults = await readReverieFiles(config.cwd, files);
+      const readResultMap = new Map(readResults.map((r) => [r.filePath, r.content]));
+      const fileSections = files.map((file) => {
+        const absolute = path.resolve(config.cwd, file);
+        const content = readResultMap.get(absolute);
+        return `=== ${file} ===\n\n${content ?? "(skipped)"}`;
+      });
       const prompt = `${fileSections.join("\n")}\nQuestion:\n${intent}`;
       return delegateToSubAgent(config, deps, "explore", prompt, "Reverie", {
         aiSettingsAgentId: "exec",

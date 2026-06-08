@@ -1,6 +1,5 @@
 import type { ToolLike, ToolWrapper, PluginToolArgs } from "../types/contract.js";
-
-const REVERIE_NUDGE = "// 三思而后行——建议立刻调用 reverie 工具提升思维";
+import { REVERIE_NUDGE } from "engine/todo";
 
 function wrapTodoWrite(baseTool: ToolLike): ToolLike {
   const originalExecute = baseTool.execute;
