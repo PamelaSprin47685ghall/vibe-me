@@ -16,6 +16,7 @@ import { createWriteTool } from "./tools/write.js";
 import { createReadTool } from "./tools/read.js";
 import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
+import { createTodoWriteNudgeWrapper } from "./wrappers/todoWriteNudge.js";
 import { createLoopCommand } from "./commands/loop.js";
 import {
   buildAgentToolPolicies,
@@ -118,6 +119,7 @@ export function createRegistration(
       createWebOverrideWrapper(websearchDef, "web_search"),
       createWebOverrideWrapper(webfetchDef, "web_fetch"),
       createWebOverrideWrapper(readDef, "file_read"),
+      createTodoWriteNudgeWrapper(),
     ],
     contextInjector: createCapsInjector(),
     eventHook: createEventHook(),

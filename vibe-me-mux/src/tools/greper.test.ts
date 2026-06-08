@@ -45,7 +45,6 @@ const mockTaskService: {
 
 const mockDeps: HostDependencies = {
   log: { debug: () => undefined },
-  defaultModel: "anthropic:claude-sonnet-4-5",
   loadConfigOrDefault: () => ({
     projects: new Map(),
     agentAiDefaults: {},
@@ -96,6 +95,8 @@ describe("greper tool", () => {
       parentWorkspaceId: "ws-test",
       kind: "agent",
       agentId: "explore",
+      modelString: "anthropic:claude-sonnet-4-5",
+      thinkingLevel: "medium",
       prompt: "find all usages of getUserName function",
       title: "Greper",
       experiments: {

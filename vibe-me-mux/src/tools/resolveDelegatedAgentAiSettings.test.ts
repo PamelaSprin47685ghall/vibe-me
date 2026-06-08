@@ -66,7 +66,6 @@ function findWorkspaceEntryMock(
 
 const mockDeps: HostDependencies = {
   log: { debug: () => undefined },
-  defaultModel: "anthropic:claude-sonnet-4-5",
   loadConfigOrDefault: () => mockLoadConfigOrDefault(),
   readAgentDefinition: (runtime, workspacePath, agentId) =>
     mockReadAgentDefinition(runtime, workspacePath, agentId),

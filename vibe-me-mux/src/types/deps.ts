@@ -101,7 +101,6 @@ export interface TaskServiceLike {
 
 export interface HostDependencies {
   readonly log: LoggerLike;
-  readonly defaultModel: string;
   readonly taskService?: TaskServiceLike;
   readonly loadConfigOrDefault: () => ConfigFile;
   readonly readAgentDefinition: (

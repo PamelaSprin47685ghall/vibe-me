@@ -32,6 +32,7 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
       }
 
       const delegateOptions = {
+        aiSettingsAgentId: 'exec',
         experiments: {
           subagentRole: "editor" as const,
           toolPolicy: {

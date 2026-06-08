@@ -33,10 +33,8 @@ export async function delegateToSubAgent(
     parentWorkspaceId: workspaceId,
     kind: "agent",
     agentId,
-    ...(aiSettings && {
-      modelString: aiSettings.modelString,
-      thinkingLevel: aiSettings.thinkingLevel,
-    }),
+    ...(aiSettings?.modelString != null && { modelString: aiSettings.modelString }),
+    ...(aiSettings?.thinkingLevel != null && { thinkingLevel: aiSettings.thinkingLevel }),
     prompt,
     title,
     experiments: options?.experiments,

@@ -32,6 +32,7 @@ export function createEventHook(): PluginEventHook {
 
         if (!hasActiveRunner) {
           runnerNudgedWorkspaces.delete(workspaceId);
+          lastNudgeSignature.delete(workspaceId);
         }
 
         if (stoppedWorkspaces.has(workspaceId)) break;

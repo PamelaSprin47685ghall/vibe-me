@@ -32,6 +32,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
       }
 
       const delegateOptions = {
+        aiSettingsAgentId: 'explore',
         experiments: {
           subagentRole: "greper" as const,
           toolPolicy: {

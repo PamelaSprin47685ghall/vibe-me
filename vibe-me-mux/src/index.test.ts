@@ -3,7 +3,6 @@ import { createRegistration } from "./index.js";
 
 const mockDependencies = {
   log: { debug: () => undefined },
-  defaultModel: "anthropic:claude-sonnet-4-5",
   loadConfigOrDefault: () => ({ projects: new Map() }),
   readAgentDefinition: () => Promise.reject(new Error("not used")),
   resolveAgentFrontmatter: () => Promise.reject(new Error("not used")),

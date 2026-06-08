@@ -2,8 +2,8 @@ import type { ConfigFile, HostDependencies } from "../types/deps.js";
 import type { PluginToolConfiguration } from "../types/tool.js";
 
 export interface ResolvedDelegatedAgentAiSettings {
-  readonly modelString: string;
-  readonly thinkingLevel: string;
+  readonly modelString?: string;
+  readonly thinkingLevel?: string;
 }
 
 interface NamedSettings {
@@ -31,8 +31,8 @@ export function createResolveDelegatedAgentAiSettings(deps: HostDependencies) {
     ];
 
     return {
-      modelString: firstField(sources, "modelString") ?? deps.defaultModel,
-      thinkingLevel: firstField(sources, "thinkingLevel") ?? "off",
+      modelString: firstField(sources, "modelString"),
+      thinkingLevel: firstField(sources, "thinkingLevel"),
     };
   };
 }
