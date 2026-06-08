@@ -61,7 +61,7 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
       );
       const prompt = `${fileSections.join("\n")}\nQuestion:\n${intent}`;
       return delegateToSubAgent(config, deps, "explore", prompt, "Reverie", {
-        aiSettingsAgentId: "explore",
+        aiSettingsAgentId: "exec",
         experiments: {
           subagentRole: "reverie",
           toolPolicy: {

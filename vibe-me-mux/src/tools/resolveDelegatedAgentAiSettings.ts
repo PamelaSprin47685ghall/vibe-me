@@ -122,11 +122,5 @@ function resolveInheritedWorkspaceAiSettings(
     const e = workspace?.aiSettingsByAgent?.[id];
     if (e) return { modelString: e.model, thinkingLevel: e.thinkingLevel };
   }
-  if (workspace?.aiSettingsByAgent == null && workspace?.aiSettings) {
-    return {
-      modelString: workspace.aiSettings.model,
-      thinkingLevel: workspace.aiSettings.thinkingLevel,
-    };
-  }
   return undefined;
 }

@@ -25,6 +25,7 @@ export function createBrowserTool(deps: HostDependencies): ToolDefinition {
     execute: async (config, args: PluginToolArgs) => {
       const { intent } = args as BrowserToolArgs;
       return delegateToSubAgent(config, deps, "explore", intent, "Browser", {
+        aiSettingsAgentId: "explore",
         experiments: {
           subagentRole: "browser",
           toolPolicy: {

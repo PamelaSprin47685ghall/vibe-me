@@ -215,4 +215,38 @@ describe("resolveDelegatedAgentAiSettings", () => {
       thinkingLevel: "medium",
     });
   });
+
+  test("explore does not fall back to generic workspace aiSettings when aiSettingsByAgent is absent", async () => {
+    mockLoadConfigOrDefault.mockImplementation(() => ({
+      projects: new Map([
+        [
+          "/repo",
+          {
+            workspaces: [
+              {
+                id: "ws-1",
+                aiSettings: {
+                  model: "parent-model",
+                  thinkingLevel: "high",
+                },
+              },
+            ],
+          },
+        ],
+      ]),
+      agentAiDefaults: {},
+      subagentAiDefaults: {},
+    }));
+    mockResolveAgentInheritanceChain.mockResolvedValue([{ id: "explore" }]);
+
+    const result = await resolveDelegatedAgentAiSettings(
+      createToolConfig(),
+      "explore",
+    );
+
+    expect(result).toEqual({
+      modelString: undefined,
+      thinkingLevel: undefined,
+    });
+  });
 });
