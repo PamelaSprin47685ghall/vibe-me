@@ -17,7 +17,8 @@ export function createToolOutputDeduper() {
           const outputText = state.output;
           if (typeof outputText !== 'string') continue;
 
-          if (seenOutputs.some(seen => outputText.includes(seen))) {
+          const match = seenOutputs.find(seen => outputText.includes(seen));
+          if (match && outputText.length - match.length > '[No Change Since Previous Read/Write]'.length) {
             state.output = '[No Change Since Previous Read/Write]';
           } else {
             seenOutputs.push(outputText);
