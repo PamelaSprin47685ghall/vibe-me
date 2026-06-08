@@ -29,7 +29,7 @@ const WEBSEARCH = "websearch";
 const WEBFETCH = "webfetch";
 const FUZZY_GREP = "fuzzy_grep";
 const FUZZY_FIND = "fuzzy_find";
-const FILE_READ = "file_read";
+const FILE_READ = "read";
 const GLOB = "glob";
 const TODO_READ = "todo_read";
 const TODO_WRITE = "todo_write";
@@ -338,7 +338,7 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
         ],
       },
 
-      // browser = OpenCode browser. Can ONLY use file_read + stealth_browser_mcp_*.
+      // browser = OpenCode browser. Can ONLY use read + stealth_browser_mcp_*.
       browser: {
         add: [
           FILE_READ,
@@ -385,7 +385,7 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
         ],
       },
 
-      // reviewer = OpenCode reviewer. Can use file_read + glob only.
+      // reviewer = OpenCode reviewer. Can use read + glob only.
       reviewer: {
         add: [
           FILE_READ,

@@ -29,7 +29,7 @@ export function deduplicateReadOutputs<T extends MuxMessageLike>(
     for (const part of msg.parts) {
       if (
         part.type === "dynamic-tool" &&
-        part.toolName === "file_read" &&
+        part.toolName === "read" &&
         part.state === "output-available" &&
         typeof part.output === "string"
       ) {
