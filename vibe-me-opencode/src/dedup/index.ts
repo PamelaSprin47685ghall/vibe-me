@@ -11,7 +11,7 @@ export function createToolOutputDeduper() {
 
       for (const msg of messages) {
         for (const part of msg.parts) {
-          if (part.type !== 'tool') continue;
+          if (part.type !== 'tool' || part.tool !== 'read') continue;
           const state = part.state as Record<string, unknown> | undefined;
           if (!state) continue;
           const outputText = state.output;
