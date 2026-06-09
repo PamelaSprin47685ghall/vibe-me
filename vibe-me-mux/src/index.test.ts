@@ -11,6 +11,29 @@ const mockDependencies = {
 } as const;
 
 describe("createRegistration", () => {
+  test("keeps toolNames aligned with registered tools", () => {
+    const registration = createRegistration(mockDependencies as never);
+
+    expect(registration.toolNames).toEqual(registration.tools.map((tool) => tool.name));
+    expect(registration.toolNames).toEqual([
+      "editor",
+      "greper",
+      "reverie",
+      "runner",
+      "runner_wait",
+      "runner_abort",
+      "browser",
+      "submit_review",
+      "websearch",
+      "webfetch",
+      "fuzzy_grep",
+      "fuzzy_find",
+      "write",
+      "start_review_loop",
+      "read",
+    ]);
+  });
+
   test("registers stealth browser MCP", () => {
     const registration = createRegistration(mockDependencies as never);
 

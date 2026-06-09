@@ -34,7 +34,7 @@ type CanonicalToolName = typeof CANONICAL_TOOL_NAMES[number];
 function createRuntimeTools(enabledToolNames: readonly CanonicalToolName[]): Record<string, boolean> {
   const enabledTools = new Set<CanonicalToolName>(enabledToolNames);
   return Object.fromEntries(
-    CANONICAL_TOOL_NAMES.map((toolName) => [toolName, enabledTools.has(toolName)]),
+    CANONICAL_TOOL_NAMES.map((toolName) => [toolName, enabledTools.has(toolName)] as const),
   );
 }
 

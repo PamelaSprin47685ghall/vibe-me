@@ -53,17 +53,50 @@ export function getMcpServers(): Readonly<Record<string, string>> {
   };
 }
 
-function requireToolDefinition(
-  tools: readonly ToolDefinition[],
-  toolName: string,
-): ToolDefinition {
-  const toolDefinition = tools.find((tool) => tool.name === toolName);
+type ExecuteHostFileRead = (
+  args: unknown,
+  options?: { readonly abortSignal?: AbortSignal },
+) => Promise<unknown>;
 
-  if (toolDefinition === undefined) {
-    throw new Error(`Missing tool definition: ${toolName}`);
-  }
+type ToolFactory = (deps: HostDependencies) => ToolDefinition;
 
-  return toolDefinition;
+const TOOL_FACTORIES = {
+  editor: createEditorTool,
+  greper: createGreperTool,
+  reverie: createReverieTool,
+  runner: createRunnerTool,
+  runner_wait: createRunnerWaitTool,
+  runner_abort: createRunnerAbortTool,
+  browser: createBrowserTool,
+  submit_review: createSubmitReviewTool,
+  websearch: createWebsearchTool,
+  webfetch: createWebfetchTool,
+  fuzzy_grep: createFuzzyGrepTool,
+  fuzzy_find: createFuzzyFindTool,
+  write: createWriteTool,
+  start_review_loop: createStartReviewLoopTool,
+} satisfies Record<string, ToolFactory>;
+
+type OrdinaryToolCatalog = {
+  readonly [ToolName in keyof typeof TOOL_FACTORIES]: ToolDefinition;
+};
+
+type ToolCatalog = OrdinaryToolCatalog & {
+  readonly read: ToolDefinition;
+};
+
+function createToolCatalog(
+  deps: HostDependencies,
+  executeHostFileRead: ExecuteHostFileRead,
+): ToolCatalog {
+  const ordinaryToolCatalog = Object.fromEntries(
+    Object.entries(TOOL_FACTORIES).map(([toolName, createTool]) => [toolName, createTool(deps)]),
+  ) as OrdinaryToolCatalog;
+
+  return {
+    ...ordinaryToolCatalog,
+    read: createReadTool(deps, executeHostFileRead),
+  };
 }
 
 function createWebOverrideWrapper(
@@ -87,7 +120,7 @@ function createWebOverrideWrapper(
 export function createRegistration(
   deps: HostDependencies,
 ): PluginRegistration {
-  let hostFileReadExecute: ((args: unknown, options?: { readonly abortSignal?: AbortSignal }) => Promise<unknown>) | undefined;
+  let hostFileReadExecute: ExecuteHostFileRead | undefined;
 
   const executeHostFileRead = (
     args: unknown,
@@ -100,28 +133,8 @@ export function createRegistration(
     return hostFileReadExecute(args, opts);
   };
 
-  const readDef = createReadTool(deps, executeHostFileRead);
-
-  const tools: ToolDefinition[] = [
-    createEditorTool(deps),
-    createGreperTool(deps),
-    createReverieTool(deps),
-    createRunnerTool(deps),
-    createRunnerWaitTool(deps),
-    createRunnerAbortTool(deps),
-    createBrowserTool(deps),
-    createSubmitReviewTool(deps),
-    createWebsearchTool(deps),
-    createWebfetchTool(deps),
-    createFuzzyGrepTool(deps),
-    createFuzzyFindTool(deps),
-    createWriteTool(deps),
-    createStartReviewLoopTool(deps),
-    readDef,
-  ];
-
-  const websearchDef = requireToolDefinition(tools, "websearch");
-  const webfetchDef = requireToolDefinition(tools, "webfetch");
+  const catalog = createToolCatalog(deps, executeHostFileRead);
+  const tools = Object.values(catalog);
 
   return {
     toolNames: tools.map((t) => t.name),
@@ -129,8 +142,8 @@ export function createRegistration(
     mcpServers: getMcpServers(),
     wrappers: [
       ...createSyntaxCheckWrappers(deps.log),
-      createWebOverrideWrapper(websearchDef, "web_search"),
-      createWebOverrideWrapper(webfetchDef, "web_fetch"),
+      createWebOverrideWrapper(catalog.websearch, "web_search"),
+      createWebOverrideWrapper(catalog.webfetch, "web_fetch"),
       {
         targetTool: "file_read",
         wrapper: (hostTool) => {
