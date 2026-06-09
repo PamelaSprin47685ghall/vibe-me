@@ -5,7 +5,6 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { stripHeadTailPipes } from './no-head-tail.js';
 import {
   abort,
   cleanupJob,
@@ -18,6 +17,7 @@ import {
   type WaitResult,
   wait,
 } from 'engine/runner';
+import { stripHeadTailPipes } from './no-head-tail.js';
 
 const hasNpx = (() => {
   try {

@@ -38,6 +38,13 @@ export function formatSyntaxDiagnostics(
   result: SyntaxCheckResult,
   options?: { includeOk?: boolean }
 ): string | null {
+  if (!result.ok) {
+    return [
+      SYNTAX_CHECK_MARKER,
+      `Syntax check failed in ${filePath} (${result.lang || 'unknown'}): ${result.reason}`,
+    ].join('\n');
+  }
+
   if (result.errors.length === 0) {
     if (options?.includeOk) {
       return `${SYNTAX_CHECK_MARKER} ${filePath}: ok (${result.lang})`;

@@ -85,6 +85,21 @@ describe("Aspect Output Normalization", () => {
     );
   });
 
+  it("should format syntax check failures", () => {
+    const mockResult: SyntaxCheckResult = {
+      ok: false,
+      lang: "typescript",
+      errors: [],
+      reason: "parser returned undefined",
+    };
+
+    const formatted = formatSyntaxDiagnostics("src/broken.ts", mockResult);
+
+    expect(formatted).toBe(
+      `${SYNTAX_CHECK_MARKER}\nSyntax check failed in src/broken.ts (typescript): parser returned undefined`
+    );
+  });
+
   it("should return null for check with unsupported language (empty errors)", () => {
     const mockResult: SyntaxCheckResult = {
       ok: true,

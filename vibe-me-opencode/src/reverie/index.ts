@@ -1,8 +1,8 @@
 import { resolve } from 'node:path';
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { REVERIE_SYSTEM_PROMPT } from 'engine/subagent';
 import { readReverieFiles } from 'engine/reverie-files';
+import { REVERIE_SYSTEM_PROMPT } from 'engine/subagent';
 import { extractToolContext, runSubagent } from '../utils/session';
 
 export { REVERIE_SYSTEM_PROMPT };
@@ -36,16 +36,19 @@ export function createReverieTool(ctx: PluginInput): ToolDefinition {
       const parts: Array<{ type: 'text'; text: string }> = [];
 
       const readResults = await readReverieFiles(directory, args.files);
-      const readResultMap = new Map(readResults.map(r => [r.filePath, r.content]));
+      const readResultMap = new Map(
+        readResults.map((r) => [r.filePath, r.content]),
+      );
 
       for (const file of args.files) {
         const absolute = resolve(directory, file);
         const content = readResultMap.get(absolute);
         parts.push({
           type: 'text',
-          text: content != null
-            ? `=== ${file} ===\n\n${content}`
-            : `=== ${file} ===\n\n(skipped)`,
+          text:
+            content != null
+              ? `=== ${file} ===\n\n${content}`
+              : `=== ${file} ===\n\n(skipped)`,
         });
       }
 

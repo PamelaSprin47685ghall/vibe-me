@@ -1,9 +1,41 @@
 export type AgentRole = 'orchestrator' | 'editor' | 'reviewer' | 'greper' | 'browser' | 'runner' | 'reverie';
 
-export interface AgentToolPolicy {
+export interface AgentRuntimePolicy {
   readonly tools: Record<string, boolean>;
   readonly permissions: Record<string, 'allow' | 'deny'>;
   readonly disabledTools: readonly string[];
+}
+
+const CANONICAL_TOOL_NAMES = [
+  'read',
+  'write',
+  'edit',
+  'runner',
+  'glob',
+  'fuzzy_find',
+  'fuzzy_grep',
+  'grep',
+  'editor',
+  'greper',
+  'reverie',
+  'submit_review',
+  'submit_review_result',
+  'webfetch',
+  'websearch',
+  'browser',
+  'task',
+  'runner_wait',
+  'runner_abort',
+  'stealth_browser_mcp_star',
+] as const;
+
+type CanonicalToolName = typeof CANONICAL_TOOL_NAMES[number];
+
+function createRuntimeTools(enabledToolNames: readonly CanonicalToolName[]): Record<string, boolean> {
+  const enabledTools = new Set<CanonicalToolName>(enabledToolNames);
+  return Object.fromEntries(
+    CANONICAL_TOOL_NAMES.map((toolName) => [toolName, enabledTools.has(toolName)]),
+  );
 }
 
 const BROWSER_DISABLED_TOOLS = [
@@ -21,15 +53,20 @@ const BROWSER_DISABLED_TOOLS = [
   'bash', 'bash_output', 'bash_background_list', 'bash_background_terminate', 'grep',
 ] as const;
 
-export const AGENT_POLICIES: Record<AgentRole, AgentToolPolicy> = {
+export const AGENT_POLICIES: Record<AgentRole, AgentRuntimePolicy> = {
   orchestrator: {
-    tools: {
-      read: true, editor: true, greper: true, reverie: true, submit_review: true,
-      webfetch: true, websearch: true, runner: true, browser: true, glob: true,
-      fuzzy_find: false, fuzzy_grep: false, grep: false, edit: false, write: false,
-      task: false, runner_wait: false, runner_abort: false, submit_review_result: false,
-      stealth_browser_mcp_star: false,
-    },
+    tools: createRuntimeTools([
+      'read',
+      'editor',
+      'greper',
+      'reverie',
+      'submit_review',
+      'webfetch',
+      'websearch',
+      'runner',
+      'browser',
+      'glob',
+    ]),
     permissions: {
       bash: 'deny', edit: 'deny', write: 'deny', grep: 'deny',
       'stealth-browser-mcp_star': 'deny', runner_wait: 'deny', runner_abort: 'deny',
@@ -40,14 +77,15 @@ export const AGENT_POLICIES: Record<AgentRole, AgentToolPolicy> = {
   },
 
   editor: {
-    tools: {
-      read: true, write: true, edit: true, runner: true, glob: true,
-      fuzzy_find: true, fuzzy_grep: true,
-      grep: false, editor: false, greper: false, reverie: false,
-      submit_review: false, submit_review_result: false, webfetch: false,
-      websearch: false, browser: false, task: false, runner_wait: false,
-      runner_abort: false, stealth_browser_mcp_star: false,
-    },
+    tools: createRuntimeTools([
+      'read',
+      'write',
+      'edit',
+      'runner',
+      'glob',
+      'fuzzy_find',
+      'fuzzy_grep',
+    ]),
     permissions: { bash: 'deny', grep: 'deny', task: 'deny' },
     disabledTools: [
       'task', 'editor', 'greper', 'reverie', 'browser', 'submit_review',
@@ -56,14 +94,7 @@ export const AGENT_POLICIES: Record<AgentRole, AgentToolPolicy> = {
   },
 
   reviewer: {
-    tools: {
-      read: true, submit_review_result: true,
-      write: false, edit: false, runner: false, glob: false, fuzzy_find: false,
-      fuzzy_grep: false, grep: false, editor: false, greper: false, reverie: false,
-      submit_review: false, webfetch: false, websearch: false, browser: false,
-      task: false, runner_wait: false, runner_abort: false,
-      stealth_browser_mcp_star: false,
-    },
+    tools: createRuntimeTools(['read', 'submit_review_result']),
     permissions: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
     disabledTools: [
       'submit_review', 'editor', 'greper', 'reverie', 'browser',
@@ -72,13 +103,7 @@ export const AGENT_POLICIES: Record<AgentRole, AgentToolPolicy> = {
   },
 
   greper: {
-    tools: {
-      read: true, runner: true, glob: true, fuzzy_find: true, fuzzy_grep: true,
-      write: false, edit: false, grep: false, editor: false, greper: false,
-      reverie: false, submit_review: false, submit_review_result: false,
-      webfetch: false, websearch: false, browser: false, task: false,
-      runner_wait: false, runner_abort: false, stealth_browser_mcp_star: false,
-    },
+    tools: createRuntimeTools(['read', 'runner', 'glob', 'fuzzy_find', 'fuzzy_grep']),
     permissions: { bash: 'deny', edit: 'deny', write: 'deny', grep: 'deny', task: 'deny' },
     disabledTools: [
       'greper', 'reverie', 'browser', 'submit_review',
@@ -87,39 +112,19 @@ export const AGENT_POLICIES: Record<AgentRole, AgentToolPolicy> = {
   },
 
   browser: {
-    tools: {
-      read: true, stealth_browser_mcp_star: true,
-      write: false, edit: false, runner: false, glob: false, fuzzy_find: false,
-      fuzzy_grep: false, grep: false, editor: false, greper: false, reverie: false,
-      submit_review: false, submit_review_result: false, webfetch: false,
-      websearch: false, browser: false, task: false, runner_wait: false,
-      runner_abort: false,
-    },
+    tools: createRuntimeTools(['read', 'stealth_browser_mcp_star']),
     permissions: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
     disabledTools: [...BROWSER_DISABLED_TOOLS],
   },
 
   runner: {
-    tools: {
-      runner_wait: true, runner_abort: true,
-      read: false, write: false, edit: false, runner: false, glob: false,
-      fuzzy_find: false, fuzzy_grep: false, grep: false, editor: false,
-      greper: false, reverie: false, submit_review: false, submit_review_result: false,
-      webfetch: false, websearch: false, browser: false, task: false,
-      stealth_browser_mcp_star: false,
-    },
+    tools: createRuntimeTools(['runner_wait', 'runner_abort']),
     permissions: { edit: 'deny', write: 'deny', task: 'deny' },
     disabledTools: [],
   },
 
   reverie: {
-    tools: {
-      read: false, write: false, edit: false, runner: false, glob: false,
-      fuzzy_find: false, fuzzy_grep: false, grep: false, editor: false,
-      greper: false, reverie: false, submit_review: false, submit_review_result: false,
-      webfetch: false, websearch: false, browser: false, task: false,
-      runner_wait: false, runner_abort: false, stealth_browser_mcp_star: false,
-    },
+    tools: createRuntimeTools([]),
     permissions: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
     disabledTools: [
       'reverie', 'greper', 'editor', 'browser', 'submit_review',
@@ -136,41 +141,85 @@ export function isAgentRole(name: string): name is AgentRole {
   return (AGENT_ROLE_LIST as readonly string[]).includes(name);
 }
 
-export function getAgentPolicy(role: AgentRole): AgentToolPolicy {
+export function getAgentPolicy(role: AgentRole): AgentRuntimePolicy {
   return AGENT_POLICIES[role];
+}
+
+type UniversalPermissionDefault = 'allow' | 'deny';
+
+interface UniversalPermissionDefaultRule {
+  readonly permissionName: string;
+  readonly defaultPermission: UniversalPermissionDefault;
+  readonly includedRoles?: readonly AgentRole[];
+  readonly excludedRoles?: readonly AgentRole[];
+}
+
+const SEARCH_PERMISSION_ROLES: readonly AgentRole[] = ['editor', 'greper'];
+
+const UNIVERSAL_PERMISSION_DEFAULT_RULES: readonly UniversalPermissionDefaultRule[] = [
+  { permissionName: 'bash', defaultPermission: 'deny' },
+  {
+    permissionName: 'stealth-browser-mcp_star',
+    defaultPermission: 'deny',
+    excludedRoles: ['browser'],
+  },
+  { permissionName: 'runner_wait', defaultPermission: 'deny', excludedRoles: ['runner'] },
+  { permissionName: 'runner_abort', defaultPermission: 'deny', excludedRoles: ['runner'] },
+  {
+    permissionName: 'submit_review_result',
+    defaultPermission: 'deny',
+    excludedRoles: ['reviewer'],
+  },
+  {
+    permissionName: 'glob',
+    defaultPermission: 'deny',
+    excludedRoles: SEARCH_PERMISSION_ROLES,
+  },
+  {
+    permissionName: 'fuzzy_find',
+    defaultPermission: 'allow',
+    includedRoles: SEARCH_PERMISSION_ROLES,
+  },
+  {
+    permissionName: 'fuzzy_find',
+    defaultPermission: 'deny',
+    excludedRoles: SEARCH_PERMISSION_ROLES,
+  },
+  {
+    permissionName: 'fuzzy_grep',
+    defaultPermission: 'allow',
+    includedRoles: SEARCH_PERMISSION_ROLES,
+  },
+  {
+    permissionName: 'fuzzy_grep',
+    defaultPermission: 'deny',
+    excludedRoles: SEARCH_PERMISSION_ROLES,
+  },
+  { permissionName: 'grep', defaultPermission: 'deny' },
+  { permissionName: 'question', defaultPermission: 'deny', excludedRoles: ['orchestrator'] },
+];
+
+function appliesToAgent(rule: UniversalPermissionDefaultRule, agent: AgentRole): boolean {
+  return (rule.includedRoles === undefined || rule.includedRoles.includes(agent))
+    && (rule.excludedRoles === undefined || !rule.excludedRoles.includes(agent));
+}
+
+function applyPermissionDefault(
+  permission: Record<string, string>,
+  rule: UniversalPermissionDefaultRule,
+): void {
+  if (permission[rule.permissionName] === undefined) {
+    permission[rule.permissionName] = rule.defaultPermission;
+  }
 }
 
 export function applyUniversalPermissionDeny(
   agent: AgentRole,
   permission: Record<string, string>,
 ): void {
-  const is = (r: AgentRole) => agent === r;
-  const inRoles = (roles: readonly AgentRole[]) => (roles as readonly string[]).includes(agent);
-
-  if (permission['bash'] === undefined) permission['bash'] = 'deny';
-  if (permission['stealth-browser-mcp_star'] === undefined && !is('browser')) {
-    permission['stealth-browser-mcp_star'] = 'deny';
-  }
-  if (permission['runner_wait'] === undefined && !is('runner')) {
-    permission['runner_wait'] = 'deny';
-  }
-  if (permission['runner_abort'] === undefined && !is('runner')) {
-    permission['runner_abort'] = 'deny';
-  }
-  if (permission['submit_review_result'] === undefined && !is('reviewer')) {
-    permission['submit_review_result'] = 'deny';
-  }
-  if (permission['glob'] === undefined && !inRoles(['editor', 'greper'])) {
-    permission['glob'] = 'deny';
-  }
-  if (permission['fuzzy_find'] === undefined) {
-    permission['fuzzy_find'] = inRoles(['editor', 'greper']) ? 'allow' : 'deny';
-  }
-  if (permission['fuzzy_grep'] === undefined) {
-    permission['fuzzy_grep'] = inRoles(['editor', 'greper']) ? 'allow' : 'deny';
-  }
-  if (permission['grep'] === undefined) permission['grep'] = 'deny';
-  if (permission['question'] === undefined && !is('orchestrator')) {
-    permission['question'] = 'deny';
+  for (const rule of UNIVERSAL_PERMISSION_DEFAULT_RULES) {
+    if (appliesToAgent(rule, agent)) {
+      applyPermissionDefault(permission, rule);
+    }
   }
 }

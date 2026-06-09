@@ -1,158 +1,198 @@
 import { AGENT_POLICIES } from "engine/agent-policy";
-import type { AgentToolPolicy } from "./types/tool.js";
+import type { MuxPluginToolPolicy } from "./types/tool.js";
 
-export type { AgentToolPolicy };
+export type { MuxPluginToolPolicy };
 
 export type MuxAgentName = "exec" | "explore";
 
 export type SubAgentRole = "editor" | "greper" | "runner" | "browser" | "reverie" | "reviewer";
 
 export type MuxAgentToolPolicies = Record<MuxAgentName, {
-  main: AgentToolPolicy;
-} & Partial<Record<SubAgentRole, AgentToolPolicy>>>;
+  main: MuxPluginToolPolicy;
+} & Partial<Record<SubAgentRole, MuxPluginToolPolicy>>>;
 
-// ── Tool name regex patterns (bare names — wrapped with ^...$ by applyToolPolicyToNames) ──
+const TOOL_NAME = {
+  bash: "bash",
+  bashOutput: "bash_output",
+  bashBackgroundList: "bash_background_list",
+  bashBackgroundTerminate: "bash_background_terminate",
+  grep: "grep",
+  editor: "editor",
+  write: "write",
+  runner: "runner",
+  runnerWait: "runner_wait",
+  runnerAbort: "runner_abort",
+  browser: "browser",
+  submitReview: "submit_review",
+  startReviewLoop: "start_review_loop",
+  greper: "greper",
+  reverie: "reverie",
+  websearch: "websearch",
+  webfetch: "webfetch",
+  fuzzyGrep: "fuzzy_grep",
+  fuzzyFind: "fuzzy_find",
+  fileRead: "read",
+  glob: "glob",
+  todoRead: "todo_read",
+  todoWrite: "todo_write",
+  proposePlan: "propose_plan",
+  askUserQuestion: "ask_user_question",
+  webFetch: "web_fetch",
+  webSearch: "web_search",
+  task: "task",
+  fileEditReplaceString: "file_edit_replace_string",
+  fileEditInsert: "file_edit_insert",
+  attachFile: "attach_file",
+  advisor: "advisor",
+  notify: "notify",
+  analyticsQuery: "analytics_query",
+  getGoal: "get_goal",
+  completeGoal: "complete_goal",
+  reviewPaneUpdate: "review_pane_update",
+  reviewPaneGet: "review_pane_get",
+  desktopScreenshot: "desktop_screenshot",
+  desktopMoveMouse: "desktop_move_mouse",
+  desktopClick: "desktop_click",
+  desktopDoubleClick: "desktop_double_click",
+  desktopDrag: "desktop_drag",
+  desktopScroll: "desktop_scroll",
+  desktopType: "desktop_type",
+  desktopKeyPress: "desktop_key_press",
+  agentSkillRead: "agent_skill_read",
+  agentSkillReadFile: "agent_skill_read_file",
+  agentSkillList: "agent_skill_list",
+  agentSkillWrite: "agent_skill_write",
+  agentSkillDelete: "agent_skill_delete",
+  skillsCatalogSearch: "skills_catalog_search",
+  skillsCatalogRead: "skills_catalog_read",
+  muxAgentsRead: "mux_agents_read",
+  muxAgentsWrite: "mux_agents_write",
+  muxConfigRead: "mux_config_read",
+  muxConfigWrite: "mux_config_write",
+} as const;
 
-const BASH = "bash";
-const GREP = "grep";
-const EDITOR = "editor";
-const WRITE = "write";
-const RUNNER = "runner";
-const RUNNER_WAIT = "runner_wait";
-const RUNNER_ABORT = "runner_abort";
-const BROWSER = "browser";
-const SUBMIT_REVIEW = "submit_review";
+const TOOL_PATTERN = {
+  stealthBrowserMcpFamily: "stealth_browser_mcp_.*",
+  desktopFamily: "desktop_.*",
+} as const;
 
-const START_REVIEW_LOOP = "start_review_loop";
-const GREPER = "greper";
-const REVERIE = "reverie";
-const WEBSEARCH = "websearch";
-const WEBFETCH = "webfetch";
-const FUZZY_GREP = "fuzzy_grep";
-const FUZZY_FIND = "fuzzy_find";
-const FILE_READ = "read";
-const GLOB = "glob";
-const TODO_READ = "todo_read";
-const TODO_WRITE = "todo_write";
-const PROPOSE_PLAN = "propose_plan";
-const ASK_USER_QUESTION = "ask_user_question";
-const WEB_FETCH = "web_fetch";
-const WEB_SEARCH = "web_search";
-const TASK = "task";
-const FILE_EDIT_REPLACE_STRING = "file_edit_replace_string";
-const FILE_EDIT_INSERT = "file_edit_insert";
-const ATTACH_FILE = "attach_file";
+type ToolSelector = string | readonly string[];
 
-// Miscellaneous tool names
-const ADVISOR = "advisor";
-const NOTIFY = "notify";
+const selectTools = (...selectors: readonly ToolSelector[]): string[] => selectors.flatMap((selector) => (
+  typeof selector === "string" ? [selector] : [...selector]
+));
 
-const ANALYTICS_QUERY = "analytics_query";
-const GET_GOAL = "get_goal";
-const COMPLETE_GOAL = "complete_goal";
-const REVIEW_PANE_UPDATE = "review_pane_update";
-const REVIEW_PANE_GET = "review_pane_get";
-
-// Family prefix patterns (match any tool name starting with the prefix)
-const STEALTH_FAMILY = "stealth_browser_mcp_.*";
-const DESKTOP_FAMILY = "desktop_.*";
-
-// ── Composite groups ──
+function toolPolicy(
+  addSelectors: readonly ToolSelector[],
+  removeSelectors: readonly ToolSelector[],
+): MuxPluginToolPolicy {
+  return {
+    add: selectTools(...addSelectors),
+    remove: selectTools(...removeSelectors),
+  };
+}
 
 const MUTATION_TOOLS: readonly string[] = [
-  WRITE,
-  FILE_EDIT_REPLACE_STRING,
-  FILE_EDIT_INSERT,
-  ATTACH_FILE,
+  TOOL_NAME.write,
+  TOOL_NAME.fileEditReplaceString,
+  TOOL_NAME.fileEditInsert,
+  TOOL_NAME.attachFile,
 ];
 
-const EXECUTION_TOOLS: readonly string[] = [RUNNER, RUNNER_WAIT, RUNNER_ABORT];
+const EXECUTION_TOOLS: readonly string[] = [
+  TOOL_NAME.runner,
+  TOOL_NAME.runnerWait,
+  TOOL_NAME.runnerAbort,
+];
 
 const WEB_TOOLS: readonly string[] = [
-  WEB_FETCH,
-  WEB_SEARCH,
-  WEBSEARCH,
-  WEBFETCH,
+  TOOL_NAME.webFetch,
+  TOOL_NAME.webSearch,
+  TOOL_NAME.websearch,
+  TOOL_NAME.webfetch,
 ];
 
-const FUZZY_TOOLS: readonly string[] = [FUZZY_FIND, FUZZY_GREP];
+const FUZZY_TOOLS: readonly string[] = [TOOL_NAME.fuzzyFind, TOOL_NAME.fuzzyGrep];
 
 const DELEGATION_TOOLS: readonly string[] = [
-  EDITOR,
-  GREPER,
-  REVERIE,
-  BROWSER,
-  SUBMIT_REVIEW,
-  START_REVIEW_LOOP,
+  TOOL_NAME.editor,
+  TOOL_NAME.greper,
+  TOOL_NAME.reverie,
+  TOOL_NAME.browser,
+  TOOL_NAME.submitReview,
+  TOOL_NAME.startReviewLoop,
 ];
 
 const ORCHESTRATION_TOOLS: readonly string[] = [
-  ASK_USER_QUESTION,
-  PROPOSE_PLAN,
-  TODO_READ,
-  TODO_WRITE,
-  ADVISOR,
-  NOTIFY,
-  GET_GOAL,
-  COMPLETE_GOAL,
-  REVIEW_PANE_UPDATE,
-  REVIEW_PANE_GET,
+  TOOL_NAME.askUserQuestion,
+  TOOL_NAME.proposePlan,
+  TOOL_NAME.todoRead,
+  TOOL_NAME.todoWrite,
+  TOOL_NAME.advisor,
+  TOOL_NAME.notify,
+  TOOL_NAME.getGoal,
+  TOOL_NAME.completeGoal,
+  TOOL_NAME.reviewPaneUpdate,
+  TOOL_NAME.reviewPaneGet,
+];
+
+const BASH_FAMILY_TOOLS: readonly string[] = [
+  TOOL_NAME.bash,
+  TOOL_NAME.bashOutput,
+  TOOL_NAME.bashBackgroundList,
+  TOOL_NAME.bashBackgroundTerminate,
 ];
 
 const DESKTOP_INTERACTION_TOOLS: readonly string[] = [
-  ANALYTICS_QUERY,
-  "desktop_screenshot",
-  "desktop_move_mouse",
-  "desktop_click",
-  "desktop_double_click",
-  "desktop_drag",
-  "desktop_scroll",
-  "desktop_type",
-  "desktop_key_press",
+  TOOL_NAME.analyticsQuery,
+  TOOL_NAME.desktopScreenshot,
+  TOOL_NAME.desktopMoveMouse,
+  TOOL_NAME.desktopClick,
+  TOOL_NAME.desktopDoubleClick,
+  TOOL_NAME.desktopDrag,
+  TOOL_NAME.desktopScroll,
+  TOOL_NAME.desktopType,
+  TOOL_NAME.desktopKeyPress,
 ];
 
 const MUX_ADMIN_TOOLS: readonly string[] = [
-  "agent_skill_read",
-  "agent_skill_read_file",
-  "agent_skill_list",
-  "agent_skill_write",
-  "agent_skill_delete",
-  "skills_catalog_search",
-  "skills_catalog_read",
-  "mux_agents_read",
-  "mux_agents_write",
-  "mux_config_read",
-  "mux_config_write",
+  TOOL_NAME.agentSkillRead,
+  TOOL_NAME.agentSkillReadFile,
+  TOOL_NAME.agentSkillList,
+  TOOL_NAME.agentSkillWrite,
+  TOOL_NAME.agentSkillDelete,
+  TOOL_NAME.skillsCatalogSearch,
+  TOOL_NAME.skillsCatalogRead,
+  TOOL_NAME.muxAgentsRead,
+  TOOL_NAME.muxAgentsWrite,
+  TOOL_NAME.muxConfigRead,
+  TOOL_NAME.muxConfigWrite,
 ];
 
-// ── Sub-agent disabled tool lists ──
-// Defense-in-depth: disabledTools is applied AFTER per-role policy resolution.
-// The per-role pluginPolicies already restrict tool visibility; disabledTools
-// is the final safety net that overrides everything and prevents recursion.
+const RUNNER_DISABLED_FILE_TOOLS: readonly string[] = [
+  TOOL_NAME.fileRead,
+  TOOL_NAME.fileEditReplaceString,
+  TOOL_NAME.fileEditInsert,
+  TOOL_NAME.write,
+  TOOL_NAME.attachFile,
+];
 
 export const EDITOR_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.editor.disabledTools;
 
 export const GREPER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.greper.disabledTools;
 
-export const RUNNER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = [
-  RUNNER,
-  FILE_READ,
-  FILE_EDIT_REPLACE_STRING,
-  FILE_EDIT_INSERT,
-  WRITE,
-  ATTACH_FILE,
-  GLOB,
-  ...FUZZY_TOOLS,
-  ...DELEGATION_TOOLS,
-  ...WEB_TOOLS,
-  ...ORCHESTRATION_TOOLS,
-  BASH,
-  "bash_output",
-  "bash_background_list",
-  "bash_background_terminate",
-  ...DESKTOP_INTERACTION_TOOLS,
-  ...MUX_ADMIN_TOOLS,
-];
+export const RUNNER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = selectTools(
+  TOOL_NAME.runner,
+  RUNNER_DISABLED_FILE_TOOLS,
+  TOOL_NAME.glob,
+  FUZZY_TOOLS,
+  DELEGATION_TOOLS,
+  WEB_TOOLS,
+  ORCHESTRATION_TOOLS,
+  BASH_FAMILY_TOOLS,
+  DESKTOP_INTERACTION_TOOLS,
+  MUX_ADMIN_TOOLS,
+);
 
 export const BROWSER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.browser.disabledTools;
 
@@ -160,235 +200,211 @@ export const REVERIE_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIE
 
 export const REVIEWER_SUB_AGENT_DISABLED_TOOLS: readonly string[] = AGENT_POLICIES.reviewer.disabledTools;
 
-// ── Builder ──
-
 export function buildAgentToolPolicies(): MuxAgentToolPolicies {
   return {
-    // exec = OpenCode orchestrator (main) + editor + runner sub-agents.
     exec: {
-      // Main = strict OpenCode orchestrator. Delegates mutations, but can use
-      // runner directly. No bash, no grep, no fuzzy tools, no stealth browser,
-      // no task lifecycle, no runner wait/abort.
-      main: {
-        add: [
-          FILE_READ,
-          GREPER,
-          REVERIE,
-          SUBMIT_REVIEW,
-          START_REVIEW_LOOP,
-          ...WEB_TOOLS,
-          BROWSER,
-          GLOB,
-          ASK_USER_QUESTION,
-          PROPOSE_PLAN,
-          TODO_READ,
-          TODO_WRITE,
-          FUZZY_FIND,
-          EDITOR,
+      main: toolPolicy(
+        [
+          TOOL_NAME.fileRead,
+          TOOL_NAME.greper,
+          TOOL_NAME.reverie,
+          TOOL_NAME.submitReview,
+          TOOL_NAME.startReviewLoop,
+          WEB_TOOLS,
+          TOOL_NAME.browser,
+          TOOL_NAME.glob,
+          TOOL_NAME.askUserQuestion,
+          TOOL_NAME.proposePlan,
+          TOOL_NAME.todoRead,
+          TOOL_NAME.todoWrite,
+          TOOL_NAME.fuzzyFind,
+          TOOL_NAME.editor,
         ],
-        remove: [
-          BASH,
-          GREP,
-          FUZZY_GREP,
-          STEALTH_FAMILY,
-          TASK,
-          RUNNER_WAIT,
-          RUNNER_ABORT,
-          WRITE,
-          FILE_EDIT_REPLACE_STRING,
-          FILE_EDIT_INSERT,
-          ATTACH_FILE,
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          TOOL_NAME.fuzzyGrep,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
+          TOOL_NAME.task,
+          TOOL_NAME.runnerWait,
+          TOOL_NAME.runnerAbort,
+          TOOL_NAME.write,
+          TOOL_NAME.fileEditReplaceString,
+          TOOL_NAME.fileEditInsert,
+          TOOL_NAME.attachFile,
         ],
-      },
-
-      // editor = OpenCode editor agent. Can mutate files but cannot delegate
-      // further, cannot run executables, cannot manage task lifecycle.
-      editor: {
-        add: [
-          FILE_READ,
-          ...MUTATION_TOOLS,
-          GLOB,
-          TODO_READ,
-          TODO_WRITE,
+      ),
+      editor: toolPolicy(
+        [
+          TOOL_NAME.fileRead,
+          MUTATION_TOOLS,
+          TOOL_NAME.glob,
+          TOOL_NAME.todoRead,
+          TOOL_NAME.todoWrite,
         ],
-        remove: [
-          BASH,
-          GREP,
-          ...FUZZY_TOOLS,
-          STEALTH_FAMILY,
-          TASK,
-          ...DELEGATION_TOOLS,
-          ...EXECUTION_TOOLS,
-          ...WEB_TOOLS,
-          PROPOSE_PLAN,
-          ASK_USER_QUESTION,
-          FILE_EDIT_INSERT,
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          FUZZY_TOOLS,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
+          TOOL_NAME.task,
+          DELEGATION_TOOLS,
+          EXECUTION_TOOLS,
+          WEB_TOOLS,
+          TOOL_NAME.proposePlan,
+          TOOL_NAME.askUserQuestion,
+          TOOL_NAME.fileEditInsert,
         ],
-      },
+      ),
     },
-
-    // explore = read-only sub-agent (main) + greper + browser + reverie + reviewer.
     explore: {
-      // Main = the explore policy (read-only sub-agent).
-      main: {
-        add: [
-          FILE_READ,
-          GLOB,
-          GREPER,
-          ...FUZZY_TOOLS,
-          RUNNER,
-          BROWSER,
-          STEALTH_FAMILY,
+      main: toolPolicy(
+        [
+          TOOL_NAME.fileRead,
+          TOOL_NAME.glob,
+          TOOL_NAME.greper,
+          FUZZY_TOOLS,
+          TOOL_NAME.runner,
+          TOOL_NAME.browser,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
         ],
-        remove: [
-          BASH,
-          GREP,
-          ...MUTATION_TOOLS,
-          REVERIE,
-          SUBMIT_REVIEW,
-          START_REVIEW_LOOP,
-          RUNNER_WAIT,
-          RUNNER_ABORT,
-          ...WEB_TOOLS,
-          TASK,
-          DESKTOP_FAMILY,
-          PROPOSE_PLAN,
-          TODO_READ,
-          TODO_WRITE,
-          ASK_USER_QUESTION,
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          MUTATION_TOOLS,
+          TOOL_NAME.reverie,
+          TOOL_NAME.submitReview,
+          TOOL_NAME.startReviewLoop,
+          TOOL_NAME.runnerWait,
+          TOOL_NAME.runnerAbort,
+          WEB_TOOLS,
+          TOOL_NAME.task,
+          TOOL_PATTERN.desktopFamily,
+          TOOL_NAME.proposePlan,
+          TOOL_NAME.todoRead,
+          TOOL_NAME.todoWrite,
+          TOOL_NAME.askUserQuestion,
         ],
-      },
-
-      // greper = OpenCode greper. Like explore but no delegation, no runner wait/abort.
-      greper: {
-        add: [
-          FILE_READ,
-          GLOB,
-          ...FUZZY_TOOLS,
-          RUNNER,
+      ),
+      greper: toolPolicy(
+        [
+          TOOL_NAME.fileRead,
+          TOOL_NAME.glob,
+          FUZZY_TOOLS,
+          TOOL_NAME.runner,
         ],
-        remove: [
-          BASH,
-          GREP,
-          ...MUTATION_TOOLS,
-          GREPER,
-          REVERIE,
-          BROWSER,
-          SUBMIT_REVIEW,
-          START_REVIEW_LOOP,
-          RUNNER_WAIT,
-          RUNNER_ABORT,
-          ...WEB_TOOLS,
-          TASK,
-          DESKTOP_FAMILY,
-          STEALTH_FAMILY,
-          PROPOSE_PLAN,
-          TODO_READ,
-          TODO_WRITE,
-          ASK_USER_QUESTION,
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          MUTATION_TOOLS,
+          TOOL_NAME.greper,
+          TOOL_NAME.reverie,
+          TOOL_NAME.browser,
+          TOOL_NAME.submitReview,
+          TOOL_NAME.startReviewLoop,
+          TOOL_NAME.runnerWait,
+          TOOL_NAME.runnerAbort,
+          WEB_TOOLS,
+          TOOL_NAME.task,
+          TOOL_PATTERN.desktopFamily,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
+          TOOL_NAME.proposePlan,
+          TOOL_NAME.todoRead,
+          TOOL_NAME.todoWrite,
+          TOOL_NAME.askUserQuestion,
         ],
-      },
-
-      // browser = OpenCode browser. Can ONLY use read + stealth_browser_mcp_*.
-      browser: {
-        add: [
-          FILE_READ,
-          STEALTH_FAMILY,
+      ),
+      browser: toolPolicy(
+        [
+          TOOL_NAME.fileRead,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
         ],
-        remove: [
-          BASH,
-          GREP,
-          ...FUZZY_TOOLS,
-          DESKTOP_FAMILY,
-          TASK,
-          ...MUTATION_TOOLS,
-          ...DELEGATION_TOOLS,
-          ...EXECUTION_TOOLS,
-          ...WEB_TOOLS,
-          ...ORCHESTRATION_TOOLS,
-          ...DESKTOP_INTERACTION_TOOLS,
-          ...MUX_ADMIN_TOOLS,
-          GLOB,
-          GREPER,
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          FUZZY_TOOLS,
+          TOOL_PATTERN.desktopFamily,
+          TOOL_NAME.task,
+          MUTATION_TOOLS,
+          DELEGATION_TOOLS,
+          EXECUTION_TOOLS,
+          WEB_TOOLS,
+          ORCHESTRATION_TOOLS,
+          DESKTOP_INTERACTION_TOOLS,
+          MUX_ADMIN_TOOLS,
+          TOOL_NAME.glob,
+          TOOL_NAME.greper,
         ],
-      },
-
-      // reverie = OpenCode reverie. Can use NOTHING. Empty add + broad remove.
-      reverie: {
-        add: [],
-        remove: [
-          BASH,
-          GREP,
-          ...FUZZY_TOOLS,
-          STEALTH_FAMILY,
-          DESKTOP_FAMILY,
-          TASK,
-          ...MUTATION_TOOLS,
-          ...DELEGATION_TOOLS,
-          ...EXECUTION_TOOLS,
-          ...WEB_TOOLS,
-          ...ORCHESTRATION_TOOLS,
-          ...DESKTOP_INTERACTION_TOOLS,
-          ...MUX_ADMIN_TOOLS,
-          FILE_READ,
-          GLOB,
-          GREPER,
+      ),
+      reverie: toolPolicy(
+        [],
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          FUZZY_TOOLS,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
+          TOOL_PATTERN.desktopFamily,
+          TOOL_NAME.task,
+          MUTATION_TOOLS,
+          DELEGATION_TOOLS,
+          EXECUTION_TOOLS,
+          WEB_TOOLS,
+          ORCHESTRATION_TOOLS,
+          DESKTOP_INTERACTION_TOOLS,
+          MUX_ADMIN_TOOLS,
+          TOOL_NAME.fileRead,
+          TOOL_NAME.glob,
+          TOOL_NAME.greper,
         ],
-      },
-
-      // reviewer = OpenCode reviewer. Can use read + glob only.
-      reviewer: {
-        add: [
-          FILE_READ,
-          GLOB,
+      ),
+      reviewer: toolPolicy(
+        [
+          TOOL_NAME.fileRead,
+          TOOL_NAME.glob,
         ],
-        remove: [
-          BASH,
-          GREP,
-          ...FUZZY_TOOLS,
-          STEALTH_FAMILY,
-          DESKTOP_FAMILY,
-          TASK,
-          ...MUTATION_TOOLS,
-          ...DELEGATION_TOOLS,
-          ...EXECUTION_TOOLS,
-          ...WEB_TOOLS,
-          ...ORCHESTRATION_TOOLS,
-          ...DESKTOP_INTERACTION_TOOLS,
-          ...MUX_ADMIN_TOOLS,
-          GREPER,
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          FUZZY_TOOLS,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
+          TOOL_PATTERN.desktopFamily,
+          TOOL_NAME.task,
+          MUTATION_TOOLS,
+          DELEGATION_TOOLS,
+          EXECUTION_TOOLS,
+          WEB_TOOLS,
+          ORCHESTRATION_TOOLS,
+          DESKTOP_INTERACTION_TOOLS,
+          MUX_ADMIN_TOOLS,
+          TOOL_NAME.greper,
         ],
-      },
-      // runner = read-only runner agent. Can ONLY use runner_wait + runner_abort.
-      // Strictest possible policy: nothing else is allowed.
-      runner: {
-        add: [RUNNER_WAIT, RUNNER_ABORT],
-        remove: [
-          BASH,
-          GREP,
-          ...FUZZY_TOOLS,
-          STEALTH_FAMILY,
-          DESKTOP_FAMILY,
-          TASK,
-          ...MUTATION_TOOLS,
-          ...DELEGATION_TOOLS,
-          RUNNER,
-          ...WEB_TOOLS,
-          ...ORCHESTRATION_TOOLS,
-          ...DESKTOP_INTERACTION_TOOLS,
-          ...MUX_ADMIN_TOOLS,
+      ),
+      runner: toolPolicy(
+        [TOOL_NAME.runnerWait, TOOL_NAME.runnerAbort],
+        [
+          TOOL_NAME.bash,
+          TOOL_NAME.grep,
+          FUZZY_TOOLS,
+          TOOL_PATTERN.stealthBrowserMcpFamily,
+          TOOL_PATTERN.desktopFamily,
+          TOOL_NAME.task,
+          MUTATION_TOOLS,
+          DELEGATION_TOOLS,
+          TOOL_NAME.runner,
+          WEB_TOOLS,
+          ORCHESTRATION_TOOLS,
+          DESKTOP_INTERACTION_TOOLS,
+          MUX_ADMIN_TOOLS,
         ],
-      },
+      ),
     },
   };
 }
 
-// ── Lookup ──
-
 export function getPluginToolPolicy(
   agentId: string,
   role?: string,
-): AgentToolPolicy | undefined {
+): MuxPluginToolPolicy | undefined {
   const policies = buildAgentToolPolicies()[agentId as MuxAgentName];
   if (!policies) return undefined;
   if (role && role in policies) return policies[role as SubAgentRole];

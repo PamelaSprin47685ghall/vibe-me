@@ -4,19 +4,22 @@
   "description": "Mux plugin: kunwei addon as a standalone repo (editor, greper, runner, reverie, browser, fuzzy, review-loop, caps, syntax-check)",
   "type": "module",
   "main": "dist/index.cjs",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./src/index.ts",
+      "types": "./dist/index.d.ts",
       "default": "./dist/index.cjs"
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --target=node --format=cjs --outfile=dist/index.cjs --bundle",
-    "prepublish": "bun run build",
+    "build": "rm -rf dist && bun build src/index.ts --target=node --format=cjs --outfile=dist/index.cjs --bundle && tsc -p tsconfig.build.json",
+    "prepublishOnly": "bun run typecheck && bun run test && bun run build",
     "typecheck": "tsc --noEmit",
     "test": "bun test src/"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "engine": "file:../vibe-me-engine"
   },

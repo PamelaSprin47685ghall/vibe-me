@@ -1,3 +1,5 @@
+import { createTextOutputDeduper } from "engine/util";
+
 interface DynamicToolPart {
   readonly type: "dynamic-tool";
   readonly toolName: string;
@@ -12,12 +14,10 @@ interface MuxMessageLike {
   [key: string]: unknown;
 }
 
-const DEDUP_MARKER = "[No Change Since Previous Read/Write]";
-
 export function deduplicateReadOutputs<T extends MuxMessageLike>(
   messages: readonly T[],
 ): T[] {
-  const seenOutputs: string[] = [];
+  const dedupeOutput = createTextOutputDeduper();
   let mutated = false;
 
   const result = messages.map((msg) => {
@@ -34,16 +34,13 @@ export function deduplicateReadOutputs<T extends MuxMessageLike>(
         typeof part.output === "string"
       ) {
         const current = part.output;
-        const deduped = seenOutputs.some(
-          (seen) => current.includes(seen) && current !== seen,
-        );
+        const output = dedupeOutput(current);
 
-        if (deduped && current.length > DEDUP_MARKER.length) {
-          newParts.push({ ...part, output: DEDUP_MARKER });
-          partMutated = true;
-        } else {
+        if (output === current) {
           newParts.push(part as DynamicToolPart);
-          seenOutputs.push(current);
+        } else {
+          newParts.push({ ...part, output });
+          partMutated = true;
         }
       } else {
         newParts.push(part as DynamicToolPart);

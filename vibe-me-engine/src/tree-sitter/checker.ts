@@ -33,6 +33,16 @@ interface NativePack {
   downloadAll(): number;
 }
 
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.length > 0) return error.message;
+  if (typeof error === 'string' && error.length > 0) return error;
+  return 'unknown error';
+}
+
+function syntaxCheckFailed(lang: string, reason: string): SyntaxCheckResult {
+  return { ok: false, lang, errors: [], reason };
+}
+
 function loadNativePack(): NativePack {
   const { platform, arch } = process;
   const suffix =
@@ -91,8 +101,8 @@ export async function checkSyntax(content: string, filePath: string): Promise<Sy
   let pack: NativePack;
   try {
     pack = await getPack();
-  } catch {
-    return { ok: true, lang: '', errors: [] };
+  } catch (error) {
+    return syntaxCheckFailed('', `native language pack load failed: ${errorMessage(error)}`);
   }
 
   let lang: string;
@@ -101,21 +111,21 @@ export async function checkSyntax(content: string, filePath: string): Promise<Sy
       ?? pack.detectLanguageFromContent(content)
       ?? detectLangFromContentFallback(content, pack)
       ?? '';
-  } catch {
-    return { ok: true, lang: '', errors: [] };
+  } catch (error) {
+    return syntaxCheckFailed('', `language detection failed: ${errorMessage(error)}`);
   }
   if (!lang) return { ok: true, lang: '', errors: [] };
 
   let parser: NativeParser;
   try {
     parser = pack.getParser(lang);
-  } catch {
-    return { ok: true, lang, errors: [] };
+  } catch (error) {
+    return syntaxCheckFailed(lang, `parser load failed: ${errorMessage(error)}`);
   }
 
   try {
     const tree = parser.parse(content);
-    if (!tree) return { ok: true, lang, errors: [] };
+    if (!tree) return syntaxCheckFailed(lang, 'parser returned undefined');
 
     const errors: SyntaxDiagnostic[] = findErrorNodes(tree.rootNode()).map((node) => {
       const start = node.startPosition();
@@ -131,7 +141,7 @@ export async function checkSyntax(content: string, filePath: string): Promise<Sy
     });
 
     return { ok: true, lang, errors };
-  } catch {
-    return { ok: true, lang, errors: [] };
+  } catch (error) {
+    return syntaxCheckFailed(lang, `parse failed: ${errorMessage(error)}`);
   }
 }

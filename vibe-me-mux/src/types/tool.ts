@@ -1,6 +1,6 @@
 import type { RuntimeHandle, TaskServiceLike } from "./deps.js";
 
-export interface AgentToolPolicy {
+export interface MuxPluginToolPolicy {
   readonly add?: string[];
   readonly remove?: string[];
 }

@@ -73,7 +73,9 @@ export function createLoopCommandManager(_ctx: PluginInput) {
       if (!opencodeConfig.command) {
         opencodeConfig.command = {};
       }
-      (opencodeConfig.command as Record<string, unknown>)[LOOP_REVIEW_COMMAND_NAME] = {
+      (opencodeConfig.command as Record<string, unknown>)[
+        LOOP_REVIEW_COMMAND_NAME
+      ] = {
         template: 'Enable while-loop mode with pre-review.',
         description:
           'Enable while-loop mode — the task is pre-reviewed immediately, and reviewer feedback is prepended to your prompt before any work begins',
@@ -95,7 +97,10 @@ export function createLoopCommandManager(_ctx: PluginInput) {
       const task = input.arguments.trim();
       if (!task) {
         deactivateReview(input.sessionID);
-        output.parts.push({ type: 'text', text: 'loop-review mode cancelled.' });
+        output.parts.push({
+          type: 'text',
+          text: 'loop-review mode cancelled.',
+        });
         return;
       }
 
@@ -122,7 +127,10 @@ export function createLoopCommandManager(_ctx: PluginInput) {
       });
       const childID = createResult.data?.id;
       if (!childID) {
-        output.parts.push({ type: 'text', text: 'Failed to create pre-reviewer session' });
+        output.parts.push({
+          type: 'text',
+          text: 'Failed to create pre-reviewer session',
+        });
         return;
       }
       addChild(sessionID, childID);
@@ -133,7 +141,12 @@ export function createLoopCommandManager(_ctx: PluginInput) {
         { type: 'text', text: `=== Task ===\n\n${task}` },
       ];
 
-      const result = await runReviewerWithNudge(client, childID, parts, directory);
+      const result = await runReviewerWithNudge(
+        client,
+        childID,
+        parts,
+        directory,
+      );
 
       if (result.feedback == null) {
         output.parts.push({

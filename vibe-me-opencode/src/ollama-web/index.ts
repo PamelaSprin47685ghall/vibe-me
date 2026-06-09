@@ -48,7 +48,9 @@ export function createOllamaWebSearchTool(): ToolDefinition {
             max_results: args.numResults ?? 10,
           },
           context.abort,
-        )) as { results?: Array<{ title: string; url: string; content: string }> };
+        )) as {
+          results?: Array<{ title: string; url: string; content: string }>;
+        };
         const results = data.results ?? [];
         return formatSearchResults(results) || 'No results found.';
       } catch (error) {

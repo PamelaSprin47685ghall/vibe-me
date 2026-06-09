@@ -70,6 +70,29 @@ describe('createSyntaxCheckHook', () => {
     expect(output.output).toContain('[syntax-check]');
   });
 
+  it('appends syntax check failures to edit tool output', async () => {
+    writeFileSync(join(tmpDir, 'test.ts'), 'const x = 1\n');
+    spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
+      ok: false,
+      lang: 'typescript',
+      errors: [],
+      reason: 'parser returned undefined',
+    });
+
+    const hook = createSyntaxCheckHook(createMockCtx(tmpDir));
+    const output = createOutput('edited successfully');
+
+    await hook['tool.execute.after'](
+      { tool: 'edit', sessionID: 's1', args: { path: 'test.ts' } },
+      output,
+    );
+
+    expect(output.output).toContain('[syntax-check]');
+    expect(output.output).toContain(
+      'Syntax check failed in test.ts (typescript): parser returned undefined',
+    );
+  });
+
   it('appends syntax errors to Write tool output', async () => {
     writeFileSync(join(tmpDir, 'test.ts'), 'const x = 1\n');
     mockCheckSyntax([
@@ -313,6 +336,7 @@ describe('checkSyntax return paths', () => {
     const pyCode = 'import os\nimport sys\n\ndef main():\n    print("Hello, World!")\n    for i in range(10):\n        if i % 2 == 0:\n            print(i)\n\nif __name__ == "__main__":\n    main()\n';
     const result = await checkSyntax(pyCode, '/tmp/script');
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
     expect(result.lang).toBe('python');
   });
 
@@ -320,6 +344,7 @@ describe('checkSyntax return paths', () => {
     const jsCode = 'const { useState, useEffect } = require("react");\n\nmodule.exports = function App() {\n  const [count, setCount] = useState(0);\n  return count;\n};\n';
     const result = await checkSyntax(jsCode, '/tmp/myfile');
     expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.reason);
     expect(result.lang).toBe('javascript');
   });
 });

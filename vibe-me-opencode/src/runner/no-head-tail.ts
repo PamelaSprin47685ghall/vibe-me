@@ -1,1 +1,5 @@
-export { stripHeadTailPipes, type StripResult, type StrippedPipe } from 'engine/runner';
+export {
+  type StrippedPipe,
+  type StripResult,
+  stripHeadTailPipes,
+} from 'engine/runner';

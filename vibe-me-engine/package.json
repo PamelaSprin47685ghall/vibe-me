@@ -24,8 +24,12 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test src/"
+    "test": "bun test src/",
+    "prepublishOnly": "bun run typecheck && bun run test"
   },
+  "files": [
+    "src"
+  ],
   "dependencies": {
     "@ff-labs/fff-node": "^0.8.4",
     "@kreuzberg/tree-sitter-language-pack": "^1.8.1",

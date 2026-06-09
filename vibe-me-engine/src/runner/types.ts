@@ -2,22 +2,6 @@ export type RunnerLanguage = 'shell' | 'python' | 'javascript';
 
 export const RUNNER_LANGUAGES: RunnerLanguage[] = ['shell', 'python', 'javascript'];
 
-export interface ActiveJob {
-  sessionId: string;
-  parentSessionId?: string;
-  childProcess: import('node:child_process').ChildProcess | null;
-  stdoutFile: string;
-  writeStream: import('node:fs').WriteStream | null;
-  tempPath?: string;
-  projectDir?: string;
-  abortController: AbortController;
-  bytesRead: number;
-  status: 'running' | 'completed' | 'aborted';
-  startTime: number;
-  closePromise: Promise<void>;
-  finalOutput: string;
-}
-
 export interface ExecuteOptions {
   sessionId: string;
   parentSessionId?: string;

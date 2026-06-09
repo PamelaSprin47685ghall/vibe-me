@@ -1,3 +1,5 @@
+import { createTextOutputDeduper } from 'engine/util';
+
 export function createToolOutputDeduper() {
   return {
     async handleMessagesTransform(output: { messages: unknown[] }): Promise<void> {
@@ -7,7 +9,7 @@ export function createToolOutputDeduper() {
       }>;
       if (messages.length === 0) return;
 
-      const seenOutputs: string[] = [];
+      const dedupeOutput = createTextOutputDeduper();
 
       for (const msg of messages) {
         for (const part of msg.parts) {
@@ -17,12 +19,8 @@ export function createToolOutputDeduper() {
           const outputText = state.output;
           if (typeof outputText !== 'string') continue;
 
-          const match = seenOutputs.find(seen => outputText.includes(seen));
-          if (match && outputText.length - match.length > '[No Change Since Previous Read/Write]'.length) {
-            state.output = '[No Change Since Previous Read/Write]';
-          } else {
-            seenOutputs.push(outputText);
-          }
+          const output = dedupeOutput(outputText);
+          if (output !== outputText) state.output = output;
         }
       }
     },

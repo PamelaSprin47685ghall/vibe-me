@@ -12,14 +12,18 @@
     }
   },
   "scripts": {
-    "build": "bun build src/index.ts --outdir dist --target node --format esm --external @kreuzberg/tree-sitter-language-pack",
+    "build": "rm -rf dist && bun build src/index.ts --outdir dist --target node --format esm --external @kreuzberg/tree-sitter-language-pack && tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test src/",
     "lint": "bun x biome lint src/",
     "format": "bun x biome format --write src/",
     "check": "bun x biome check --write src/",
-    "check:ci": "bun x biome check src/"
+    "check:ci": "bun x biome check src/",
+    "prepublishOnly": "bun run typecheck && bun run test && bun run check:ci && bun run build"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@kreuzberg/tree-sitter-language-pack": "^1.8.1",
     "@opencode-ai/plugin": "^1.15.12",

@@ -40,6 +40,21 @@ describe("AOP Syntax Diagnostics Formatter Tests", () => {
     expect(formatted).toBe("[syntax-check] lib.rs: ok (rust)");
   });
 
+  it("should format syntax check failures", () => {
+    const result: SyntaxCheckResult = {
+      ok: false,
+      lang: "typescript",
+      errors: [],
+      reason: "parser load failed: missing grammar",
+    };
+
+    const formatted = formatSyntaxDiagnostics("broken.ts", result);
+
+    expect(formatted).toBe(
+      "[syntax-check]\nSyntax check failed in broken.ts (typescript): parser load failed: missing grammar"
+    );
+  });
+
   it("should return null when check returns empty errors (language unsupported etc.)", () => {
     const result: SyntaxCheckResult = { ok: true, lang: "", errors: [] };
 

@@ -1,6 +1,14 @@
 import type { Plugin } from '@opencode-ai/plugin';
+import {
+  AGENT_POLICIES,
+  type AgentRole,
+  applyUniversalPermissionDeny,
+  getAgentPolicy,
+  isAgentRole,
+} from 'engine/agent-policy';
 import { createBrowserTool, getBrowserConfig } from './browser/index.js';
 import { createCapsMessagesInjector } from './caps/index.js';
+import { createToolOutputDeduper } from './dedup/index.js';
 import { createEditorTool, getEditorConfig } from './editor/index.js';
 import { createFuzzyFindTool, createFuzzyGrepTool } from './fuzzy/index.js';
 import { createGreperTool, getGreperConfig } from './greper/index.js';
@@ -24,19 +32,9 @@ import {
   getRunnerConfig,
 } from './runner/index.js';
 import { createSyntaxCheckHook } from './tree-sitter/index.js';
-import { createToolOutputDeduper } from './dedup/index.js';
 import { lookupChildAgent } from './utils/child-agent';
-import {
-  AGENT_POLICIES,
-  getAgentPolicy,
-  applyUniversalPermissionDeny,
-  isAgentRole,
-  type AgentRole,
-} from 'engine/agent-policy';
 
 type ToolDefaults = Record<string, boolean>;
-type AgentName = AgentRole;
-
 function mergeTools(
   current: Record<string, unknown> | undefined,
   defaults: ToolDefaults,
@@ -121,8 +119,8 @@ const KunweiPlugin: Plugin = async (ctx) => {
           tools: mergeTools(
             (
               opencodeConfig.agent?.orchestrator as
-              | Record<string, unknown>
-              | undefined
+                | Record<string, unknown>
+                | undefined
             )?.tools as Record<string, unknown> | undefined,
             getAgentToolDefaults('orchestrator'),
           ),
@@ -130,8 +128,8 @@ const KunweiPlugin: Plugin = async (ctx) => {
             ...getAgentPermissionDefaults('orchestrator'),
             ...((
               opencodeConfig.agent?.orchestrator as
-              | Record<string, unknown>
-              | undefined
+                | Record<string, unknown>
+                | undefined
             )?.permission as Record<string, unknown> | undefined),
           },
           mcps: [],

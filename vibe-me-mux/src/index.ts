@@ -53,6 +53,19 @@ export function getMcpServers(): Readonly<Record<string, string>> {
   };
 }
 
+function requireToolDefinition(
+  tools: readonly ToolDefinition[],
+  toolName: string,
+): ToolDefinition {
+  const toolDefinition = tools.find((tool) => tool.name === toolName);
+
+  if (toolDefinition === undefined) {
+    throw new Error(`Missing tool definition: ${toolName}`);
+  }
+
+  return toolDefinition;
+}
+
 function createWebOverrideWrapper(
   def: ToolDefinition,
   targetTool: string,
@@ -75,7 +88,19 @@ export function createRegistration(
   deps: HostDependencies,
 ): PluginRegistration {
   let hostFileReadExecute: ((args: unknown, options?: { readonly abortSignal?: AbortSignal }) => Promise<unknown>) | undefined;
-  const readDef = createReadTool(deps, (args, opts) => hostFileReadExecute!(args, opts));
+
+  const executeHostFileRead = (
+    args: unknown,
+    opts?: { readonly abortSignal?: AbortSignal },
+  ): Promise<unknown> => {
+    if (hostFileReadExecute === undefined) {
+      throw new Error("Host file_read wrapper has not been initialized");
+    }
+
+    return hostFileReadExecute(args, opts);
+  };
+
+  const readDef = createReadTool(deps, executeHostFileRead);
 
   const tools: ToolDefinition[] = [
     createEditorTool(deps),
@@ -95,8 +120,8 @@ export function createRegistration(
     readDef,
   ];
 
-  const websearchDef = tools.find(t => t.name === "websearch")!;
-  const webfetchDef = tools.find(t => t.name === "webfetch")!;
+  const websearchDef = requireToolDefinition(tools, "websearch");
+  const webfetchDef = requireToolDefinition(tools, "webfetch");
 
   return {
     toolNames: tools.map((t) => t.name),
@@ -151,7 +176,7 @@ export type {
   PluginToolConfiguration,
 } from "./types/tool.js";
 export type { HostDependencies, RuntimeHandle, TaskServiceLike, TaskCreateInput, TaskWaitOptions, TaskCreateResult } from "./types/deps.js";
-export type { AgentToolPolicy } from "./types/tool.js";
+export type { MuxPluginToolPolicy } from "./types/tool.js";
 export type { MuxAgentName, SubAgentRole, MuxAgentToolPolicies } from "./agentToolPolicies.js";
 export { buildAgentToolPolicies, getPluginToolPolicy } from "./agentToolPolicies.js";
 export { findCapsFiles, type CapsFileInfo } from "engine/caps";
