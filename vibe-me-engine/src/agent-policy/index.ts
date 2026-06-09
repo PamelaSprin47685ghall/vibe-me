@@ -40,7 +40,7 @@ function createRuntimeTools(enabledToolNames: readonly CanonicalToolName[]): Rec
 
 const BROWSER_DISABLED_TOOLS = [
   'glob', 'greper', 'fuzzy_find', 'fuzzy_grep', 'runner', 'browser', 'editor',
-  'reverie', 'submit_review', 'start_review_loop', 'write', 'file_edit_replace_string',
+  'reverie', 'submit_review', 'write', 'file_edit_replace_string',
   'file_edit_insert', 'attach_file', 'runner_wait', 'runner_abort', 'web_fetch',
   'web_search', 'websearch', 'webfetch', 'ask_user_question', 'propose_plan',
   'todo_read', 'todo_write', 'advisor', 'notify', 'get_goal', 'complete_goal',
@@ -89,7 +89,7 @@ export const AGENT_POLICIES: Record<AgentRole, AgentRuntimePolicy> = {
     permissions: { bash: 'deny', grep: 'deny', task: 'deny' },
     disabledTools: [
       'task', 'editor', 'greper', 'reverie', 'browser', 'submit_review',
-      'start_review_loop', 'runner', 'runner_wait', 'runner_abort',
+      'runner', 'runner_wait', 'runner_abort',
     ],
   },
 
@@ -98,7 +98,7 @@ export const AGENT_POLICIES: Record<AgentRole, AgentRuntimePolicy> = {
     permissions: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
     disabledTools: [
       'submit_review', 'editor', 'greper', 'reverie', 'browser',
-      'start_review_loop', 'runner', 'runner_wait', 'runner_abort',
+      'runner', 'runner_wait', 'runner_abort',
     ],
   },
 
@@ -107,7 +107,7 @@ export const AGENT_POLICIES: Record<AgentRole, AgentRuntimePolicy> = {
     permissions: { bash: 'deny', edit: 'deny', write: 'deny', grep: 'deny', task: 'deny' },
     disabledTools: [
       'greper', 'reverie', 'browser', 'submit_review',
-      'start_review_loop', 'runner_wait', 'runner_abort',
+      'runner_wait', 'runner_abort',
     ],
   },
 
@@ -128,7 +128,7 @@ export const AGENT_POLICIES: Record<AgentRole, AgentRuntimePolicy> = {
     permissions: { bash: 'deny', edit: 'deny', write: 'deny', task: 'deny' },
     disabledTools: [
       'reverie', 'greper', 'editor', 'browser', 'submit_review',
-      'start_review_loop', 'runner', 'runner_wait', 'runner_abort', 'read',
+      'runner', 'runner_wait', 'runner_abort', 'read',
     ],
   },
 };

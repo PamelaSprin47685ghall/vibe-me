@@ -1,10 +1,37 @@
-import { globalIteratorStore } from "engine/util";
-import { deactivateReview, isReviewActive } from "engine/review";
-import { cleanupJob, getActiveJobs, hasActiveJob, buildRunnerNudgePrompt } from "engine/runner";
-import { defaultCoordinator, TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, type NudgeInputContext } from "engine/todo";
+import type { JobRegistry } from "engine/runner";
+import type { NudgeInputContext } from "engine/todo";
 import type { PluginEventHook } from "./types/tool.js";
 
-export function createEventHook(): PluginEventHook {
+export interface EventHookDeps {
+  cleanupRegistry: (registry: JobRegistry, id: string) => void;
+  globalJobRegistry: JobRegistry;
+  deactivateReview: (id: string) => void;
+  isReviewActive: (id: string) => boolean;
+  clearIteratorScope: (id: string) => void;
+  coordinator: {
+    shouldNudge: (sessionId: string, context: NudgeInputContext) => string;
+    suppress: (id: string) => void;
+  };
+  hasActiveJob: (sessionId: string) => boolean;
+  buildRunnerNudgePrompt: () => string;
+  TODO_NUDGE_PROMPT: string;
+  LOOP_NUDGE_PROMPT: string;
+}
+
+export function createEventHook(deps: EventHookDeps): PluginEventHook {
+  const {
+    cleanupRegistry,
+    globalJobRegistry,
+    deactivateReview,
+    isReviewActive,
+    clearIteratorScope,
+    coordinator,
+    hasActiveJob,
+    buildRunnerNudgePrompt,
+    TODO_NUDGE_PROMPT,
+    LOOP_NUDGE_PROMPT,
+  } = deps;
+
   const runnerNudgedWorkspaces = new Set<string>();
   const stoppedWorkspaces = new Set<string>();
   const retryPendingWorkspaces = new Set<string>();
@@ -28,7 +55,7 @@ export function createEventHook(): PluginEventHook {
           .filter((part) => part.type === "text" && part.text)
           .map((part) => part.text!)
           .join("\n");
-        const hasActiveRunner = hasActiveJob(getActiveJobs, workspaceId);
+        const hasActiveRunner = hasActiveJob(workspaceId);
 
         if (!hasActiveRunner) {
           runnerNudgedWorkspaces.delete(workspaceId);
@@ -44,7 +71,7 @@ export function createEventHook(): PluginEventHook {
             hasActiveRunner: true,
             isLoopActive: false,
           };
-          const action = defaultCoordinator.shouldNudge(workspaceId, context);
+          const action = coordinator.shouldNudge(workspaceId, context);
 
           if (action === "nudge-runner" && !runnerNudgedWorkspaces.has(workspaceId)) {
             const signature = `runner:${lastAssistantMessage.slice(0, 200)}`;
@@ -75,7 +102,7 @@ export function createEventHook(): PluginEventHook {
           isLoopActive: isReviewActive(workspaceId),
         };
 
-        const action = defaultCoordinator.shouldNudge(workspaceId, context);
+        const action = coordinator.shouldNudge(workspaceId, context);
         const promptText =
           action === "nudge-todo"
             ? TODO_NUDGE_PROMPT
@@ -97,16 +124,16 @@ export function createEventHook(): PluginEventHook {
         break;
       }
       case "stream-abort":
-        cleanupJob(workspaceId);
+        cleanupRegistry(globalJobRegistry, workspaceId);
         deactivateReview(workspaceId);
-        globalIteratorStore.clearScope(workspaceId);
+        clearIteratorScope(workspaceId);
         runnerNudgedWorkspaces.delete(workspaceId);
         stoppedWorkspaces.add(workspaceId);
         retryPendingWorkspaces.delete(workspaceId);
         break;
       case "error":
         if ((event.properties as { readonly errorType?: string } | undefined)?.errorType === "aborted") {
-          defaultCoordinator.suppress(workspaceId);
+          coordinator.suppress(workspaceId);
           stoppedWorkspaces.add(workspaceId);
         }
         break;

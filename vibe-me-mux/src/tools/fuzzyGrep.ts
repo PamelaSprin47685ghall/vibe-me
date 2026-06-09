@@ -1,6 +1,6 @@
 import type { FuzzyGrepToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
-import { FuzzySearchCoordinator } from "engine/fuzzy";
+import { fuzzyGrep } from "engine/fuzzy";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -49,7 +49,7 @@ export function createFuzzyGrepTool(_deps: HostDependencies): ToolDefinition {
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const a = args as FuzzyGrepToolArgs;
-      const result = await FuzzySearchCoordinator.fuzzyGrep(
+      const result = await fuzzyGrep(
         {
           pattern: a.pattern ?? undefined,
           path: a.path ?? undefined,

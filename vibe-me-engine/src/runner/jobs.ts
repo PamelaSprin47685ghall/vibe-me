@@ -5,7 +5,7 @@ import { killTree } from './process.js';
 import { stripHeadTailPipes } from './no-head-tail.js';
 import { createJavascriptPrelude, rewriteJavascriptModuleSpecifiers } from './javascript.js';
 import { runChildProcess } from './process.js';
-import { ActiveJob, createTempScript, getTempScriptPath, globalJobRegistry, MAX_OUTPUT_BYTES } from './job.js';
+import { ActiveJob, cleanupRegistry, createTempScript, getTempScriptPath, globalJobRegistry, MAX_OUTPUT_BYTES } from './job.js';
 import type { ExecuteOptions, ExecuteResult, WaitOptions, WaitResult, RunnerLanguage } from './types.js';
 
 function truncateTail(text: string, max: number): string {
@@ -13,11 +13,11 @@ function truncateTail(text: string, max: number): string {
 }
 
 export function getActiveJobs(): Map<string, ActiveJob> {
-  return globalJobRegistry.getAll();
+  return globalJobRegistry;
 }
 
 export function cleanupJob(sessionId: string): void {
-  globalJobRegistry.cleanup(sessionId);
+  cleanupRegistry(globalJobRegistry, sessionId);
 }
 
 export async function ensureJavascriptProject(projectDir: string, dependencies: string[] | undefined): Promise<void> {
@@ -143,7 +143,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
   else if (language === 'python') projectDir = getRunnerProjectDir(sessionId);
 
   const job = new ActiveJob(sessionId, logPath, projectDir, options.parentSessionId);
-  globalJobRegistry.register(job);
+  globalJobRegistry.set(job.sessionId, job);
 
   const runner = {
     onSpawn: (child: import('node:child_process').ChildProcess) => { job.childProcess = child; },

@@ -1,7 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { isAbortErrorName } from 'engine/util';
 import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, REVERIE_NUDGE, defaultCoordinator, type NudgeInputContext } from 'engine/todo';
-import { buildRunnerNudgePrompt, hasActiveJob, cleanupJob, getActiveJobs } from 'engine/runner';
+import { buildRunnerNudgePrompt, hasActiveJob, cleanupRegistry, globalJobRegistry } from 'engine/runner';
 import { isReviewActive } from 'engine/review';
 import { type TodoItem, asMessageArray } from '../utils/session';
 import { lookupChildAgent } from '../utils/child-agent';
@@ -179,8 +179,6 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
     if (retryPendingSessions.has(sessionID)) return;
     if (nudgedSessions.has(sessionID)) return;
 
-    const suppressor = defaultCoordinator.getOrCreateSuppressor(sessionID);
-    if (suppressor.isSuppressed()) return;
     nudgedSessions.add(sessionID);
 
     let todos: TodoItem[];
@@ -219,7 +217,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
     const context: NudgeInputContext = {
       todos,
       lastAssistantMessage,
-      hasActiveRunner: hasActiveJob(getActiveJobs, sessionID),
+      hasActiveRunner: hasActiveJob(sessionID),
       isLoopActive: isReviewActive(sessionID),
     };
 
@@ -235,7 +233,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
     } else if (action === 'nudge-loop') {
       promptText = LOOP_NUDGE_PROMPT;
     } else if (action === 'nudge-runner') {
-      const jobs = getActiveJobs();
+      const jobs = globalJobRegistry;
       const isSelfJob = jobs.get(sessionID)?.status === 'running';
       if (!isSelfJob) {
         nudgedSessions.delete(sessionID);
@@ -319,7 +317,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         event.type === 'session.remove' ||
         event.type === 'session.deleted'
       ) {
-        cleanupJob(sessionID);
+        cleanupRegistry(globalJobRegistry, sessionID);
         defaultCoordinator.clearSession(sessionID);
         resumeSession(sessionID);
         sessionAgents.delete(sessionID);

@@ -1,5 +1,5 @@
 import { type ToolDefinition, tool } from '@opencode-ai/plugin';
-import { FuzzySearchCoordinator, resolveExternalBasePath } from 'engine/fuzzy';
+import { fuzzyFind, fuzzyGrep, resolveExternalBasePath } from 'engine/fuzzy';
 
 export { resolveExternalBasePath };
 
@@ -51,7 +51,7 @@ export function createFuzzyFindTool(): ToolDefinition {
         limit: args.limit ?? undefined,
         iterator: args.iterator ?? undefined,
       };
-      const result = await FuzzySearchCoordinator.fuzzyFind(cleanArgs, { cwd: activeCwd, scopeId });
+      const result = await fuzzyFind(cleanArgs, { cwd: activeCwd, scopeId });
       return result.output;
     },
   });
@@ -124,7 +124,7 @@ export function createFuzzyGrepTool(): ToolDefinition {
         limit: args.limit ?? undefined,
         iterator: args.iterator ?? undefined,
       };
-      const result = await FuzzySearchCoordinator.fuzzyGrep(
+      const result = await fuzzyGrep(
         cleanArgs,
         { cwd: activeCwd, scopeId }
       );

@@ -24,7 +24,6 @@ const TOOL_NAME = {
   runnerAbort: "runner_abort",
   browser: "browser",
   submitReview: "submit_review",
-  startReviewLoop: "start_review_loop",
   greper: "greper",
   reverie: "reverie",
   websearch: "websearch",
@@ -120,7 +119,6 @@ const DELEGATION_TOOLS: readonly string[] = [
   TOOL_NAME.reverie,
   TOOL_NAME.browser,
   TOOL_NAME.submitReview,
-  TOOL_NAME.startReviewLoop,
 ];
 
 const ORCHESTRATION_TOOLS: readonly string[] = [
@@ -209,7 +207,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           TOOL_NAME.greper,
           TOOL_NAME.reverie,
           TOOL_NAME.submitReview,
-          TOOL_NAME.startReviewLoop,
           WEB_TOOLS,
           TOOL_NAME.browser,
           TOOL_NAME.glob,
@@ -274,7 +271,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           MUTATION_TOOLS,
           TOOL_NAME.reverie,
           TOOL_NAME.submitReview,
-          TOOL_NAME.startReviewLoop,
           TOOL_NAME.runnerWait,
           TOOL_NAME.runnerAbort,
           WEB_TOOLS,
@@ -301,7 +297,6 @@ export function buildAgentToolPolicies(): MuxAgentToolPolicies {
           TOOL_NAME.reverie,
           TOOL_NAME.browser,
           TOOL_NAME.submitReview,
-          TOOL_NAME.startReviewLoop,
           TOOL_NAME.runnerWait,
           TOOL_NAME.runnerAbort,
           WEB_TOOLS,

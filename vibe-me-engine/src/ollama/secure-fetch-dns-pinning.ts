@@ -92,31 +92,28 @@ async function resolveDnsPinned(hostname: string): Promise<DnsPinnedResult> {
   return { ip: selectedIp, family: isIP(selectedIp) as 4 | 6 };
 }
 
-class DnsPinningHttpAgent extends HttpAgent {
-  createConnection: typeof HttpAgent.prototype.createConnection = (options: any, callback?: any) => {
-    const hostname = options?.host || 'localhost';
-    resolveDnsPinned(hostname)
-      .then(({ ip }) => {
-        const pinnedOptions = { ...options, host: ip };
-        if (callback) super.createConnection(pinnedOptions, callback);
-      })
-      .catch((err: Error) => callback?.(err));
-    return undefined;
+function createDnsPinningAgent<T extends typeof HttpAgent | typeof HttpsAgent>(
+  BaseAgent: T,
+  isHttps: boolean,
+) {
+  return class DnsPinningAgent extends BaseAgent {
+    createConnection = (options: any, callback?: any) => {
+      const hostname = options?.host || 'localhost';
+      resolveDnsPinned(hostname)
+        .then(({ ip }) => {
+          const pinnedOptions = isHttps
+            ? { ...options, host: ip, servername: options?.servername || hostname }
+            : { ...options, host: ip };
+          if (callback) super.createConnection(pinnedOptions, callback);
+        })
+        .catch((err: Error) => callback?.(err));
+      return undefined;
+    };
   };
 }
 
-class DnsPinningHttpsAgent extends HttpsAgent {
-  createConnection: typeof HttpsAgent.prototype.createConnection = (options: any, callback?: any) => {
-    const hostname = options?.host || 'localhost';
-    resolveDnsPinned(hostname)
-      .then(({ ip }) => {
-        const pinnedOptions = { ...options, host: ip, servername: options?.servername || hostname };
-        if (callback) super.createConnection(pinnedOptions, callback);
-      })
-      .catch((err: Error) => callback?.(err));
-    return undefined;
-  };
-}
+const DnsPinningHttpAgent = createDnsPinningAgent(HttpAgent, false);
+const DnsPinningHttpsAgent = createDnsPinningAgent(HttpsAgent, true);
 
 const dnsPinningHttpAgent = new DnsPinningHttpAgent({ keepAlive: true });
 const dnsPinningHttpsAgent = new DnsPinningHttpsAgent({ keepAlive: true, rejectUnauthorized: false });

@@ -1,5 +1,11 @@
 import { createCapsInjector } from "./context/capsInjector.js";
 import { createEventHook } from "./eventHook.js";
+import { cleanupRegistry, cleanupJob, execute, globalJobRegistry, hasActiveJob, buildRunnerNudgePrompt } from "engine/runner";
+import { EXTENDED_SHELL_READ_COMMANDS } from "engine/runner/read-commands";
+import { deactivateReview, isReviewActive, tryLockReview, getReviewTask, unlockReview } from "engine/review";
+import { delegateToSubAgent } from "./tools/delegate.js";
+import { globalIteratorStore } from "engine/util";
+import { defaultCoordinator, TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from "engine/todo";
 import { createEditorTool } from "./tools/editor.js";
 import { createGreperTool } from "./tools/greper.js";
 import { createReverieTool } from "./tools/reverie.js";
@@ -15,7 +21,6 @@ import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
 import { createWriteTool } from "./tools/write.js";
 import { createReadTool } from "./tools/read.js";
 import { getStealthBrowserMcpCommand } from "engine/mcp";
-import { createStartReviewLoopTool } from "./tools/startReviewLoop.js";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import { createTodoWriteNudgeWrapper } from "./wrappers/todoWriteNudge.js";
 import { createLoopCommand } from "./commands/loop.js";
@@ -64,17 +69,29 @@ const TOOL_FACTORIES = {
   editor: createEditorTool,
   greper: createGreperTool,
   reverie: createReverieTool,
-  runner: createRunnerTool,
+  runner: (deps: HostDependencies) => createRunnerTool(deps, {
+    execute,
+    cleanupJob,
+    globalJobRegistry,
+    extendedShellReadCommands: EXTENDED_SHELL_READ_COMMANDS,
+  }),
   runner_wait: createRunnerWaitTool,
   runner_abort: createRunnerAbortTool,
   browser: createBrowserTool,
-  submit_review: createSubmitReviewTool,
+  submit_review: (deps: HostDependencies) =>
+    createSubmitReviewTool(deps, {
+      tryLockReview,
+      isReviewActive,
+      getReviewTask,
+      deactivateReview,
+      unlockReview,
+      delegateToSubAgent,
+    }),
   websearch: createWebsearchTool,
   webfetch: createWebfetchTool,
   fuzzy_grep: createFuzzyGrepTool,
   fuzzy_find: createFuzzyFindTool,
   write: createWriteTool,
-  start_review_loop: createStartReviewLoopTool,
 } satisfies Record<string, ToolFactory>;
 
 type OrdinaryToolCatalog = {
@@ -154,7 +171,18 @@ export function createRegistration(
       createTodoWriteNudgeWrapper(),
     ],
     contextInjector: createCapsInjector(),
-    eventHook: createEventHook(),
+    eventHook: createEventHook({
+      cleanupRegistry,
+      globalJobRegistry,
+      deactivateReview,
+      isReviewActive,
+      clearIteratorScope: globalIteratorStore.clearScope.bind(globalIteratorStore),
+      coordinator: defaultCoordinator,
+      hasActiveJob,
+      buildRunnerNudgePrompt,
+      TODO_NUDGE_PROMPT,
+      LOOP_NUDGE_PROMPT,
+    }),
     slashCommands: createLoopCommand(deps),
     agentToolPolicies: buildAgentToolPolicies(),
   };
@@ -171,7 +199,6 @@ export type {
   RunnerToolArgs,
   RunnerWaitToolArgs,
   RunnerAbortToolArgs,
-  StartReviewLoopToolArgs,
   SubmitReviewToolArgs,
   WebsearchToolArgs,
   WebfetchToolArgs,

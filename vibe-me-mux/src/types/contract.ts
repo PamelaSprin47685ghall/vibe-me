@@ -45,9 +45,6 @@ export interface RunnerAbortToolArgs {
   readonly jobId: string;
 }
 
-export interface StartReviewLoopToolArgs {
-  readonly task: string;
-}
 
 export interface SubmitReviewToolArgs {
   readonly report: string;
@@ -103,7 +100,7 @@ export type PluginToolArgs =
   | RunnerToolArgs
   | RunnerWaitToolArgs
   | RunnerAbortToolArgs
-  | StartReviewLoopToolArgs
+
   | SubmitReviewToolArgs
   | WebsearchToolArgs
   | WebfetchToolArgs

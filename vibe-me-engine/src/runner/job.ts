@@ -44,52 +44,31 @@ export class ActiveJob {
     this.cleanupExecuted = true;
 
     if (this.status === 'running') {
-      try {
-        this.abortController.abort();
-      } catch {}
-      this.killProcess();
+      try { this.abortController.abort(); } catch {}
+      if (this.childProcess) {
+        killTree(this.childProcess);
+        this.childProcess = null;
+      }
       this.status = 'aborted';
     }
 
-    this.closeStream();
-    this.removeFiles();
-  }
-
-  private killProcess(): void {
-    if (this.childProcess) {
-      killTree(this.childProcess);
-      this.childProcess = null;
-    }
-  }
-
-  private closeStream(): void {
     if (this.writeStream) {
-      try {
-        this.writeStream.end();
-      } catch {}
+      try { this.writeStream.end(); } catch {}
       this.writeStream = null;
     }
-  }
 
-  private removeFiles(): void {
     if (existsSync(this.stdoutFile)) {
-      try {
-        unlinkSync(this.stdoutFile);
-      } catch {}
+      try { unlinkSync(this.stdoutFile); } catch {}
     }
 
     const sessionDir = getRunnerProjectDir(this.sessionId);
     if (existsSync(sessionDir)) {
-      try {
-        rmSync(sessionDir, { recursive: true, force: true });
-      } catch {}
+      try { rmSync(sessionDir, { recursive: true, force: true }); } catch {}
     }
 
     if (this.projectDir && this.projectDir !== getRunnerProjectDir()) {
       if (existsSync(this.projectDir)) {
-        try {
-          rmSync(this.projectDir, { recursive: true, force: true });
-        } catch {}
+        try { rmSync(this.projectDir, { recursive: true, force: true }); } catch {}
       }
     }
   }
@@ -109,47 +88,22 @@ export function getTempScriptPath(sessionId: string, extension: string): string 
   return `${getRunnerProjectDir(sessionId)}/script.${extension}`;
 }
 
-export class JobRegistry {
-  private jobs = new Map<string, ActiveJob>();
+export type JobRegistry = Map<string, ActiveJob>;
 
-  public register(job: ActiveJob): void {
-    this.jobs.set(job.sessionId, job);
+export function cleanupRegistry(registry: Map<string, ActiveJob>, sessionId: string): void {
+  const directJob = registry.get(sessionId);
+  if (directJob) {
+    directJob.dispose();
+    registry.delete(sessionId);
+    return;
   }
 
-  public get(sessionId: string): ActiveJob | undefined {
-    return this.jobs.get(sessionId);
-  }
-
-  public delete(sessionId: string): void {
-    this.jobs.delete(sessionId);
-  }
-
-  public getAll(): Map<string, ActiveJob> {
-    return this.jobs;
-  }
-
-  public cleanup(sessionId: string): void {
-    const directJob = this.jobs.get(sessionId);
-    if (directJob) {
-      directJob.dispose();
-      this.delete(sessionId);
-      return;
-    }
-
-    for (const job of this.jobs.values()) {
-      if (job.parentSessionId === sessionId) {
-        job.dispose();
-        this.delete(job.sessionId);
-      }
-    }
-  }
-
-  public clear(): void {
-    for (const job of this.jobs.values()) {
+  for (const job of registry.values()) {
+    if (job.parentSessionId === sessionId) {
       job.dispose();
+      registry.delete(job.sessionId);
     }
-    this.jobs.clear();
   }
 }
 
-export const globalJobRegistry = new JobRegistry();
+export const globalJobRegistry: JobRegistry = new Map();

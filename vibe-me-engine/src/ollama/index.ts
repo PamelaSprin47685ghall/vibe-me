@@ -1,14 +1,6 @@
 import { isIpBlocked, secureFetch, validateHostname } from './secure-fetch-dns-pinning.js';
 export { isIpBlocked, secureFetch, validateHostname };
 
-export function isPrivateIPv4(ip: string): boolean {
-  return isIpBlocked(ip);
-}
-
-export function isPrivateIPv6(ip: string): boolean {
-  return isIpBlocked(ip);
-}
-
 export async function validateFetchUrl(url: string): Promise<string | null> {
   let parsed: URL;
   try {

@@ -1,52 +1,41 @@
-import { describe, expect, test, mock, beforeEach } from "bun:test";
+import { describe, expect, test, mock } from "bun:test";
+import { createEventHook, type EventHookDeps } from "./eventHook.js";
 import type { PluginEvent, PluginEventHelpers } from "./types/tool.js";
+import type { JobRegistry } from "engine/runner";
 
-const mockCleanupJob = mock<(id: string) => void>(() => undefined);
-const mockDeactivateReview = mock<(id: string) => void>(() => undefined);
-const mockSuppress = mock<(id: string) => void>(() => undefined);
-const mockShouldNudge = mock<(sessionId: string, context: unknown) => string>(() => "none");
-const mockHasActiveJob = mock<() => boolean>(() => false);
-const mockGetActiveJobs = mock(() => new Map());
-const mockBuildRunnerNudgePrompt = mock<() => string>(() => "runner-nudge");
+function createMockDeps() {
+  const mockCleanupRegistry = mock<(registry: JobRegistry, id: string) => void>(() => undefined);
+  const mockDeactivateReview = mock(() => undefined);
+  const mockSuppress = mock(() => undefined);
+  const mockShouldNudge = mock(() => "none");
+  const mockHasActiveJob = mock(() => false);
+  const mockBuildRunnerNudgePrompt = mock(() => "runner-nudge");
+  const mockIsReviewActive = mock(() => false);
+  const mockClearIteratorScope = mock(() => undefined);
 
-void mock.module("engine/runner", () => ({
-  cleanupJob: mockCleanupJob,
-  getActiveJobs: mockGetActiveJobs,
-  hasActiveJob: mockHasActiveJob,
-  buildRunnerNudgePrompt: mockBuildRunnerNudgePrompt,
-}));
-
-void mock.module("engine/review", () => ({
-  deactivateReview: mockDeactivateReview,
-  isReviewActive: mock(() => false),
-}));
-
-void mock.module("engine/util", () => ({
-  globalIteratorStore: { clearScope: mock(() => undefined) },
-}));
-
-void mock.module("engine/todo", () => ({
-  defaultCoordinator: { shouldNudge: mockShouldNudge, suppress: mockSuppress },
-  TODO_NUDGE_PROMPT: "todo-nudge-prompt",
-  LOOP_NUDGE_PROMPT: "loop-nudge-prompt",
-}));
-
-import { createEventHook } from "./eventHook.js";
-
-beforeEach(() => {
-  mockCleanupJob.mockReset();
-  mockDeactivateReview.mockReset();
-  mockSuppress.mockReset();
-  mockShouldNudge.mockReset();
-  mockHasActiveJob.mockReset();
-  mockGetActiveJobs.mockReset();
-  mockBuildRunnerNudgePrompt.mockReset();
-
-  mockShouldNudge.mockReturnValue("none");
-  mockHasActiveJob.mockReturnValue(false);
-  mockGetActiveJobs.mockReturnValue(new Map());
-  mockBuildRunnerNudgePrompt.mockReturnValue("runner-nudge");
-});
+  return {
+    mockCleanupRegistry,
+    mockDeactivateReview,
+    mockSuppress,
+    mockShouldNudge,
+    mockHasActiveJob,
+    mockBuildRunnerNudgePrompt,
+    mockIsReviewActive,
+    mockClearIteratorScope,
+    deps: {
+      cleanupRegistry: mockCleanupRegistry,
+      globalJobRegistry: new Map<string, never>() as JobRegistry,
+      deactivateReview: mockDeactivateReview,
+      isReviewActive: mockIsReviewActive,
+      clearIteratorScope: mockClearIteratorScope,
+      coordinator: { shouldNudge: mockShouldNudge, suppress: mockSuppress },
+      hasActiveJob: mockHasActiveJob,
+      buildRunnerNudgePrompt: mockBuildRunnerNudgePrompt,
+      TODO_NUDGE_PROMPT: "todo-nudge-prompt",
+      LOOP_NUDGE_PROMPT: "loop-nudge-prompt",
+    } satisfies EventHookDeps,
+  };
+}
 
 function makeHelpers(): {
   helpers: PluginEventHelpers;
@@ -62,26 +51,29 @@ function makeHelpers(): {
 
 describe("createEventHook", () => {
   test("stream-abort cleans up jobs scoped by workspaceId", () => {
+    const { deps, mockCleanupRegistry, mockDeactivateReview } = createMockDeps();
     const event: PluginEvent = { type: "stream-abort", workspaceId: "ws1" };
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     void hook(event);
-    expect(mockCleanupJob).toHaveBeenCalledTimes(1);
-    expect(mockCleanupJob).toHaveBeenCalledWith("ws1");
+    expect(mockCleanupRegistry).toHaveBeenCalledTimes(1);
+    expect(mockCleanupRegistry).toHaveBeenCalledWith(expect.any(Map), "ws1");
     expect(mockDeactivateReview).toHaveBeenCalledWith("ws1");
   });
 
   test("error with abort errorType", () => {
+    const { deps, mockSuppress } = createMockDeps();
     const event: PluginEvent = {
       type: "error",
       workspaceId: "err-ws",
       properties: { errorType: "aborted" },
     };
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     void hook(event);
     expect(mockSuppress).toHaveBeenCalledWith("err-ws");
   });
 
   test("stream-end with open todos nudge", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("nudge-todo");
     const { helpers, nudge, getTodos } = makeHelpers();
     const event: PluginEvent = {
@@ -90,7 +82,7 @@ describe("createEventHook", () => {
       properties: { parts: [{ type: "text", text: "done" }] },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
 
     expect(getTodos).toHaveBeenCalledWith("ws1");
@@ -102,6 +94,7 @@ describe("createEventHook", () => {
   });
 
   test("stream-end with queued message stop reason does not nudge", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("nudge-todo");
     const { helpers, nudge, getTodos } = makeHelpers();
     const event: PluginEvent = {
@@ -113,7 +106,7 @@ describe("createEventHook", () => {
       },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
 
     expect(getTodos).not.toHaveBeenCalled();
@@ -122,6 +115,7 @@ describe("createEventHook", () => {
   });
 
   test("stream-end with no helpers does not nudge", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("nudge-todo");
     const event: PluginEvent = {
       type: "stream-end",
@@ -129,13 +123,14 @@ describe("createEventHook", () => {
       properties: { parts: [] },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event);
 
     expect(mockShouldNudge).not.toHaveBeenCalled();
   });
 
   test("stream-end when shouldNudge returns none does not nudge", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("none");
     const { helpers, nudge } = makeHelpers();
     const event: PluginEvent = {
@@ -144,13 +139,14 @@ describe("createEventHook", () => {
       properties: { parts: [{ type: "text", text: "all done" }] },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
 
     expect(nudge).not.toHaveBeenCalled();
   });
 
   test("stream-end with nudge-runner action sends runner prompt", async () => {
+    const { deps, mockHasActiveJob, mockShouldNudge } = createMockDeps();
     mockHasActiveJob.mockReturnValue(true);
     mockShouldNudge.mockReturnValue("nudge-runner");
     const { helpers, nudge, getTodos } = makeHelpers();
@@ -160,7 +156,7 @@ describe("createEventHook", () => {
       properties: { parts: [] },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
 
     expect(getTodos).not.toHaveBeenCalled();
@@ -173,6 +169,7 @@ describe("createEventHook", () => {
   });
 
   test("stream-end nudges runner once per active streak and resets after cleanup", async () => {
+    const { deps, mockHasActiveJob, mockShouldNudge } = createMockDeps();
     const { helpers, nudge, getTodos } = makeHelpers();
     const event: PluginEvent = {
       type: "stream-end",
@@ -183,7 +180,7 @@ describe("createEventHook", () => {
     mockHasActiveJob.mockReturnValue(true);
     mockShouldNudge.mockReturnValue("nudge-runner");
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
     await hook(event, helpers);
 
@@ -206,6 +203,7 @@ describe("createEventHook", () => {
   });
 
   test("stream-end with nudge-loop action sends loop prompt", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("nudge-loop");
     const { helpers, nudge } = makeHelpers();
     const event: PluginEvent = {
@@ -214,13 +212,14 @@ describe("createEventHook", () => {
       properties: { parts: [] },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
 
     expect(nudge).toHaveBeenCalledWith("ws1", "loop-nudge-prompt");
   });
 
   test("stream-end extracts last assistant message from text parts", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("nudge-todo");
     const { helpers } = makeHelpers();
     const event: PluginEvent = {
@@ -236,7 +235,7 @@ describe("createEventHook", () => {
       },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
 
     expect(mockShouldNudge).toHaveBeenCalledWith("ws1", expect.objectContaining({
@@ -245,6 +244,7 @@ describe("createEventHook", () => {
   });
 
   test("stream-end with getTodos failure does not nudge", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     const { helpers, nudge, getTodos } = makeHelpers();
     getTodos.mockRejectedValueOnce(new Error("read failed"));
     const event: PluginEvent = {
@@ -253,7 +253,7 @@ describe("createEventHook", () => {
       properties: { parts: [] },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await hook(event, helpers);
 
     expect(mockShouldNudge).not.toHaveBeenCalled();
@@ -261,6 +261,7 @@ describe("createEventHook", () => {
   });
 
   test("stream-end with nudge failure does not throw", async () => {
+    const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("nudge-todo");
     const { helpers, nudge } = makeHelpers();
     nudge.mockRejectedValueOnce(new Error("send failed"));
@@ -270,7 +271,7 @@ describe("createEventHook", () => {
       properties: { parts: [] },
     };
 
-    const hook = createEventHook();
+    const hook = createEventHook(deps);
     await expect(hook(event, helpers)).resolves.toBeUndefined();
   });
 });

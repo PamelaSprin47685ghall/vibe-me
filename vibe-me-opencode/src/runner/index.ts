@@ -7,7 +7,6 @@ import {
   cleanupJob,
   type ExecuteResult,
   execute as executeCommand,
-  getActiveJobs,
   hasActiveJob,
   RUNNER_SYSTEM_PROMPT,
   wait,
@@ -120,7 +119,7 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
             let nudgeCount = 0;
             const MAX_RUNNER_NUDGES = 10;
             while (
-              hasActiveJob(getActiveJobs, childID) &&
+              hasActiveJob(childID) &&
               nudgeCount < MAX_RUNNER_NUDGES
             ) {
               await promptWithAbort(
@@ -137,7 +136,7 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
               nudgeCount++;
             }
 
-            if (hasActiveJob(getActiveJobs, childID)) {
+            if (hasActiveJob(childID)) {
               abort(childID);
               cleanupJob(childID);
               return 'Runner did not respond after multiple attempts. The background task has been aborted.';

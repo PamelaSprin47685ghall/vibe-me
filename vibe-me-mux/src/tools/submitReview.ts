@@ -1,15 +1,24 @@
-import type { JsonSchema, PluginToolArgs, SubmitReviewToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, PluginToolConfiguration, SubmitReviewToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
-import {
-  deactivateReview,
-  REVIEW_INSTRUCTIONS,
-  isReviewActive,
-  tryLockReview,
-  unlockReview,
-  getReviewTask,
-} from "engine/review";
+import { REVIEW_INSTRUCTIONS } from "engine/review";
 import { REVIEWER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
-import { delegateToSubAgent } from "./delegate.js";
+import type { DelegateOptions } from "./delegate.js";
+
+export interface ReviewDeps {
+  readonly tryLockReview: (workspaceId: string) => boolean;
+  readonly isReviewActive: (workspaceId: string) => boolean;
+  readonly getReviewTask: (workspaceId: string) => string | undefined;
+  readonly deactivateReview: (workspaceId: string) => void;
+  readonly unlockReview: (workspaceId: string) => void;
+  readonly delegateToSubAgent: (
+    config: PluginToolConfiguration,
+    deps: HostDependencies,
+    agentId: string,
+    prompt: string,
+    title: string,
+    options?: DelegateOptions,
+  ) => Promise<string>;
+}
 
 const AGENT_REPORT_REVIEW_INSTRUCTIONS = REVIEW_INSTRUCTIONS
   .replace(
@@ -75,32 +84,31 @@ const parameters: JsonSchema = {
   additionalProperties: false,
 };
 
-export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
-
+export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: ReviewDeps): ToolDefinition {
   return {
     name: "submit_review",
     description:
       "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and returns PASS or actionable feedback. Only works when session is in active loop mode.",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
+    execute: async (config, args) => {
       const a = args as SubmitReviewToolArgs;
       const workspaceId = config.workspaceId;
       if (!workspaceId) throw new Error("submitReview requires workspaceId");
 
-      if (!tryLockReview(workspaceId)) {
-        return isReviewActive(workspaceId)
+      if (!reviewDeps.tryLockReview(workspaceId)) {
+        return reviewDeps.isReviewActive(workspaceId)
           ? "A review is already in progress for this session."
           : "You do not need review. Just continue with your work.";
       }
 
       try {
-        const originalTask = getReviewTask(workspaceId);
+        const originalTask = reviewDeps.getReviewTask(workspaceId);
         const reviewPrompt = buildReviewPrompt(
           a.report,
           a.affectedFiles,
           originalTask,
         );
-        const reviewReport = await delegateToSubAgent(
+        const reviewReport = await reviewDeps.delegateToSubAgent(
           config,
           deps,
           "explore",
@@ -118,13 +126,13 @@ export function createSubmitReviewTool(deps: HostDependencies): ToolDefinition {
         );
 
         if (isPassingReviewReport(reviewReport)) {
-          deactivateReview(workspaceId);
+          reviewDeps.deactivateReview(workspaceId);
           return "Review passed. Loop mode ended.";
         }
 
         return `Review feedback:\n\n${reviewReport}\n\nAddress the feedback above. loop mode is still active; fix the issues and call submit_review again.`;
       } finally {
-        unlockReview(workspaceId);
+        reviewDeps.unlockReview(workspaceId);
       }
     },
   };

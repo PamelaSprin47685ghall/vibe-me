@@ -1,6 +1,6 @@
 import type { FuzzyFindToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
 import type { HostDependencies } from "../types/deps.js";
-import { FuzzySearchCoordinator } from "engine/fuzzy";
+import { fuzzyFind } from "engine/fuzzy";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -36,7 +36,7 @@ export function createFuzzyFindTool(_deps: HostDependencies): ToolDefinition {
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const a = args as FuzzyFindToolArgs;
-      const result = await FuzzySearchCoordinator.fuzzyFind(
+      const result = await fuzzyFind(
         {
           pattern: a.pattern ?? undefined,
           path: a.path ?? undefined,

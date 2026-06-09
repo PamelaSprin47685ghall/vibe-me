@@ -29,7 +29,6 @@ describe("createRegistration", () => {
       "fuzzy_grep",
       "fuzzy_find",
       "write",
-      "start_review_loop",
       "read",
     ]);
   });
