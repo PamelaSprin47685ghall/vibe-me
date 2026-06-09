@@ -3,7 +3,7 @@ import { isAbortErrorName } from 'engine/util';
 import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, REVERIE_NUDGE, defaultCoordinator, type NudgeInputContext } from 'engine/todo';
 import { buildRunnerNudgePrompt, hasActiveJob, cleanupRegistry, globalJobRegistry } from 'engine/runner';
 import { isReviewActive } from 'engine/review';
-import { type TodoItem, asMessageArray } from '../utils/session';
+import { asMessageArray } from '../utils/session';
 import { lookupChildAgent } from '../utils/child-agent';
 import { managedRunnerSessions } from '../runner/index.js';
 
@@ -181,10 +181,10 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
 
     nudgedSessions.add(sessionID);
 
-    let todos: TodoItem[];
+    let todos: string[];
     try {
       const result = await ctx.client.session.todo({ path: { id: sessionID } });
-      todos = (result.data ?? []) as TodoItem[];
+      todos = (result.data ?? []).map((t: { status: string }) => t.status);
     } catch {
       nudgedSessions.delete(sessionID);
       return;
@@ -216,7 +216,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
 
     const context: NudgeInputContext = {
       todos,
-      lastAssistantMessage,
+      lastAssistantMessage: lastAssistantMessage ?? '',
       hasActiveRunner: hasActiveJob(sessionID),
       isLoopActive: isReviewActive(sessionID),
     };

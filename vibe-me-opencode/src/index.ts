@@ -2,8 +2,10 @@ import type { Plugin } from '@opencode-ai/plugin';
 import {
   AGENT_POLICIES,
   type AgentRole,
+  agentRoleFromString,
+  agentRoleToString,
   applyUniversalPermissionDeny,
-  getAgentPolicy,
+  getAgentTools,
   isAgentRole,
 } from 'engine/agent-policy';
 import { createBrowserTool, getBrowserConfig } from './browser/index.js';
@@ -46,12 +48,24 @@ function mergeTools(
   return merged;
 }
 
-function getAgentPermissionDefaults(agent: AgentRole): Record<string, string> {
-  return { ...AGENT_POLICIES[agent].permissions };
+function getAgentPermissionDefaults(agent: AgentRole | string): Record<string, string> {
+  const key = typeof agent === 'string' ? agent : agentRoleToString(agent);
+  return { ...AGENT_POLICIES[key as keyof typeof AGENT_POLICIES].permissions };
 }
 
-function getAgentToolDefaults(agent: AgentRole): ToolDefaults {
-  return getAgentPolicy(agent).tools;
+function getAgentToolDefaults(agent: AgentRole | string): ToolDefaults {
+  const role: AgentRole =
+    typeof agent === 'string'
+      ? (() => {
+          const r = agentRoleFromString(agent);
+          if (r._tag === 'Err') throw new Error(r.error);
+          return r.value;
+        })()
+      : agent;
+  const toolMap = getAgentTools(role);
+  const result: Record<string, boolean> = {};
+  for (const [name, perm] of toolMap) result[name] = perm._tag === 'Allow';
+  return result;
 }
 
 const KunweiPlugin: Plugin = async (ctx) => {

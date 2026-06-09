@@ -88,9 +88,9 @@ export function createEventHook(deps: EventHookDeps): PluginEventHook {
           break;
         }
 
-        let todos: Array<{ status: string }>;
+        let todos: readonly string[];
         try {
-          todos = await helpers.getTodos(workspaceId);
+          todos = (await helpers.getTodos(workspaceId)) ?? [];
         } catch {
           break;
         }

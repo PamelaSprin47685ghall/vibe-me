@@ -43,8 +43,8 @@ function makeHelpers(): {
   getTodos: ReturnType<typeof mock>;
 } {
   const nudge = mock<(workspaceId: string, message: string) => Promise<boolean>>(() => Promise.resolve(true));
-  const getTodos = mock<(workspaceId: string) => Promise<Array<{ status: string }>>>(() =>
-    Promise.resolve([{ status: "pending" }]),
+  const getTodos = mock<(workspaceId: string) => Promise<readonly string[]>>(() =>
+    Promise.resolve(["pending"]),
   );
   return { helpers: { nudge, getTodos }, nudge, getTodos };
 }
@@ -87,7 +87,7 @@ describe("createEventHook", () => {
 
     expect(getTodos).toHaveBeenCalledWith("ws1");
     expect(mockShouldNudge).toHaveBeenCalledWith("ws1", expect.objectContaining({
-      todos: [{ status: "pending" }],
+      todos: ["pending"],
       lastAssistantMessage: "done",
     }));
     expect(nudge).toHaveBeenCalledWith("ws1", "todo-nudge-prompt");
