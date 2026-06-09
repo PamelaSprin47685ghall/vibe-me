@@ -4,7 +4,8 @@ import {
   resolveSubsessionParentID,
   unregisterChildAgent,
 } from './child-agent';
-import { promptWithAbort, runSubagent } from './session';
+import { promptWithAbort } from './abort-signal';
+import { runSubagent } from './subagent';
 
 function createMockClient() {
   return {

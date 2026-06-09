@@ -4,6 +4,8 @@ export * from './paths.js';
 export * from './process.js';
 export * from './javascript.js';
 export * from './jobs.js';
+export * from './wait.js';
+export * from './abort.js';
 export { ActiveJob, type JobRegistry, globalJobRegistry, cleanupRegistry } from './job.js';
 export * from './nudge.js';
 export * from './prompts.js';

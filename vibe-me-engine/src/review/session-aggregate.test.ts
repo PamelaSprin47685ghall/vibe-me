@@ -6,9 +6,8 @@ import {
   tryAcquireReviewLock,
   clearReviewSessions,
   setPendingReview,
-  ReviewState,
-  type ReviewResult,
-} from './session-unified.js';
+} from './session-registry.js';
+import type { ReviewState, ReviewResult } from './session-types.js';
 
 describe('ReviewSessionNode Aggregate', () => {
   beforeEach(() => {

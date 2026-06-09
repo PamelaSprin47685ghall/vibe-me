@@ -17,6 +17,7 @@
     "./session": "./src/session/index.ts",
     "./subagent": "./src/subagent/index.ts",
     "./util": "./src/util/index.ts",
+    "./util/nudge-events": "./src/util/nudge-events.ts",
     "./mcp": "./src/mcp/index.ts",
     "./reverie-files": "./src/reverie-files.ts",
     "./runner/read-commands": "./src/runner/read-commands.ts",

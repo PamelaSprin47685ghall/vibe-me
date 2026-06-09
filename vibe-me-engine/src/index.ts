@@ -11,7 +11,57 @@
 // ---------------------------------------------------------------------------
 
 // ── 1. Kernel ─────────────────────────────────────────────────────────────
-export * from './kernel/index.js';
+export * from './types/general.js';
+export * from './types/runner.js';
+export * from './types/agent-policy.js';
+export * from './types/nudge.js';
+
+// ── types/review.ts ADT exports (excluded: ReviewState, ReviewEvent – those
+//     come from review/session-unified.ts as string-union types) ─────────────
+export type {
+  Inactive,
+  ActiveReview,
+  LockedReview,
+  ActivateCommand,
+  SubmitCommand,
+  LockCommand,
+  UnlockCommand,
+  CompleteReviewCommand,
+  ReviewCommand,
+  ActivatedEvent,
+  SubmittedEvent,
+  LockAcquiredEvent,
+  LockReleasedEvent,
+  CompletedReviewEvent,
+} from './types/review.js';
+export {
+  inactive,
+  activeReview,
+  lockedReview,
+  matchReviewState,
+  activateCommand,
+  submitCommand,
+  lockCommand,
+  unlockCommand,
+  completeReviewCommand,
+  matchReviewCommand,
+  activatedEvent,
+  submittedEvent,
+  lockAcquiredEvent,
+  lockReleasedEvent,
+  completedReviewEvent,
+  matchReviewEvent,
+} from './types/review.js';
+export {
+  startExecution,
+  evaluateWait,
+  computeResult,
+  shouldContinue,
+  truncateOutput,
+} from './runner/state.js';
+export * from './agent-policy/index.js';
+export * from './todo/index.js';
+export * from './review/index.js';
 
 // ── 2. Shell modules without naming conflicts ─────────────────────────────
 export * from './fuzzy/index.js';

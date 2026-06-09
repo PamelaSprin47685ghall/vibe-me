@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { decideNudge } from "../kernel/todo.js";
-import type { NudgeContext } from "../kernel/types.js";
+import { decideNudge } from "./nudge.js";
+import type { NudgeContext } from "../types/nudge.js";
 
 describe("Nudge Decision Engine - Pure Logic Tests", () => {
   it("should return nudge-todo when both todos and active runner exist", () => {

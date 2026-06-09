@@ -34,39 +34,9 @@ import {
   getRunnerConfig,
 } from './runner/index.js';
 import { createSyntaxCheckHook } from './tree-sitter/index.js';
-import { lookupChildAgent } from './utils/child-agent';
-
-type ToolDefaults = Record<string, boolean>;
-function mergeTools(
-  current: Record<string, unknown> | undefined,
-  defaults: ToolDefaults,
-): Record<string, boolean> {
-  const merged: Record<string, boolean> = { ...defaults };
-  for (const [key, value] of Object.entries(current ?? {})) {
-    if (typeof value === 'boolean') merged[key] = value;
-  }
-  return merged;
-}
-
-function getAgentPermissionDefaults(agent: AgentRole | string): Record<string, string> {
-  const key = typeof agent === 'string' ? agent : agentRoleToString(agent);
-  return { ...AGENT_POLICIES[key as keyof typeof AGENT_POLICIES].permissions };
-}
-
-function getAgentToolDefaults(agent: AgentRole | string): ToolDefaults {
-  const role: AgentRole =
-    typeof agent === 'string'
-      ? (() => {
-          const r = agentRoleFromString(agent);
-          if (r._tag === 'Err') throw new Error(r.error);
-          return r.value;
-        })()
-      : agent;
-  const toolMap = getAgentTools(role);
-  const result: Record<string, boolean> = {};
-  for (const [name, perm] of toolMap) result[name] = perm._tag === 'Allow';
-  return result;
-}
+import { lookupChildAgent } from './utils/child-agent.js';
+import { applyAgentConfig } from './agent-config.js';
+import { getAgentToolDefaults, mergeTools } from './agent-tools.js';
 
 const KunweiPlugin: Plugin = async (ctx) => {
   const mcps = getMcpConfig();
@@ -112,105 +82,17 @@ const KunweiPlugin: Plugin = async (ctx) => {
       });
       const defaults = isAgentRole(agent) ? getAgentToolDefaults(agent) : null;
       if (!defaults) return;
-      output.message.tools = mergeTools(output.message.tools, defaults);
+      output.message.tools = mergeTools(
+        output.message.tools as Record<string, unknown> | undefined, 
+        defaults
+      );
     },
 
     config: async (opencodeConfig) => {
-      const userAgent = opencodeConfig.agent ?? {};
-
-      opencodeConfig.agent = {
-        ...userAgent,
-        ...getEditorConfig().agents,
-        ...getRunnerConfig().agents,
-        ...getReverieConfig().agents,
-        ...getReviewerConfig().agents,
-        ...getGreperConfig().agents,
-        ...getBrowserConfig().agents,
-        orchestrator: {
-          ...(opencodeConfig.agent?.orchestrator as
-            | Record<string, unknown>
-            | undefined),
-          tools: mergeTools(
-            (
-              opencodeConfig.agent?.orchestrator as
-                | Record<string, unknown>
-                | undefined
-            )?.tools as Record<string, unknown> | undefined,
-            getAgentToolDefaults('orchestrator'),
-          ),
-          permission: {
-            ...getAgentPermissionDefaults('orchestrator'),
-            ...((
-              opencodeConfig.agent?.orchestrator as
-                | Record<string, unknown>
-                | undefined
-            )?.permission as Record<string, unknown> | undefined),
-          },
-          mcps: [],
-        },
-      };
-
-      const renameMap: Record<string, string> = {
-        editor: 'editor',
-        greper: 'greper',
-        runner: 'runner',
-        reverie: 'reverie',
-        reviewer: 'reviewer',
-        browser: 'browser',
-      };
-      for (const [oldName, newName] of Object.entries(renameMap)) {
-        const userEntry = userAgent[oldName] as
-          | Record<string, unknown>
-          | undefined;
-        if (!userEntry) continue;
-        const agentEntry = (opencodeConfig.agent as Record<string, unknown>)[
-          newName
-        ] as Record<string, unknown> | undefined;
-        if (agentEntry) Object.assign(agentEntry, userEntry);
-      }
-
-      if (userAgent.basher) {
-        const runnerEntry = (opencodeConfig.agent as Record<string, unknown>)
-          .runner as Record<string, unknown> | undefined;
-        if (runnerEntry) Object.assign(runnerEntry, userAgent.basher);
-        delete (opencodeConfig.agent as Record<string, unknown>).basher;
-      }
-
-      const configMcp = opencodeConfig.mcp as
-        | Record<string, unknown>
-        | undefined;
-      if (!configMcp) {
-        opencodeConfig.mcp = { ...mcps };
-      } else {
-        Object.assign(configMcp, mcps);
-      }
-
-      loopCommandManager.registerCommand(opencodeConfig);
-
-      const agentConfig = opencodeConfig.agent as Record<string, unknown>;
-      for (const [name, entry] of Object.entries(agentConfig)) {
-        if (typeof entry !== 'object' || !entry) continue;
-        const agent = entry as Record<string, unknown>;
-        const perm =
-          (agent.permission as Record<string, string> | undefined) ?? {};
-        if (isAgentRole(name)) {
-          const defaults = getAgentPermissionDefaults(name);
-          for (const [key, value] of Object.entries(defaults)) {
-            if (perm[key] === undefined) perm[key] = value;
-          }
-          applyUniversalPermissionDeny(name, perm);
-        } else {
-          applyUniversalPermissionDeny('runner', perm);
-        }
-        agent.permission = perm;
-
-        if (isAgentRole(name)) {
-          agent.tools = mergeTools(
-            agent.tools as Record<string, unknown> | undefined,
-            getAgentToolDefaults(name),
-          );
-        }
-      }
+      // biome-ignore lint/suspicious/noExplicitAny: config matches internal any structure
+      applyAgentConfig(opencodeConfig as any, mcps);
+      // biome-ignore lint/suspicious/noExplicitAny: commandManager matches any config
+      loopCommandManager.registerCommand(opencodeConfig as any);
     },
 
     'experimental.chat.messages.transform': async (

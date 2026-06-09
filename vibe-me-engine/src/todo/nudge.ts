@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Pure nudge decision functions.
 // No I/O, no node:*, no mutation — every function is pure.
-// Import types from ./types.js only.
+// Import types from ../types/nudge.js only.
 // ---------------------------------------------------------------------------
 
 import {
@@ -15,7 +15,7 @@ import {
   nudgeRunner,
   freshSessionNudgeState,
   timestampKeyForAction,
-} from './types.js';
+} from '../types/nudge.js';
 
 // =========================================================================
 // 1. CONSTANTS

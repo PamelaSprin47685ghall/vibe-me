@@ -8,8 +8,8 @@ import {
   setPendingReview,
   resolvePendingReview,
   clearReviewSessions,
-  type ReviewResult,
-} from './session-unified.js';
+} from './session-registry.js';
+import type { ReviewResult } from './session-types.js';
 
 describe('Review State Machine - Atomic Transitions', () => {
   beforeEach(() => {

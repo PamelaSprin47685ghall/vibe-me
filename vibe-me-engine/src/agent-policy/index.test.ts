@@ -10,11 +10,11 @@ import {
   runnerRole,
   allow,
   deny,
-} from '../kernel/types.js';
+} from '../types/agent-policy.js';
 import {
   getAgentTools,
   computeDefaultPermissions,
-} from '../kernel/agent-policy.js';
+} from './index.js';
 
 /**
  * Apply default permission deny rules to a pre-filled Map, using ToolPermission

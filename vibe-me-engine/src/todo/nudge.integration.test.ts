@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
-import { decideNudge } from "../kernel/todo.js";
-import type { NudgeContext } from "../kernel/types.js";
+import { decideNudge } from "./nudge.js";
+import type { NudgeContext } from "../types/nudge.js";
 
 describe("Nudge Pure Decision Sandbox", () => {
   it("should prioritize runner nudge over todo/loop", () => {

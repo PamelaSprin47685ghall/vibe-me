@@ -3,17 +3,16 @@ import type {
   ExecuteEvent,
   ExecuteResult,
   JobState,
-  Maybe,
   RunningState,
   WaitCommand,
   WaitResult,
-} from './types.js';
+} from '../types/runner.js';
+import type { Maybe } from '../types/general.js';
 import {
   completedResult,
   failedResult,
-  none,
-  some,
-} from './types.js';
+} from '../types/runner.js';
+import { none, some } from '../types/general.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -42,7 +41,7 @@ export function transition(state: JobState, event: ExecuteEvent): JobState {
         case 'Timeout':
           return state;
         default:
-          assertNever(event);
+          return assertNever(event);
       }
     }
 
@@ -67,7 +66,7 @@ export function transition(state: JobState, event: ExecuteEvent): JobState {
         case 'Timeout':
           return { _tag: 'Aborted', output: state.output };
         default:
-          assertNever(event);
+          return assertNever(event);
       }
     }
 
@@ -76,7 +75,7 @@ export function transition(state: JobState, event: ExecuteEvent): JobState {
       return state;
 
     default:
-      assertNever(state);
+      return assertNever(state);
   }
 }
 
@@ -120,7 +119,7 @@ export function evaluateWait(
       }
       return { _tag: 'StillRunning', output: state.output };
     default:
-      assertNever(state);
+      return assertNever(state);
   }
 }
 
@@ -147,7 +146,7 @@ export function computeResult(state: JobState): Maybe<ExecuteResult> {
     case 'Aborted':
       return some(failedResult(state.output));
     default:
-      assertNever(state);
+      return assertNever(state);
   }
 }
 
@@ -169,7 +168,7 @@ export function shouldContinue(
     case 'Running':
       return (now - state.startTime) < timeoutMs;
     default:
-      assertNever(state);
+      return assertNever(state);
   }
 }
 

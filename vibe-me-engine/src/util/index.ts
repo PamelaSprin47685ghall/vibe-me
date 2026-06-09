@@ -7,3 +7,4 @@ export * from './schema.js';
 export * from './iterator.js';
 export * from './path.js';
 export * from './excluded-dirs.js';
+export * from './nudge-events.js';

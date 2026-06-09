@@ -1,12 +1,43 @@
 import { pathToFileURL } from 'node:url';
 import { resolve, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
 import { init, parse } from 'es-module-lexer';
+import { runChildProcess } from './process.js';
 
 let lexerInitPromise: Promise<void> | null = null;
 
 function ensureLexer(): Promise<void> {
   lexerInitPromise ??= init;
   return lexerInitPromise;
+}
+
+export async function ensureJavascriptProject(projectDir: string, dependencies: string[] | undefined): Promise<void> {
+  const { mkdirSync, writeFileSync } = await import('node:fs');
+  mkdirSync(projectDir, { recursive: true });
+
+  const pkgPath = `${projectDir}/package.json`;
+  let pkgData: Record<string, unknown> = { type: 'module', dependencies: {} } as Record<string, unknown>;
+  if (existsSync(pkgPath)) {
+    try { pkgData = JSON.parse(readFileSync(pkgPath, 'utf8')); } catch {}
+  }
+  if (!pkgData.dependencies) pkgData.dependencies = {};
+  const deps = pkgData.dependencies as Record<string, string>;
+
+  const requiredPackages = [...new Set(['tsx', ...(dependencies ?? [])])];
+  const toInstall: string[] = [];
+  for (const pkg of requiredPackages) {
+    if (!deps[pkg]) toInstall.push(pkg);
+  }
+  if (toInstall.length === 0) return;
+
+  for (const pkg of toInstall) deps[pkg] = '*';
+  writeFileSync(pkgPath, `${JSON.stringify(pkgData, null, 2)}\n`, 'utf-8');
+
+  await runChildProcess({
+    command: 'npx',
+    args: ['--yes', 'npm@latest', 'install', '--prefix', projectDir, ...toInstall],
+    cwd: projectDir,
+  });
 }
 
 export function createJavascriptPrelude(cwd: string): string {

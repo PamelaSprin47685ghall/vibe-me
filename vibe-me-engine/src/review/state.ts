@@ -12,7 +12,7 @@ import {
   completedReviewEvent,
   matchReviewState,
   matchReviewCommand,
-} from './types.js';
+} from '../types/review.js';
 
 // ── transition ──────────────────────────────────────────────────────────────
 // Pure state machine: given a current state and a command, returns the next
@@ -25,27 +25,27 @@ export function transition(
   return matchReviewState<[ReviewState, ReviewEvent | null]>(state, {
     Inactive: () =>
       matchReviewCommand<[ReviewState, ReviewEvent | null]>(command, {
-        Activate: (cmd) => [activeReview(cmd.task), activatedEvent(cmd.task)],
+        Activate: (cmd: any) => [activeReview(cmd.task), activatedEvent(cmd.task)],
         Submit: () => [state, null],
         Lock: () => [state, null],
         Unlock: () => [state, null],
         Complete: () => [state, null],
       }),
-    Active: (s) =>
+    Active: (s: any) =>
       matchReviewCommand<[ReviewState, ReviewEvent | null]>(command, {
         Activate: () => [state, null],
         Submit: () => [state, submittedEvent],
-        Lock: (cmd) => [lockedReview(s.task, cmd.reviewerId), lockAcquiredEvent(cmd.reviewerId)],
+        Lock: (cmd: any) => [lockedReview(s.task, cmd.reviewerId), lockAcquiredEvent(cmd.reviewerId)],
         Unlock: () => [state, null],
         Complete: () => [state, null],
       }),
-    Locked: (s) =>
+    Locked: (s: any) =>
       matchReviewCommand<[ReviewState, ReviewEvent | null]>(command, {
         Activate: () => [state, null],
         Submit: () => [state, null],
         Lock: () => [state, null],
         Unlock: () => [activeReview(s.task), lockReleasedEvent],
-        Complete: (cmd) => [inactive, completedReviewEvent(cmd.accepted, cmd.feedback)],
+        Complete: (cmd: any) => [inactive, completedReviewEvent(cmd.accepted, cmd.feedback)],
       }),
   });
 }
