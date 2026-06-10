@@ -76,7 +76,7 @@ export function transition(state: JobState, event: ExecuteEvent): JobState {
 
 /** Create the initial Running state from an ExecuteCommand. */
 export function startExecution(
-  cmd: ExecuteCommand,
+  _cmd: ExecuteCommand,
   startTime: number,
 ): RunningState {
   return {

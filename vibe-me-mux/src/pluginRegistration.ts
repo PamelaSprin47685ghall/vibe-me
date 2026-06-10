@@ -7,10 +7,10 @@ import { defaultCoordinator, TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from "engine
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import { createTodoWriteNudgeWrapper } from "./wrappers/todoWriteNudge.js";
 import { createLoopCommand } from "./commands/loop.js";
-import { buildAgentToolPolicies, type MuxAgentToolPolicies } from "./agent-tool-policy.js";
+import { getPluginToolPolicy } from "./agent-tool-policy.js";
 import { createToolCatalog, type ExecuteHostFileRead } from "./toolRegistration.js";
 import { getMcpServers } from "./mcpServers.js";
-import type { ToolDefinition, ToolWrapper, ToolLike, PluginToolArgs } from "./types/contract.js";
+import type { ToolDefinition, ToolWrapper, ToolLike } from "./types/contract.js";
 import type { HostDependencies } from "./types/deps.js";
 import type { ContextInjectorRegistration, PluginEventHook, PluginSlashCommandDefinition } from "./types/tool.js";
 
@@ -22,7 +22,7 @@ export interface PluginRegistration {
   readonly contextInjector: ContextInjectorRegistration;
   readonly eventHook: PluginEventHook;
   readonly slashCommands: readonly PluginSlashCommandDefinition[];
-  readonly agentToolPolicies: MuxAgentToolPolicies;
+  readonly getToolPolicy?: (agentId: string, role?: string) => import("./types/tool.js").MuxPluginToolPolicy | undefined;
 }
 
 function createWebOverrideWrapper(
@@ -34,7 +34,7 @@ function createWebOverrideWrapper(
     wrapper: (_tool, config) => ({
       description: def.description,
       parameters: def.parameters,
-      execute: (args: PluginToolArgs, options?: { readonly abortSignal?: AbortSignal }) =>
+      execute: (args: Record<string, unknown>, options?: { readonly abortSignal?: AbortSignal }) =>
         def.execute(
           { ...config, abortSignal: options?.abortSignal },
           args,
@@ -93,6 +93,6 @@ export function createRegistration(
       LOOP_NUDGE_PROMPT,
     }),
     slashCommands: createLoopCommand(deps),
-    agentToolPolicies: buildAgentToolPolicies(),
+    getToolPolicy: getPluginToolPolicy,
   };
 }

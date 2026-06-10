@@ -1,4 +1,14 @@
-import type { FuzzyGrepToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface FuzzyGrepToolArgs {
+  readonly pattern?: string;
+  readonly path?: string;
+  readonly exclude?: string;
+  readonly caseSensitive?: boolean;
+  readonly context?: number;
+  readonly limit?: number;
+  readonly iterator?: string;
+}
 import type { HostDependencies } from "../types/deps.js";
 import { fuzzyGrep } from "engine/fuzzy";
 
@@ -47,8 +57,8 @@ export function createFuzzyGrepTool(_deps: HostDependencies): ToolDefinition {
     description:
       "Search file contents using fuzzy-aware content search. Smart-case, git-aware, frecency-ranked. Supports automatic regex mode for regex-like patterns and automatic fuzzy fallback when no exact matches are found.\n\nFirst call: provide pattern and optional filters.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const a = args as FuzzyGrepToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const a = args as unknown as FuzzyGrepToolArgs;
       const result = await fuzzyGrep(
         {
           pattern: a.pattern ?? undefined,

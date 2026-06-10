@@ -1,6 +1,10 @@
-import type { GreperToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface GreperToolArgs {
+  readonly intents: readonly string[];
+}
 import type { HostDependencies } from "../types/deps.js";
-import { GREPER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
+import { AGENT_POLICIES } from "engine/agent-policy";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -24,8 +28,8 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
     description:
       "Search the codebase based on natural-language intents. Each intent in the array spawns its own search subagent session. IMPORTANT: Do NOT assume the search agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const { intents } = args as GreperToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const { intents } = args as unknown as GreperToolArgs;
 
       if (intents.length === 0) {
         return "Error: `intents` must be a non-empty array.";
@@ -36,7 +40,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "greper" as const,
           toolPolicy: {
-            disabledTools: [...GREPER_SUB_AGENT_DISABLED_TOOLS],
+            disabledTools: [...AGENT_POLICIES.greper.disabledTools],
           },
         },
       };

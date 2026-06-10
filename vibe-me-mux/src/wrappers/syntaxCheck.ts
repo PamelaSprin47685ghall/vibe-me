@@ -3,7 +3,7 @@ import path from "node:path";
 import { checkSyntax, extractFilePath, isFileEditTool, formatSyntaxDiagnostics } from "engine/tree-sitter";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { LoggerLike } from "../types/deps.js";
-import type { ToolLike, ToolWrapper, PluginToolArgs } from "../types/contract.js";
+import type { ToolLike, ToolWrapper } from "../types/contract.js";
 
 function wrapFileEditTool(
   toolName: string,
@@ -17,7 +17,7 @@ function wrapFileEditTool(
   return {
     ...baseTool,
     execute: ((
-      args: PluginToolArgs,
+      args: Record<string, unknown>,
       options?: { readonly abortSignal?: AbortSignal },
     ) => {
       const result = originalExecute.call(baseTool, args, options);
@@ -35,7 +35,7 @@ function wrapFileEditTool(
 async function appendSyntaxCheck(
   result: unknown,
   toolName: string,
-  args: PluginToolArgs,
+  args: Record<string, unknown>,
   config: PluginToolConfiguration,
   log: LoggerLike,
 ): Promise<unknown> {

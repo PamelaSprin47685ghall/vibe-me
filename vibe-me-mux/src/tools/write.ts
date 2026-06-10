@@ -1,6 +1,11 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonSchema, PluginToolArgs, ToolDefinition, WriteToolArgs } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface WriteToolArgs {
+  readonly file_path: string;
+  readonly content: string;
+}
 import type { HostDependencies } from "../types/deps.js";
 import { checkSyntax, formatSyntaxDiagnostics } from "engine/tree-sitter";
 
@@ -27,8 +32,8 @@ export function createWriteTool(_deps: HostDependencies): ToolDefinition {
     description:
       "Write content to a file. Resolves relative paths against the current working directory, creates parent directories if they don't exist, and runs syntax checking on the written content.",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const { file_path, content } = args as WriteToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const { file_path, content } = args as unknown as WriteToolArgs;
       const resolved = path.resolve(config.cwd, file_path);
 
 

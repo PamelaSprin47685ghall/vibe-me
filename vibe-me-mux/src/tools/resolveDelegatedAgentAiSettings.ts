@@ -26,7 +26,7 @@ export function createResolveDelegatedAgentAiSettings(deps: HostDependencies) {
       configFile.subagentAiDefaults?.[agentId],
       configFile.agentAiDefaults?.[agentId],
       await resolveDescriptorAiSettings(deps, config, agentId),
-      resolveWorkspaceExecFallback(workspace),
+      agentId === "exec" ? resolveWorkspaceExecFallback(workspace) : undefined,
     ];
 
     return {

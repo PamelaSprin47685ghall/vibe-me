@@ -1,6 +1,10 @@
-import type { BrowserToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface BrowserToolArgs {
+  readonly intent: string;
+}
 import type { HostDependencies } from "../types/deps.js";
-import { BROWSER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
+import { AGENT_POLICIES } from "engine/agent-policy";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -22,14 +26,14 @@ export function createBrowserTool(deps: HostDependencies): ToolDefinition {
     description:
       "Receive a natural-language intent for a web task and delegate to the browser agent. IMPORTANT: Do NOT assume the browser agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent. Failure to do so will cause severe confusion.",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const { intent } = args as BrowserToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const { intent } = args as unknown as BrowserToolArgs;
       return delegateToSubAgent(config, deps, "explore", intent, "Browser", {
         aiSettingsAgentId: "explore",
         experiments: {
           subagentRole: "browser",
           toolPolicy: {
-            disabledTools: [...BROWSER_SUB_AGENT_DISABLED_TOOLS],
+            disabledTools: [...AGENT_POLICIES.browser.disabledTools],
           },
         },
       });

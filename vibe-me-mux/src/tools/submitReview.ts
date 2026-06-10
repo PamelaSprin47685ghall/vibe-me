@@ -1,8 +1,21 @@
-import type { JsonSchema, PluginToolConfiguration, SubmitReviewToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
 import { REVIEW_INSTRUCTIONS } from "engine/review";
-import { REVIEWER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
+import { AGENT_POLICIES } from "engine/agent-policy";
 import type { DelegateOptions } from "./delegate.js";
+
+export const FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME =
+  "ForegroundWaitBackgroundedError";
+
+export function isForegroundWaitBackgroundedError(
+  error: unknown,
+): boolean {
+  return (
+    error instanceof Error &&
+    error.name === FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME
+  );
+}
 
 export interface ReviewDeps {
   readonly tryLockReview: (workspaceId: string) => boolean;
@@ -91,7 +104,7 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
       "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and returns PASS or actionable feedback. Only works when session is in active loop mode.",
     parameters,
     execute: async (config, args) => {
-      const a = args as SubmitReviewToolArgs;
+      const a = args as unknown as { report: string; affectedFiles: readonly string[] };
       const workspaceId = config.workspaceId;
       if (!workspaceId) throw new Error("submitReview requires workspaceId");
 
@@ -119,7 +132,7 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
             experiments: {
               subagentRole: "reviewer",
               toolPolicy: {
-                disabledTools: [...REVIEWER_SUB_AGENT_DISABLED_TOOLS],
+                disabledTools: [...AGENT_POLICIES.reviewer.disabledTools],
               },
             },
           },

@@ -1,4 +1,4 @@
-import type { ToolLike, ToolWrapper, PluginToolArgs } from "../types/contract.js";
+import type { ToolLike, ToolWrapper } from "../types/contract.js";
 import { REVERIE_NUDGE } from "engine/todo";
 
 function wrapTodoWrite(baseTool: ToolLike): ToolLike {
@@ -8,7 +8,7 @@ function wrapTodoWrite(baseTool: ToolLike): ToolLike {
   return {
     ...baseTool,
     execute: ((
-      args: PluginToolArgs,
+      args: Record<string, unknown>,
       options?: { readonly abortSignal?: AbortSignal },
     ) => {
       const result = originalExecute.call(baseTool, args, options);

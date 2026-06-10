@@ -4,7 +4,7 @@ import type { ChildProcess } from "node:child_process";
 describe("Runner Security & Multi-Pipe Stripping (Memory Stub)", () => {
   beforeEach(() => {
     mock.module("node:child_process", () => ({
-      spawn: (command: string, args: string[]) => {
+      spawn: (_command: string, _args: string[]) => {
         const mockProcess = {
           pid: 88888,
           stdout: {

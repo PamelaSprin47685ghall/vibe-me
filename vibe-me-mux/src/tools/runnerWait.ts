@@ -1,4 +1,9 @@
-import type { JsonSchema, PluginToolArgs, RunnerWaitToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface RunnerWaitToolArgs {
+  readonly jobId: string;
+  readonly ms?: number;
+}
 import type { HostDependencies } from "../types/deps.js";
 import { wait } from "engine/runner";
 
@@ -25,8 +30,8 @@ export function createRunnerWaitTool(_deps: HostDependencies): ToolDefinition {
     description:
       "Wait for a background runner task to produce more output or finish.",
     parameters,
-    execute: async (_config, args: PluginToolArgs) => {
-      const { jobId, ms } = args as RunnerWaitToolArgs;
+    execute: async (_config, args: Record<string, unknown>) => {
+      const { jobId, ms } = args as unknown as RunnerWaitToolArgs;
       const result = await wait({
         sessionId: jobId,
         ms: ms ?? 2000,

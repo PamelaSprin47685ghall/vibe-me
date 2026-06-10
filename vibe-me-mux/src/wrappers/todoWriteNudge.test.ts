@@ -1,6 +1,6 @@
 import { describe, expect, test, mock } from "bun:test";
 import { createTodoWriteNudgeWrapper } from "./todoWriteNudge.js";
-import type { ToolLike, PluginToolArgs } from "../types/contract.js";
+import type { ToolLike } from "../types/contract.js";
 
 const NUDGE = "// Think thrice before acting — consider calling reverie tool to improve reasoning";
 
@@ -26,7 +26,7 @@ describe("createTodoWriteNudgeWrapper", () => {
 
     const wrapped = wrapper.wrapper(base, config);
     const result = await (wrapped.execute as (...args: readonly unknown[]) => Promise<unknown>)(
-      {} as PluginToolArgs,
+      {} as Record<string, unknown>,
     );
 
     expect(result).toEqual({
@@ -42,7 +42,7 @@ describe("createTodoWriteNudgeWrapper", () => {
 
     const wrapped = wrapper.wrapper(base, config);
     const result = await (wrapped.execute as (...args: readonly unknown[]) => Promise<unknown>)(
-      {} as PluginToolArgs,
+      {} as Record<string, unknown>,
     );
 
     expect(result).toBe(`ok\n\n${NUDGE}`);
@@ -54,10 +54,10 @@ describe("createTodoWriteNudgeWrapper", () => {
 
     const wrapped = wrapper.wrapper(base, config);
     const exec = wrapped.execute as (...args: readonly unknown[]) => Promise<unknown>;
-    const first = (await exec({} as PluginToolArgs)) as { nudge: string };
+    const first = (await exec({} as Record<string, unknown>)) as { nudge: string };
     base.execute = mock(() => first) as ToolLike["execute"];
 
-    const second = (await exec({} as PluginToolArgs)) as { nudge: string };
+    const second = (await exec({} as Record<string, unknown>)) as { nudge: string };
     expect(second.nudge).toBe(NUDGE);
   });
 
@@ -67,7 +67,7 @@ describe("createTodoWriteNudgeWrapper", () => {
 
     const wrapped = wrapper.wrapper(base, config);
     const result = await (wrapped.execute as (...args: readonly unknown[]) => Promise<unknown>)(
-      {} as PluginToolArgs,
+      {} as Record<string, unknown>,
     );
 
     expect(result).toEqual({ success: false, error: "x" });
@@ -78,7 +78,7 @@ describe("createTodoWriteNudgeWrapper", () => {
     const base = makeBaseTool({ success: true as const, count: 0 });
 
     const wrapped = wrapper.wrapper(base, config);
-    const result = (wrapped.execute as (...args: readonly unknown[]) => unknown)({} as PluginToolArgs);
+    const result = (wrapped.execute as (...args: readonly unknown[]) => unknown)({} as Record<string, unknown>);
 
     expect(result).toEqual({
       success: true,
@@ -93,7 +93,7 @@ describe("createTodoWriteNudgeWrapper", () => {
     const base: ToolLike = { name: "todo_write", execute: original as ToolLike["execute"] };
 
     const wrapped = wrapper.wrapper(base, config);
-    const args = { todos: [] } as unknown as PluginToolArgs;
+    const args = { todos: [] } as unknown as Record<string, unknown>;
     const options = { abortSignal: new AbortController().signal };
     await (wrapped.execute as (...args: readonly unknown[]) => Promise<unknown>)(args, options);
 

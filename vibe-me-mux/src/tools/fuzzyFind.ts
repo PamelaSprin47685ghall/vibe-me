@@ -1,4 +1,11 @@
-import type { FuzzyFindToolArgs, JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface FuzzyFindToolArgs {
+  readonly pattern?: string;
+  readonly path?: string;
+  readonly limit?: number;
+  readonly iterator?: string;
+}
 import type { HostDependencies } from "../types/deps.js";
 import { fuzzyFind } from "engine/fuzzy";
 
@@ -34,8 +41,8 @@ export function createFuzzyFindTool(_deps: HostDependencies): ToolDefinition {
     description:
       "Search for files by fuzzy path text matching. Returns file paths ranked by relevance and frecency. Supports partial matches on file names and directory paths. Regex and glob syntax are not supported.\n\nFirst call: provide pattern and optional path.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const a = args as FuzzyFindToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const a = args as unknown as FuzzyFindToolArgs;
       const result = await fuzzyFind(
         {
           pattern: a.pattern ?? undefined,

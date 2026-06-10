@@ -1,7 +1,12 @@
 import path from "node:path";
-import type { JsonSchema, PluginToolArgs, ReverieToolArgs, ToolDefinition } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface ReverieToolArgs {
+  readonly intent: string;
+  readonly files: readonly string[];
+}
 import type { HostDependencies } from "../types/deps.js";
-import { REVERIE_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
+import { AGENT_POLICIES } from "engine/agent-policy";
 import { delegateToSubAgent } from "./delegate.js";
 import { readReverieFiles } from "engine/reverie-files";
 
@@ -32,8 +37,8 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
     description:
       "Receive a natural-language intent or question for deep reasoning and delegate to the reverie agent. IMPORTANT: Do NOT assume the reverie agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent and files. Failure to do so will cause severe confusion.",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const { intent, files } = args as ReverieToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const { intent, files } = args as unknown as ReverieToolArgs;
       const readResults = await readReverieFiles(config.cwd, files);
       const readResultMap = new Map(readResults.map((r) => [r.filePath, r.content]));
       const fileSections = files.map((file) => {
@@ -47,7 +52,7 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "reverie",
           toolPolicy: {
-            disabledTools: [...REVERIE_SUB_AGENT_DISABLED_TOOLS],
+            disabledTools: [...AGENT_POLICIES.reverie.disabledTools],
           },
         },
       });

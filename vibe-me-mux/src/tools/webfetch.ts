@@ -1,4 +1,12 @@
-import type { JsonSchema, PluginToolArgs, ToolDefinition, WebfetchToolArgs } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface WebfetchToolArgs {
+  readonly url: string;
+  readonly extract_main?: boolean;
+  readonly prefer_llms_txt?: "auto" | "always" | "never";
+  readonly prompt?: string;
+  readonly timeout?: number;
+}
 import type { HostDependencies } from "../types/deps.js";
 import { ollamaPost, formatFetchResponse, validateFetchUrl } from "engine/ollama";
 
@@ -40,8 +48,8 @@ export function createWebfetchTool(_deps: HostDependencies): ToolDefinition {
     description:
       "Fetch a URL with better extraction for static/docs pages. Supports llms.txt probing, content-focused HTML extraction, metadata, redirects, and an optional prompt processed by a cheap secondary model.",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const a = args as WebfetchToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const a = args as unknown as WebfetchToolArgs;
       const urlError = await validateFetchUrl(a.url);
       if (urlError) return JSON.stringify({ success: false, error: urlError });
 

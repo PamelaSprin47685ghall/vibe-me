@@ -4,7 +4,7 @@ import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
 import { delegateToSubAgent } from "../tools/delegate.js";
 import { isPassingReviewReport } from "../tools/submitReview.js";
-import { REVIEWER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
+import { AGENT_POLICIES } from "engine/agent-policy";
 
 const PRE_REVIEW_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -89,7 +89,7 @@ function createLoopReviewCommand(deps: HostDependencies): PluginSlashCommandDefi
             experiments: {
               subagentRole: "reviewer",
               toolPolicy: {
-                disabledTools: [...REVIEWER_SUB_AGENT_DISABLED_TOOLS],
+                disabledTools: [...AGENT_POLICIES.reviewer.disabledTools],
               },
             },
           }),

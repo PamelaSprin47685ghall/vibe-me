@@ -1,13 +1,10 @@
 import { randomUUID } from "node:crypto";
-import type { JsonSchema, PluginToolArgs, RunnerToolArgs, ToolDefinition } from "../types/contract.js";
-import {
-  isForegroundWaitBackgroundedError,
-  requireTaskService,
-  requireWorkspaceId,
-} from "../types/contract.js";
+import type { JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
+import { requireWorkspaceId } from "../types/contract.js";
+import { isForegroundWaitBackgroundedError } from "./submitReview.js";
 import type { HostDependencies } from "../types/deps.js";
-import { RUNNER_SUB_AGENT_DISABLED_TOOLS } from "../agentToolPolicies.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
+import { AGENT_POLICIES } from "engine";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -57,10 +54,11 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
       "Automatically handles timeout management and provides incremental output monitoring.",
     parameters,
     execute: async (config, args: PluginToolArgs) => {
-      const a = args as RunnerToolArgs;
+      const a = args as { language: "shell" | "python" | "javascript"; program: string; dependencies?: string[]; what_to_summarize: string };
       const workspaceId = requireWorkspaceId(config, "runner");
       const jobId = `${workspaceId}/${randomUUID()}`;
-      const taskService = requireTaskService(config, "runner");
+      const taskService = config.taskService;
+      if (!taskService) throw new Error("runner requires taskService");
       const execResult = await runnerDeps.execute({
         sessionId: jobId,
         parentSessionId: workspaceId,
@@ -125,7 +123,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
         experiments: {
           subagentRole: "runner",
           toolPolicy: {
-             disabledTools: [...RUNNER_SUB_AGENT_DISABLED_TOOLS],
+             disabledTools: [...AGENT_POLICIES.runner.disabledTools],
           },
         },
       });

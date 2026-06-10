@@ -1,10 +1,7 @@
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
-import {
-  requireWorkspaceId,
-  requireTaskService,
-  isForegroundWaitBackgroundedError,
-} from "../types/contract.js";
+import { requireWorkspaceId } from "../types/contract.js";
+import { isForegroundWaitBackgroundedError } from "./submitReview.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 
 export interface DelegateOptions {
@@ -21,7 +18,8 @@ export async function delegateToSubAgent(
   options?: DelegateOptions,
 ): Promise<string> {
   const workspaceId = requireWorkspaceId(config, title.toLowerCase());
-  const taskService = requireTaskService(config, title.toLowerCase());
+  const taskService = config.taskService;
+  if (!taskService) throw new Error(`No task service for ${title.toLowerCase()}`);
   const aiSettings = options?.aiSettingsAgentId
     ? await createResolveDelegatedAgentAiSettings(deps)(
         config,

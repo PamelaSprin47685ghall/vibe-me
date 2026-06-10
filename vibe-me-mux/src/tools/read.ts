@@ -1,6 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { JsonSchema, PluginToolArgs, ToolDefinition, ReadToolArgs } from "../types/contract.js";
+import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+
+interface ReadToolArgs {
+  readonly path: string;
+  readonly offset?: number;
+  readonly limit?: number;
+}
 import type { HostDependencies } from "../types/deps.js";
 import { isExcludedDir } from "engine/util";
 
@@ -106,8 +112,8 @@ export function createReadTool(
     description:
       "If path is a directory, returns a formatted directory listing (equivalent to ls -la). Use this instead of running `ls` via runner.",
     parameters,
-    execute: async (config, args: PluginToolArgs) => {
-      const { path: filePath, offset, limit } = args as ReadToolArgs;
+    execute: async (config, args: Record<string, unknown>) => {
+      const { path: filePath, offset, limit } = args as unknown as ReadToolArgs;
       const resolved = path.resolve(config.cwd, filePath);
 
       let stat;
