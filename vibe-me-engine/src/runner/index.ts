@@ -6,6 +6,7 @@ export * from './javascript.js';
 export * from './jobs.js';
 export * from './wait.js';
 export * from './abort.js';
-export { ActiveJob, type JobRegistry, globalJobRegistry, cleanupRegistry } from './job.js';
+export type { JobRecord, JobStatus, JobHandles, JobEntry, JobRegistry } from './job.js';
+export { MAX_OUTPUT_BYTES, emptyJob, appendOutput, markCompleted, markAborted, createHandles, releaseHandles, cleanupFiles, cleanupRegistry, globalJobRegistry, createTempScript, getTempScriptPath } from './job.js';
 export * from './nudge.js';
 export * from './prompts.js';

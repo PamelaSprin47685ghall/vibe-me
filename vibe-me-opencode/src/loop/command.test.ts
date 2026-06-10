@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { activateReview, clearReviewSessions, isReviewActive } from 'engine/review';
 import { createLoopCommandManager } from './index';
 import { createMockContext, createOutput } from './test-utils';

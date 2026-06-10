@@ -1,17 +1,12 @@
-export class Deferred<T> {
+export interface Deferred<T> {
   promise: Promise<T>;
-  resolve!: (value: T) => void;
-  private _isResolved = false;
+  resolve: (value: T) => void;
+}
 
-  constructor() {
-    this.promise = new Promise<T>((r) => {
-      this.resolve = (val: T) => {
-        if (this._isResolved) return;
-        this._isResolved = true;
-        r(val);
-      };
-    });
-  }
+export function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => { resolve = r; });
+  return { promise, resolve };
 }
 
 export type ReviewResult = {

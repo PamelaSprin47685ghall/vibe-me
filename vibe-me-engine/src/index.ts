@@ -19,7 +19,7 @@ export {
 
 // Kernel state machines — selective re-exports to avoid naming conflicts with kernel ADTs
 export { type AgentRuntimePolicy, AGENT_POLICIES, AGENT_ROLE_LIST, isAgentRole, getAgentPolicy, applyUniversalPermissionDeny } from './agent-policy/index.js';
-export { TODO_NUDGE_CHECK_TAG, TERMINAL_TODO_STATUSES, hasOpenTodos, NudgeCoordinator, defaultCoordinator, clearNudgeSession } from './todo/index.js';
+export * from './todo/index.js';
 export * from './review/index.js';
 
 // Shell — I/O modules
@@ -41,6 +41,7 @@ export * from './runner/paths.js';
 export * from './runner/process.js';
 export * from './runner/javascript.js';
 export * from './runner/jobs.js';
-export { ActiveJob, type JobRegistry, globalJobRegistry, cleanupRegistry } from './runner/job.js';
+export type { JobRecord, JobStatus, JobHandles, JobEntry, JobRegistry } from './runner/job.js';
+export { MAX_OUTPUT_BYTES, emptyJob, appendOutput, markCompleted, markAborted, createHandles, releaseHandles, cleanupFiles, cleanupRegistry, globalJobRegistry, createTempScript, getTempScriptPath } from './runner/job.js';
 export * from './runner/nudge.js';
 export * from './runner/prompts.js';

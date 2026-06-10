@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createRunnerTool, type RunnerToolDeps } from "./runner.js";
+import type { JobEntry } from "engine/runner";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type {
   ConfigFile,
@@ -15,7 +16,7 @@ function createMockRunnerDeps() {
     Promise.resolve({ background: false, output: "command output" }),
   );
   const mockCleanupJob = mock(() => undefined);
-  const mockGlobalJobRegistry = new Map<string, { taskId?: string }>();
+  const mockGlobalJobRegistry = new Map<string, JobEntry>();
 
   return {
     mockExecute,

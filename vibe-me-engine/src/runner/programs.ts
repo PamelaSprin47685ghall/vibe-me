@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { killTree } from './process.js';
-import { createTempScript, getTempScriptPath } from './job.js';
+import { createTempScript, getTempScriptPath } from './script.js';
 import { createJavascriptPrelude, rewriteJavascriptModuleSpecifiers, ensureJavascriptProject } from './javascript.js';
 import type { RunnerLanguage } from './types.js';
 

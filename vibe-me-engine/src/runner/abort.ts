@@ -1,5 +1,5 @@
 import { cleanupJob } from './jobs.js';
-import { globalJobRegistry } from './job.js';
+import { globalJobRegistry } from './job-registry.js';
 
 export function abort(sessionId: string): string {
   const job = globalJobRegistry.get(sessionId);

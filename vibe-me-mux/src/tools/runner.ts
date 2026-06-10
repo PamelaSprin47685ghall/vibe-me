@@ -5,6 +5,7 @@ import { isForegroundWaitBackgroundedError } from "./submitReview.js";
 import type { HostDependencies } from "../types/deps.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 import { AGENT_POLICIES } from "engine";
+import type { JobEntry } from "engine/runner";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -39,7 +40,7 @@ const parameters: JsonSchema = {
 export interface RunnerToolDeps {
   execute: typeof import("engine/runner").execute;
   cleanupJob: (jobId: string) => void;
-  globalJobRegistry: Map<string, { taskId?: string }>;
+  globalJobRegistry: Map<string, JobEntry>;
   extendedShellReadCommands: ReadonlySet<string>;
 }
 
@@ -134,7 +135,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
       }
 
       const job = runnerDeps.globalJobRegistry.get(jobId);
-      if (job) job.taskId = createResult.data.taskId;
+      if (job) job.record = { ...job.record, taskId: createResult.data.taskId };
 
       try {
         const result = await taskService.waitForAgentReport(

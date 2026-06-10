@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { globalIteratorStore } from 'engine/util';
+import { globalIteratorStore, storeIterator, consumeIterator } from 'engine/util';
 
 describe('iterator store', () => {
   it('stores and consumes iterator data once', () => {
@@ -8,15 +8,15 @@ describe('iterator store', () => {
       pageSize: 20,
       pageIndex: 1,
     };
-    const id = globalIteratorStore.store('global', 'ffi_f', data);
+    const id = storeIterator(globalIteratorStore, 'global', 'ffi_f', data);
     expect(id).toMatch(/^ffi_f\d+$/);
-    const retrieved = globalIteratorStore.consume<typeof data>(id);
+    const retrieved = consumeIterator<typeof data>(globalIteratorStore, id);
     expect(retrieved?.query).toBe('src/main');
     expect(retrieved?.pageIndex).toBe(1);
-    expect(globalIteratorStore.consume(id)).toBeUndefined();
+    expect(consumeIterator(globalIteratorStore, id)).toBeUndefined();
   });
 
   it('returns undefined for unknown iterator id', () => {
-    expect(globalIteratorStore.consume('missing')).toBeUndefined();
+    expect(consumeIterator(globalIteratorStore, 'missing')).toBeUndefined();
   });
 });

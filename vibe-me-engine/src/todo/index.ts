@@ -1,17 +1,23 @@
-// ---------------------------------------------------------------------------
-// Backward-compatible barrel for todo/nudge module.
-// Re-exports the pure kernel functions and types, plus a legacy class wrapper.
-// ---------------------------------------------------------------------------
-
-// Local-scope imports needed by NudgeCoordinator below; export {…} from does
-// NOT make names available in this scope.
 import {
   createNudgeCoordinatorState,
   updateNudgeState,
+  SKIP_TODO_RE,
+  SKIP_LOOP_RE,
+  QUESTION_RE,
+  REVERIE_NUDGE,
+  TODO_NUDGE_PROMPT,
+  LOOP_NUDGE_PROMPT,
+  decideNudge,
+  shouldSuppressNudge,
 } from './nudge.js';
 import {
   nudgeActionToString,
   type NudgeContext,
+  type NudgeAction,
+  type NudgeCoordinatorState,
+  type SessionNudgeState,
+  nudgeActionFromString,
+  matchNudgeAction,
 } from '../types/nudge.js';
 
 export {
@@ -25,13 +31,16 @@ export {
   shouldSuppressNudge,
   createNudgeCoordinatorState,
   updateNudgeState,
-} from './nudge.js';
+  nudgeActionFromString,
+  nudgeActionToString,
+  matchNudgeAction,
+};
+export type { NudgeAction, NudgeContext, NudgeCoordinatorState, SessionNudgeState };
 
-// Re-export types used by callers
-export type { NudgeAction, NudgeContext, NudgeCoordinatorState, SessionNudgeState } from '../types/nudge.js';
-export { nudgeActionFromString, nudgeActionToString, matchNudgeAction } from '../types/nudge.js';
+export const TODO_NUDGE_CHECK_TAG = '<skip-todo-check />';
+export const TERMINAL_TODO_STATUSES: ReadonlySet<string> = new Set(['completed', 'cancelled', 'abandoned']);
+export function hasOpenTodos(todos: readonly string[]): boolean { return todos.length > 0; }
 
-// Backward compat for callers still using the old NudgeCoordinator class API
 export class NudgeCoordinator {
   private state = createNudgeCoordinatorState();
   private suppressed = new Set<string>();
@@ -56,20 +65,4 @@ export class NudgeCoordinator {
 export const defaultCoordinator = new NudgeCoordinator();
 export function clearNudgeSession(sessionId: string): void { defaultCoordinator.clearSession(sessionId); }
 
-// ---------------------------------------------------------------------------
-// Backward-compat aliases and helpers that the engine barrel re-exports.
-// ---------------------------------------------------------------------------
-
-/** Backward-compat alias for NudgeContext (used by shell-level callers). */
-export type { NudgeContext as NudgeInputContext } from '../types/nudge.js';
-
-/** The magic comment tag that suppresses todo nudges. */
-export const TODO_NUDGE_CHECK_TAG = '<skip-todo-check />';
-
-/** Status values that mark a todo as no longer open. */
-export const TERMINAL_TODO_STATUSES: ReadonlySet<string> = new Set(['completed', 'cancelled', 'abandoned']);
-
-/** Check whether at least one item in a list of open-todo strings remains. */
-export function hasOpenTodos(todos: readonly string[]): boolean {
-  return todos.length > 0;
-}
+export type { NudgeContext as NudgeInputContext };

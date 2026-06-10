@@ -1,6 +1,9 @@
 import { getRunnerLogPath, getRunnerProjectDir, RUNNER_EARLY_TIMEOUT_MS } from './paths.js';
 import { stripHeadTailPipes } from './no-head-tail.js';
-import { ActiveJob, cleanupRegistry, globalJobRegistry, MAX_OUTPUT_BYTES } from './job.js';
+import { cleanupRegistry, globalJobRegistry, MAX_OUTPUT_BYTES } from './job.js';
+import type { JobEntry } from './job.js';
+import { emptyJob, appendOutput, markCompleted, markAborted } from './job.js';
+import { createHandles } from './job.js';
 import { executeShellProgram, executePythonProgram, executeJavascriptProgram } from './programs.js';
 import type { ExecuteOptions, ExecuteResult } from './types.js';
 
@@ -8,7 +11,7 @@ export function truncateTail(text: string, max: number): string {
   return text.length <= max ? text : text.slice(-max);
 }
 
-export function getActiveJobs(): Map<string, ActiveJob> {
+export function getActiveJobs(): Map<string, JobEntry> {
   return globalJobRegistry;
 }
 
@@ -23,22 +26,27 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
   const timeoutMs = earlyTimeoutMs ?? RUNNER_EARLY_TIMEOUT_MS;
   const cwd = options.cwd ?? process.cwd();
 
-  const existingJob = globalJobRegistry.get(sessionId);
-  if (existingJob?.status === 'running') throw new Error('A task is already running. Use wait() or abort() first.');
-  if (existingJob) cleanupJob(sessionId);
+  const existingEntry = globalJobRegistry.get(sessionId);
+  if (existingEntry?.record.status === 'running') throw new Error('A task is already running. Use wait() or abort() first.');
+  if (existingEntry) cleanupJob(sessionId);
 
   const logPath = getRunnerLogPath(sessionId);
   let projectDir: string | undefined;
   if (language === 'javascript') projectDir = getRunnerProjectDir();
   else if (language === 'python') projectDir = getRunnerProjectDir(sessionId);
 
-  const job = new ActiveJob(sessionId, logPath, projectDir, options.parentSessionId);
-  globalJobRegistry.set(job.sessionId, job);
+  const record = emptyJob(sessionId, logPath, projectDir, options.parentSessionId);
+  const handles = createHandles(logPath);
+  const entry: JobEntry = { record, handles };
+  globalJobRegistry.set(sessionId, entry);
 
   const runner = {
-    onSpawn: (child: import('node:child_process').ChildProcess) => { job.childProcess = child; },
-    abortSignal: job.abortController.signal,
-    onOutput: (chunk: string) => job.writeOutput(chunk),
+    onSpawn: (child: import('node:child_process').ChildProcess) => { handles.childProcess = child; },
+    abortSignal: handles.abortController.signal,
+    onOutput: (chunk: string) => {
+      entry.record = appendOutput(entry.record, chunk);
+      try { handles.writeStream?.write(chunk); } catch {}
+    },
   };
 
   let capturedError: unknown;
@@ -49,20 +57,24 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
         : language === 'python'
           ? await executePythonProgram({ program, language, dependencies, cwd, projectDir, runner })
           : await executeJavascriptProgram({ program, language, dependencies, cwd, projectDir, runner }, projectDir!);
-      job.childProcess = null;
-      if (job.status === 'running') job.status = result.cancelled ? 'aborted' : 'completed';
+      handles.childProcess = null;
+      if (entry.record.status === 'running') {
+        entry.record = result.cancelled ? markAborted(entry.record) : markCompleted(entry.record);
+      }
       if (result.exitCode !== undefined && result.exitCode !== 0) {
         const msg = `\n[runner] Command exited with code ${result.exitCode}\n`;
-        job.writeOutput(msg);
+        entry.record = appendOutput(entry.record, msg);
+        try { handles.writeStream?.write(msg); } catch {}
       }
     } catch (error) {
-      if (job.status === 'running') job.status = 'aborted';
+      if (entry.record.status === 'running') entry.record = markAborted(entry.record);
       const msg = `\n[runner] ${error instanceof Error ? error.message : String(error)}\n`;
-      job.writeOutput(msg);
+      entry.record = appendOutput(entry.record, msg);
+      try { handles.writeStream?.write(msg); } catch {}
       capturedError = error;
     }
   })();
-  job.closePromise = closePromise;
+  handles.closePromise = closePromise;
 
   try {
     const isCompletedEarly = await Promise.race([
@@ -71,7 +83,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
     ]);
 
     if (isCompletedEarly) {
-      const fullOutput = job.finalOutput;
+      const fullOutput = entry.record.finalOutput;
       if (capturedError) { cleanupJob(sessionId); throw capturedError; }
       cleanupJob(sessionId);
       return { output: truncateTail(fullOutput, MAX_OUTPUT_BYTES).trim() || '(no output)', background: false, message: '[System] Task completed.' };
@@ -87,9 +99,8 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
     throw error;
   }
 
-  job.bytesRead = job.finalOutput.length;
   return {
-    output: truncateTail(job.finalOutput, MAX_OUTPUT_BYTES).trim() || '(no output yet)',
+    output: truncateTail(entry.record.finalOutput, MAX_OUTPUT_BYTES).trim() || '(no output yet)',
     background: true,
     jobId: sessionId,
     message: '[System] Task has been backgrounded. Use wait() to check progress.',
@@ -101,5 +112,3 @@ export function getSessionId(context: Record<string, unknown>): string {
   if (typeof context.sessionId === 'string') return context.sessionId;
   return '';
 }
-
-

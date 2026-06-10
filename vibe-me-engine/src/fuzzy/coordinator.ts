@@ -1,16 +1,15 @@
-import { FinderManager, createExternalFinder } from './finder.js';
+import { createFinder } from './finder.js';
+import { getCachedFinder } from './finder-registry.js';
 import { buildQuery, resolveFuzzySearchPath } from './query.js';
 import { formatFindOutput, formatGrepOutput, fileAnnotation } from './format.js';
-import { ScopedIteratorStore } from '../util/iterator.js';
-
-const globalIteratorStore = new ScopedIteratorStore();
+import { IteratorStore, globalIteratorStore, storeIterator, consumeIterator } from '../util/iterator.js';
 
 export interface FuzzyFindParams { pattern?: string; path?: string; limit?: number; iterator?: string }
 export interface FuzzyGrepParams {
   pattern?: string; path?: string; exclude?: string | string[];
   caseSensitive?: boolean; context?: number; limit?: number; iterator?: string;
 }
-export interface SearchOptions { cwd: string; scopeId: string; store?: ScopedIteratorStore }
+export interface SearchOptions { cwd: string; scopeId: string; store?: IteratorStore }
 export interface FuzzyFindState { query: string; pageSize: number; pageIndex: number; externalBasePath: string | null }
 export interface FuzzyGrepState {
   query: string; mode: 'plain' | 'regex' | 'fuzzy'; smartCase: boolean;
@@ -18,12 +17,12 @@ export interface FuzzyGrepState {
   externalBasePath: string | null; cursor: any | null;
 }
 
-type FinderLike = Awaited<ReturnType<typeof FinderManager.get>>;
+type FinderLike = Awaited<ReturnType<typeof createFinder>>;
 
 function resolveStore(opts: SearchOptions) { return opts.store ?? globalIteratorStore; }
 
 async function acquireFinder(externalBasePath: string | null, cwd: string): Promise<FinderLike> {
-  return externalBasePath ? await createExternalFinder(externalBasePath) : await FinderManager.get(cwd);
+  return externalBasePath ? await createFinder(externalBasePath) : await getCachedFinder(cwd);
 }
 
 function releaseFinder(finder: FinderLike, externalBasePath: string | null) {
@@ -38,7 +37,7 @@ export async function fuzzyFind(
 
   let searchState: FuzzyFindState | undefined;
   if (params.iterator) {
-    searchState = store.consume<FuzzyFindState>(params.iterator);
+    searchState = consumeIterator<FuzzyFindState>(store, params.iterator);
     if (!searchState) {
       return { output: `fuzzy_find iterator error: unknown, expired, or already consumed iterator "${params.iterator}"`, isError: true };
     }
@@ -64,7 +63,7 @@ export async function fuzzyFind(
     for (const item of result.items) lines.push(`${item.relativePath}${fileAnnotation(item)}`);
     const nextPageIndex = searchState.pageIndex + 1;
     const nextIterator = (result.totalMatched ?? 0) > nextPageIndex * searchState.pageSize
-      ? store.store(options.scopeId, 'ffi_f', { ...searchState, pageIndex: nextPageIndex }) : '';
+      ? storeIterator(store, options.scopeId, 'ffi_f', { ...searchState, pageIndex: nextPageIndex }) : '';
     return { output: `${lines.join('\n')}\n\n[iterator="${nextIterator}"]` };
   } finally {
     releaseFinder(finder, externalBasePath);
@@ -79,7 +78,7 @@ export async function fuzzyGrep(
 
   let searchState: FuzzyGrepState | undefined;
   if (params.iterator) {
-    searchState = store.consume<FuzzyGrepState>(params.iterator);
+    searchState = consumeIterator<FuzzyGrepState>(store, params.iterator);
     if (!searchState) {
       return { output: `fuzzy_grep iterator error: unknown, expired, or already consumed iterator "${params.iterator}"`, isError: true };
     }
@@ -138,7 +137,7 @@ export async function fuzzyGrep(
     const notices: string[] = [];
     if (result?.regexFallbackError) notices.push(`Invalid regex: ${result.regexFallbackError}, used literal match`);
     const nextIterator = result?.nextCursor
-      ? store.store(options.scopeId, 'ffi_i', { ...searchState, cursor: result.nextCursor }) : '';
+      ? storeIterator(store, options.scopeId, 'ffi_i', { ...searchState, cursor: result.nextCursor }) : '';
     notices.push(`iterator="${nextIterator}"`);
     if (notices.length > 0) output += `\n\n[${notices.join('. ')}]`;
     if (fuzzyNotice) output = `[${fuzzyNotice}]\n${output}`;

@@ -1,71 +1,60 @@
 import { describe, test, expect } from 'bun:test';
-import { PureLRUStore, ScopedLRUStore } from './lru-pure.js';
+import {
+  createLRUStore, lruSet, lruGet, lruConsume,
+  createScopedLRUStore, scopedStore, scopedConsume, scopedClearScope,
+} from './lru-pure.js';
 
-describe('PureLRUStore', () => {
+describe('LRUStore', () => {
   test('evicts oldest when exceeding max size', () => {
-    const store = new PureLRUStore<number>(3);
-    store.set('a', 1);
-    store.set('b', 2);
-    store.set('c', 3);
-    store.set('d', 4);
-
-    expect(store.get('a')).toBeUndefined();
-    expect(store.get('b')).toBe(2);
-    expect(store.get('c')).toBe(3);
-    expect(store.get('d')).toBe(4);
+    const s = createLRUStore<number>(3);
+    lruSet(s, 'a', 1); lruSet(s, 'b', 2); lruSet(s, 'c', 3); lruSet(s, 'd', 4);
+    expect(lruGet(s, 'a')).toBeUndefined();
+    expect(lruGet(s, 'b')).toBe(2);
+    expect(lruGet(s, 'c')).toBe(3);
+    expect(lruGet(s, 'd')).toBe(4);
   });
 
   test('touch moves item to end', () => {
-    const store = new PureLRUStore<number>(3);
-    store.set('a', 1);
-    store.set('b', 2);
-    store.set('c', 3);
-    
-    store.get('a');
-    store.set('d', 4);
-
-    expect(store.get('a')).toBe(1);
-    expect(store.get('b')).toBeUndefined();
+    const s = createLRUStore<number>(3);
+    lruSet(s, 'a', 1); lruSet(s, 'b', 2); lruSet(s, 'c', 3);
+    lruGet(s, 'a'); lruSet(s, 'd', 4);
+    expect(lruGet(s, 'a')).toBe(1);
+    expect(lruGet(s, 'b')).toBeUndefined();
   });
 
   test('consume removes item', () => {
-    const store = new PureLRUStore<number>(3);
-    store.set('a', 1);
-    
-    expect(store.consume('a')).toBe(1);
-    expect(store.get('a')).toBeUndefined();
+    const s = createLRUStore<number>(3);
+    lruSet(s, 'a', 1);
+    expect(lruConsume(s, 'a')).toBe(1);
+    expect(lruGet(s, 'a')).toBeUndefined();
   });
 });
 
 describe('ScopedLRUStore', () => {
   test('isolates scopes', () => {
-    const store = new ScopedLRUStore<number>(10, 5);
-    store.store('scope1', 'token1', 100);
-    store.store('scope2', 'token1', 200);
-
-    expect(store.consume('scope1', 'token1')).toBe(100);
-    expect(store.consume('scope2', 'token1')).toBe(200);
+    const s = createScopedLRUStore<number>(10, 5);
+    scopedStore(s, 'scope1', 'token1', 100);
+    scopedStore(s, 'scope2', 'token1', 200);
+    expect(scopedConsume(s, 'scope1', 'token1')).toBe(100);
+    expect(scopedConsume(s, 'scope2', 'token1')).toBe(200);
   });
 
   test('evicts oldest scope when exceeding global limit', () => {
-    const store = new ScopedLRUStore<number>(10, 2);
-    store.store('scope1', 'token', 1);
-    store.store('scope2', 'token', 2);
-    store.store('scope3', 'token', 3);
-
-    expect(store.consume('scope1', 'token')).toBeUndefined();
-    expect(store.consume('scope2', 'token')).toBe(2);
-    expect(store.consume('scope3', 'token')).toBe(3);
+    const s = createScopedLRUStore<number>(10, 2);
+    scopedStore(s, 'scope1', 'token', 1);
+    scopedStore(s, 'scope2', 'token', 2);
+    scopedStore(s, 'scope3', 'token', 3);
+    expect(scopedConsume(s, 'scope1', 'token')).toBeUndefined();
+    expect(scopedConsume(s, 'scope2', 'token')).toBe(2);
+    expect(scopedConsume(s, 'scope3', 'token')).toBe(3);
   });
 
   test('clearScope removes entire scope', () => {
-    const store = new ScopedLRUStore<number>(10, 5);
-    store.store('scope1', 'a', 1);
-    store.store('scope1', 'b', 2);
-    
-    store.clearScope('scope1');
-
-    expect(store.consume('scope1', 'a')).toBeUndefined();
-    expect(store.consume('scope1', 'b')).toBeUndefined();
+    const s = createScopedLRUStore<number>(10, 5);
+    scopedStore(s, 'scope1', 'a', 1);
+    scopedStore(s, 'scope1', 'b', 2);
+    scopedClearScope(s, 'scope1');
+    expect(scopedConsume(s, 'scope1', 'a')).toBeUndefined();
+    expect(scopedConsume(s, 'scope1', 'b')).toBeUndefined();
   });
 });

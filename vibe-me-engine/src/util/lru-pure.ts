@@ -1,82 +1,76 @@
-export class PureLRUStore<T> {
-  private map = new Map<string, T>();
+export interface LRUStore<T> { data: Map<string, T>; maxSize: number }
 
-  constructor(private maxSize: number) {}
+export const createLRUStore = <T>(maxSize: number): LRUStore<T> => ({ data: new Map(), maxSize });
 
-  set(key: string, value: T): void {
-    if (this.map.has(key)) this.map.delete(key);
-    this.map.set(key, value);
-    if (this.map.size > this.maxSize) {
-      const first = this.map.keys().next().value;
-      if (first !== undefined) {
-        this.map.delete(first);
-      }
-    }
+export const lruSet = <T>(store: LRUStore<T>, key: string, value: T): LRUStore<T> => {
+  if (store.data.has(key)) store.data.delete(key);
+  store.data.set(key, value);
+  if (store.data.size > store.maxSize) {
+    const first = store.data.keys().next().value;
+    if (first !== undefined) store.data.delete(first);
   }
+  return store;
+};
 
-  get(key: string): T | undefined {
-    const value = this.map.get(key);
-    if (value === undefined) return undefined;
-    this.map.delete(key);
-    this.map.set(key, value);
-    return value;
-  }
+export const lruGet = <T>(store: LRUStore<T>, key: string): T | undefined => {
+  const value = store.data.get(key);
+  if (value === undefined) return undefined;
+  store.data.delete(key);
+  store.data.set(key, value);
+  return value;
+};
 
-  consume(key: string): T | undefined {
-    const value = this.map.get(key);
-    if (value !== undefined) this.map.delete(key);
-    return value;
-  }
+export const lruConsume = <T>(store: LRUStore<T>, key: string): T | undefined => {
+  const value = store.data.get(key);
+  if (value !== undefined) store.data.delete(key);
+  return value;
+};
 
-  delete(key: string): boolean {
-    return this.map.delete(key);
-  }
+export const lruDelete = <T>(store: LRUStore<T>, key: string): boolean => store.data.delete(key);
 
-  clear(): void {
-    this.map.clear();
-  }
+export const lruClear = <T>(store: LRUStore<T>): LRUStore<T> => { store.data.clear(); return store; };
 
-  get size(): number {
-    return this.map.size;
-  }
+export const lruSize = (store: LRUStore<unknown>): number => store.data.size;
+
+export interface ScopedLRUStore<T> {
+  scopes: Map<string, LRUStore<T>>;
+  perScopeLimit: number;
+  globalScopeLimit: number;
 }
 
-export class ScopedLRUStore<T> {
-  private scopes = new Map<string, PureLRUStore<T>>();
+export const createScopedLRUStore = <T>(perScopeLimit: number, globalScopeLimit: number): ScopedLRUStore<T> =>
+  ({ scopes: new Map(), perScopeLimit, globalScopeLimit });
 
-  constructor(
-    private perScopeLimit: number,
-    private globalScopeLimit: number
-  ) {}
-
-  store(scopeId: string, token: string, value: T): void {
-    let scope = this.scopes.get(scopeId);
-    if (!scope) {
-      scope = new PureLRUStore<T>(this.perScopeLimit);
-      this.scopes.set(scopeId, scope);
-      if (this.scopes.size > this.globalScopeLimit) {
-        const firstScope = this.scopes.keys().next().value;
-        if (firstScope !== undefined) {
-          this.scopes.delete(firstScope);
-        }
-      }
-    } else {
-      this.scopes.delete(scopeId);
-      this.scopes.set(scopeId, scope);
+const ensureScope = <T>(store: ScopedLRUStore<T>, scopeId: string): LRUStore<T> => {
+  let scope = store.scopes.get(scopeId);
+  if (!scope) {
+    scope = createLRUStore<T>(store.perScopeLimit);
+    store.scopes.set(scopeId, scope);
+    if (store.scopes.size > store.globalScopeLimit) {
+      const first = store.scopes.keys().next().value;
+      if (first !== undefined) store.scopes.delete(first);
     }
-    scope.set(token, value);
+  } else {
+    store.scopes.delete(scopeId);
+    store.scopes.set(scopeId, scope);
   }
+  return scope;
+};
 
-  consume(scopeId: string, token: string): T | undefined {
-    const scope = this.scopes.get(scopeId);
-    return scope?.consume(token);
-  }
+export const scopedStore = <T>(store: ScopedLRUStore<T>, scopeId: string, token: string, value: T): ScopedLRUStore<T> => {
+  lruSet(ensureScope(store, scopeId), token, value);
+  return store;
+};
 
-  clearScope(scopeId: string): void {
-    this.scopes.delete(scopeId);
-  }
+export const scopedConsume = <T>(store: ScopedLRUStore<T>, scopeId: string, token: string): T | undefined =>
+  store.scopes.get(scopeId) ? lruConsume(store.scopes.get(scopeId)!, token) : undefined;
 
-  clear(): void {
-    this.scopes.clear();
-  }
-}
+export const scopedClearScope = <T>(store: ScopedLRUStore<T>, scopeId: string): ScopedLRUStore<T> => {
+  store.scopes.delete(scopeId);
+  return store;
+};
+
+export const scopedClear = <T>(store: ScopedLRUStore<T>): ScopedLRUStore<T> => {
+  store.scopes.clear();
+  return store;
+};

@@ -1,4 +1,4 @@
-export { ScopedLRUStore, PureLRUStore } from './lru-pure.js';
+export * from './lru-pure.js';
 export * from './abort.js';
 export * from './dedup.js';
 export * from './unified-context.js';

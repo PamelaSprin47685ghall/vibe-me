@@ -9,7 +9,7 @@ import {
 import {
   createSubmitReviewResultTool,
   createSubmitReviewTool,
-  Deferred,
+  createDeferred,
 } from './index';
 import { createMockContext } from './test-utils';
 
@@ -19,7 +19,7 @@ afterEach(() => {
 
 describe('createSubmitReviewResultTool', () => {
   test('resolves pending result with null feedback (accept)', async () => {
-    const d = new Deferred<any>();
+    const d = createDeferred<any>();
     setPendingReview('reviewer-1', (result) => d.resolve(result));
 
     const reviewTool = createSubmitReviewResultTool();
@@ -32,7 +32,7 @@ describe('createSubmitReviewResultTool', () => {
   });
 
   test('resolves pending result with feedback (reject)', async () => {
-    const d = new Deferred<any>();
+    const d = createDeferred<any>();
     setPendingReview('reviewer-1', (result) => d.resolve(result));
 
     const reviewTool = createSubmitReviewResultTool();
@@ -55,7 +55,7 @@ describe('createSubmitReviewResultTool', () => {
   });
 
   test('treats empty string as null (accept)', async () => {
-    const d = new Deferred<any>();
+    const d = createDeferred<any>();
     setPendingReview('reviewer-1', (result) => d.resolve(result));
 
     const reviewTool = createSubmitReviewResultTool();

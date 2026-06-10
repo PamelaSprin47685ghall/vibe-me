@@ -2,7 +2,7 @@ import { createCapsInjector } from "./context/capsInjector.js";
 import { createEventHook } from "./eventHook.js";
 import { cleanupRegistry, globalJobRegistry, hasActiveJob, buildRunnerNudgePrompt } from "engine/runner";
 import { deactivateReview, isReviewActive } from "engine/review";
-import { globalIteratorStore } from "engine/util";
+import { globalIteratorStore, clearIteratorScope } from "engine/util";
 import { defaultCoordinator, TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from "engine/todo";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import { createTodoWriteNudgeWrapper } from "./wrappers/todoWriteNudge.js";
@@ -85,7 +85,7 @@ export function createRegistration(
       globalJobRegistry,
       deactivateReview,
       isReviewActive,
-      clearIteratorScope: globalIteratorStore.clearScope.bind(globalIteratorStore),
+      clearIteratorScope: (id: string) => clearIteratorScope(globalIteratorStore, id),
       coordinator: defaultCoordinator,
       hasActiveJob,
       buildRunnerNudgePrompt,

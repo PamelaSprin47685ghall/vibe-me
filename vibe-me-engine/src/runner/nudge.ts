@@ -13,13 +13,13 @@ export function buildRunnerNudgePrompt(): string {
 
 export function hasActiveJob(sessionId: string): boolean {
   const jobs = globalJobRegistry;
-  const job = jobs.get(sessionId);
-  if (job?.status === 'running') return true;
-  for (const [, j] of jobs) {
-    if (j.parentSessionId === sessionId && j.status === 'running') return true;
+  const entry = jobs.get(sessionId);
+  if (entry?.record.status === 'running') return true;
+  for (const [, e] of jobs) {
+    if (e.record.parentSessionId === sessionId && e.record.status === 'running') return true;
   }
-  for (const [, j] of jobs) {
-    if (j.taskId === sessionId && j.status === 'running') return true;
+  for (const [, e] of jobs) {
+    if (e.record.taskId === sessionId && e.record.status === 'running') return true;
   }
   return false;
 }

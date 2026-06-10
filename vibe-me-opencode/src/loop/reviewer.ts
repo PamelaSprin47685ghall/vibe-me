@@ -1,7 +1,6 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import {
   deactivateReview,
-  REVIEW_INSTRUCTIONS,
   REVIEWER_NUDGE_PROMPT,
   setPendingReview,
 } from 'engine/review';
@@ -9,7 +8,7 @@ import { isAbortError } from 'engine/util';
 import { promptWithAbort } from '../utils/abort-signal';
 import { extractSessionText } from '../utils/session-messages';
 import { GRACE_TIMEOUT, MAX_REVIEWER_NUDGES, REVIEWER_GRACE_MS } from './constants';
-import { Deferred, type ReviewResult } from './types';
+import { createDeferred, type ReviewResult } from './types';
 
 export async function runReviewerWithNudge(
   client: PluginInput['client'],
@@ -23,7 +22,7 @@ export async function runReviewerWithNudge(
     return { accepted: false, feedback: 'Review aborted.', terminated: true };
   }
 
-  const deferred = new Deferred<ReviewResult>();
+  const deferred = createDeferred<ReviewResult>();
   setPendingReview(childID, (result: ReviewResult) => deferred.resolve(result));
 
   let nudgeCount = 0;

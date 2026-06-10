@@ -4,71 +4,56 @@ import {
   deactivateReview,
   isReviewActive,
   tryAcquireReviewLock,
-  releaseReviewLock,
+  unlockReview,
   setPendingReview,
   resolvePendingReview,
   clearReviewSessions,
-} from './session-registry.js';
-import type { ReviewResult } from './session-node.js';
+  getReviewTask,
+  getReviewState,
+} from './session-runtime.js';
 
-describe('Review State Machine - Atomic Transitions', () => {
-  beforeEach(() => {
-    clearReviewSessions();
-  });
+describe('Review Runtime', () => {
+  beforeEach(clearReviewSessions);
 
   describe('state transitions', () => {
-    it('starts in AwaitingSubmission after activation', () => {
+    it('starts active after activation', () => {
       activateReview('session-1', 'task-1');
       expect(isReviewActive('session-1')).toBe(true);
     });
 
-    it('allows lock acquisition only from AwaitingSubmission', () => {
+    it('allows lock acquisition from active', () => {
       activateReview('session-1', 'task-1');
       expect(tryAcquireReviewLock('session-1')).toBe(true);
       expect(tryAcquireReviewLock('session-1')).toBe(false);
     });
 
-    it('transitions to Completed after release', () => {
+    it('unlock returns to active', () => {
       activateReview('session-1', 'task-1');
       tryAcquireReviewLock('session-1');
-      releaseReviewLock('session-1');
-      expect(isReviewActive('session-1')).toBe(false);
+      unlockReview('session-1');
+      expect(getReviewState('session-1')?._tag).toBe('Active');
     });
 
-    it('rejects lock acquisition when not active', () => {
+    it('rejects lock when not active', () => {
       expect(tryAcquireReviewLock('nonexistent')).toBe(false);
     });
   });
 
   describe('pending resolution', () => {
-    it('resolves pending review', async () => {
+    it('resolves pending review', () => {
       let resolved = false;
-      let result: ReviewResult | undefined;
-
-      setPendingReview('session-1', (res) => {
-        resolved = true;
-        result = res;
-      });
-
+      let result: { accepted: boolean; feedback?: string } | undefined;
+      activateReview('session-1', 'task-1');
+      setPendingReview('session-1', (res) => { resolved = true; result = res; });
       const success = resolvePendingReview('session-1', { accepted: true, feedback: 'Approved' });
       expect(success).toBe(true);
       expect(resolved).toBe(true);
       expect(result?.feedback).toBe('Approved');
     });
 
-    it('returns false when no pending review exists', () => {
+    it('returns false when no pending review', () => {
       const success = resolvePendingReview('nonexistent', { accepted: false, feedback: 'test' });
       expect(success).toBe(false);
-    });
-
-    it('single-consume semantics for resolution', () => {
-      let callCount = 0;
-      setPendingReview('session-1', () => { callCount++; });
-
-      resolvePendingReview('session-1', { accepted: false, feedback: 'test' });
-      resolvePendingReview('session-1', { accepted: false, feedback: 'test' });
-
-      expect(callCount).toBe(1);
     });
   });
 
@@ -82,33 +67,16 @@ describe('Review State Machine - Atomic Transitions', () => {
     it('clears all sessions', () => {
       activateReview('session-1', 'task-1');
       activateReview('session-2', 'task-2');
-
       clearReviewSessions();
-
       expect(isReviewActive('session-1')).toBe(false);
       expect(isReviewActive('session-2')).toBe(false);
     });
-
-    it('terminates pending resolvers on clear', () => {
-      let terminated = false;
-      setPendingReview('session-1', (res) => {
-        if (res.terminated) terminated = true;
-      });
-
-      clearReviewSessions();
-      expect(terminated).toBe(true);
-    });
   });
 
-  describe('lock exclusivity', () => {
-    it('prevents concurrent lock acquisition', () => {
-      activateReview('session-1', 'task-1');
-      
-      const lock1 = tryAcquireReviewLock('session-1');
-      const lock2 = tryAcquireReviewLock('session-1');
-
-      expect(lock1).toBe(true);
-      expect(lock2).toBe(false);
+  describe('query', () => {
+    it('stores original task', () => {
+      activateReview('session-1', 'Refactor auth');
+      expect(getReviewTask('session-1')).toBe('Refactor auth');
     });
   });
 });

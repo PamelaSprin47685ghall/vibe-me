@@ -1,4 +1,5 @@
 import { mock } from 'bun:test';
+import type { PluginInput } from '@opencode-ai/plugin';
 
 export function createMockContext() {
   return {
@@ -18,7 +19,7 @@ export function createMockContext() {
         todo: mock(() => ({ data: [] })),
       },
     },
-  } as any;
+  } as unknown as PluginInput;
 }
 
 export function createOutput() {
