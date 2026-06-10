@@ -1,94 +1,120 @@
-export function createNudgeState() {
-  const nudgedSessions = new Set<string>();
-  let lastNudgedSession: string | null = null;
-  const retryPendingSessions = new Set<string>();
-  const stoppedSessions = new Set<string>();
-  const sessionAgents = new Map<string, string>();
-  const deliveredNudgeMessageCounts = new Map<string, number>();
+export type NudgeShellState = {
+  readonly nudgedSessions: ReadonlySet<string>;
+  readonly stoppedSessions: ReadonlySet<string>;
+  readonly retryPendingSessions: ReadonlySet<string>;
+  readonly sessionAgents: ReadonlyMap<string, string>;
+  readonly lastNudgedSession: string | null;
+  readonly deliveredCounts: ReadonlyMap<string, number>;
+};
 
-  function resumeSession(sessionID: string): void {
-    nudgedSessions.delete(sessionID);
-    retryPendingSessions.delete(sessionID);
-    stoppedSessions.delete(sessionID);
-    deliveredNudgeMessageCounts.delete(sessionID);
-    if (lastNudgedSession === sessionID) lastNudgedSession = null;
-  }
+export const emptyNudgeShellState: NudgeShellState = {
+  nudgedSessions: new Set(),
+  stoppedSessions: new Set(),
+  retryPendingSessions: new Set(),
+  sessionAgents: new Map(),
+  lastNudgedSession: null,
+  deliveredCounts: new Map(),
+};
 
-  function rememberAgent(sessionID: string, agent: unknown): void {
-    if (typeof agent === 'string' && agent) sessionAgents.set(sessionID, agent);
-  }
+export function hasStoppedSession(state: NudgeShellState, sessionID: string): boolean {
+  return state.stoppedSessions.has(sessionID);
+}
 
-  function stopSession(sessionID: string): void {
-    nudgedSessions.add(sessionID);
-    retryPendingSessions.delete(sessionID);
-    stoppedSessions.add(sessionID);
-    if (lastNudgedSession === sessionID) lastNudgedSession = null;
-  }
+export function hasRetryPendingSession(state: NudgeShellState, sessionID: string): boolean {
+  return state.retryPendingSessions.has(sessionID);
+}
 
-  function clearSession(sessionID: string): void {
-    resumeSession(sessionID);
-    sessionAgents.delete(sessionID);
-    deliveredNudgeMessageCounts.delete(sessionID);
-  }
+export function hasNudgedSession(state: NudgeShellState, sessionID: string): boolean {
+  return state.nudgedSessions.has(sessionID);
+}
 
-  function getAgent(sessionID: string): string | undefined {
-    return sessionAgents.get(sessionID);
-  }
+export function getAgent(state: NudgeShellState, sessionID: string): string | undefined {
+  return state.sessionAgents.get(sessionID);
+}
 
-  function getDeliveredCount(sessionID: string): number | undefined {
-    return deliveredNudgeMessageCounts.get(sessionID);
-  }
+export function getDeliveredCount(state: NudgeShellState, sessionID: string): number | undefined {
+  return state.deliveredCounts.get(sessionID);
+}
 
-  function setDeliveredCount(sessionID: string, count: number): void {
-    deliveredNudgeMessageCounts.set(sessionID, count);
-  }
-
-  function addNudgedSession(sessionID: string): void {
-    nudgedSessions.add(sessionID);
-  }
-
-  function deleteNudgedSession(sessionID: string): void {
-    nudgedSessions.delete(sessionID);
-  }
-
-  function hasNudgedSession(sessionID: string): boolean {
-    return nudgedSessions.has(sessionID);
-  }
-
-  function hasStoppedSession(sessionID: string): boolean {
-    return stoppedSessions.has(sessionID);
-  }
-
-  function hasRetryPendingSession(sessionID: string): boolean {
-    return retryPendingSessions.has(sessionID);
-  }
-
-  function addRetryPendingSession(sessionID: string): void {
-    retryPendingSessions.add(sessionID);
-  }
-
-  function deleteRetryPendingSession(sessionID: string): void {
-    retryPendingSessions.delete(sessionID);
-  }
-
+export function resumeSession(state: NudgeShellState, sessionID: string): NudgeShellState {
+  const nudgedSessions = new Set(state.nudgedSessions);
+  nudgedSessions.delete(sessionID);
+  const retryPendingSessions = new Set(state.retryPendingSessions);
+  retryPendingSessions.delete(sessionID);
+  const stoppedSessions = new Set(state.stoppedSessions);
+  stoppedSessions.delete(sessionID);
+  const deliveredCounts = new Map(state.deliveredCounts);
+  deliveredCounts.delete(sessionID);
   return {
-    get lastNudgedSession() { return lastNudgedSession; },
-    set lastNudgedSession(val: string | null) { lastNudgedSession = val; },
-    resumeSession,
-    rememberAgent,
-    stopSession,
-    clearSession,
-    getAgent,
-    getDeliveredCount,
-    setDeliveredCount,
-    addNudgedSession,
-    deleteNudgedSession,
-    hasNudgedSession,
-    hasStoppedSession,
-    hasRetryPendingSession,
-    addRetryPendingSession,
-    deleteRetryPendingSession,
+    ...state,
+    nudgedSessions,
+    retryPendingSessions,
+    stoppedSessions,
+    deliveredCounts,
+    lastNudgedSession: state.lastNudgedSession === sessionID ? null : state.lastNudgedSession,
   };
 }
 
-export type NudgeState = ReturnType<typeof createNudgeState>;
+export function rememberAgent(state: NudgeShellState, sessionID: string, agent: unknown): NudgeShellState {
+  if (typeof agent === 'string' && agent) {
+    const sessionAgents = new Map(state.sessionAgents);
+    sessionAgents.set(sessionID, agent);
+    return { ...state, sessionAgents };
+  }
+  return state;
+}
+
+export function stopSession(state: NudgeShellState, sessionID: string): NudgeShellState {
+  const nudgedSessions = new Set(state.nudgedSessions);
+  nudgedSessions.add(sessionID);
+  const retryPendingSessions = new Set(state.retryPendingSessions);
+  retryPendingSessions.delete(sessionID);
+  const stoppedSessions = new Set(state.stoppedSessions);
+  stoppedSessions.add(sessionID);
+  return {
+    ...state,
+    nudgedSessions,
+    retryPendingSessions,
+    stoppedSessions,
+    lastNudgedSession: state.lastNudgedSession === sessionID ? null : state.lastNudgedSession,
+  };
+}
+
+export function clearSession(state: NudgeShellState, sessionID: string): NudgeShellState {
+  let next = resumeSession(state, sessionID);
+  const sessionAgents = new Map(next.sessionAgents);
+  sessionAgents.delete(sessionID);
+  const deliveredCounts = new Map(next.deliveredCounts);
+  deliveredCounts.delete(sessionID);
+  return { ...next, sessionAgents, deliveredCounts };
+}
+
+export function setDeliveredCount(state: NudgeShellState, sessionID: string, count: number): NudgeShellState {
+  const deliveredCounts = new Map(state.deliveredCounts);
+  deliveredCounts.set(sessionID, count);
+  return { ...state, deliveredCounts };
+}
+
+export function addNudgedSession(state: NudgeShellState, sessionID: string): NudgeShellState {
+  const nudgedSessions = new Set(state.nudgedSessions);
+  nudgedSessions.add(sessionID);
+  return { ...state, nudgedSessions };
+}
+
+export function deleteNudgedSession(state: NudgeShellState, sessionID: string): NudgeShellState {
+  const nudgedSessions = new Set(state.nudgedSessions);
+  nudgedSessions.delete(sessionID);
+  return { ...state, nudgedSessions };
+}
+
+export function addRetryPendingSession(state: NudgeShellState, sessionID: string): NudgeShellState {
+  const retryPendingSessions = new Set(state.retryPendingSessions);
+  retryPendingSessions.add(sessionID);
+  return { ...state, retryPendingSessions };
+}
+
+export function deleteRetryPendingSession(state: NudgeShellState, sessionID: string): NudgeShellState {
+  const retryPendingSessions = new Set(state.retryPendingSessions);
+  retryPendingSessions.delete(sessionID);
+  return { ...state, retryPendingSessions };
+}

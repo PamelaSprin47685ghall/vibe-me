@@ -6,7 +6,7 @@ import {
   setPendingReview,
   clearReviewSessions,
 } from './session-registry.js';
-import type { ReviewResult } from './session-types.js';
+import type { ReviewResult } from './session-node.js';
 
 describe('Review Session Memory Leak Prevention', () => {
   beforeEach(() => {

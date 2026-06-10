@@ -4,7 +4,11 @@ import {
   isReviewActive,
   LOOP_NUDGE_PROMPT,
 } from 'engine/review';
-import { isAbortErrorName } from 'engine/util';
+import {
+  createPromptBody,
+  getEventAgent,
+  isAbortEventError,
+} from 'engine/util';
 import { lookupChildAgent } from '../utils/child-agent';
 import { asMessageArray, asTodoArray } from '../utils/session';
 
@@ -14,41 +18,6 @@ export function createLoopNudgeHook(ctx: PluginInput) {
 
   function rememberAgent(sessionID: string, agent: unknown): void {
     if (typeof agent === 'string' && agent) sessionAgents.set(sessionID, agent);
-  }
-
-  function getEventAgent(props: Record<string, unknown>): string | undefined {
-    if (typeof props.agent === 'string') return props.agent;
-
-    const info = props.info as { agent?: unknown } | undefined;
-    if (typeof info?.agent === 'string') return info.agent;
-  }
-
-  function createPromptBody(sessionID: string) {
-    const agent = sessionAgents.get(sessionID) ?? lookupChildAgent(sessionID);
-    const parts = [{ type: 'text' as const, text: LOOP_NUDGE_PROMPT }];
-    return agent ? { agent, parts } : { parts };
-  }
-
-  function isAbortEventError(error: unknown): boolean {
-    if (typeof error === 'string') return /\babort(?:ed)?\b/i.test(error);
-    if (!error || typeof error !== 'object') return false;
-
-    const name = (error as { name?: unknown }).name;
-    if (typeof name === 'string' && isAbortErrorName(name)) return true;
-
-    const nestedError = (error as { error?: unknown }).error;
-    if (nestedError && nestedError !== error && isAbortEventError(nestedError))
-      return true;
-
-    const data = (error as { data?: unknown }).data;
-    if (data && typeof data === 'object') {
-      const message = (data as { message?: unknown }).message;
-      if (typeof message === 'string' && /\babort(?:ed)?\b/i.test(message))
-        return true;
-    }
-
-    const message = (error as { message?: unknown }).message;
-    return typeof message === 'string' && /\babort(?:ed)?\b/i.test(message);
   }
 
   return {
@@ -126,9 +95,10 @@ export function createLoopNudgeHook(ctx: PluginInput) {
         }
 
         try {
+          const agent = sessionAgents.get(sessionID) ?? lookupChildAgent(sessionID);
           await ctx.client.session.prompt({
             path: { id: sessionID },
-            body: createPromptBody(sessionID),
+            body: createPromptBody(agent, LOOP_NUDGE_PROMPT),
           });
         } catch {
           // best-effort

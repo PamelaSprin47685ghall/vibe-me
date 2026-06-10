@@ -5,6 +5,7 @@ import {
   inactive,
   activeReview,
   lockedReview,
+  completedReview,
   activatedEvent,
   submittedEvent,
   lockAcquiredEvent,
@@ -37,7 +38,7 @@ export function transition(
         Submit: () => [state, submittedEvent],
         Lock: (cmd: any) => [lockedReview(s.task, cmd.reviewerId), lockAcquiredEvent(cmd.reviewerId)],
         Unlock: () => [state, null],
-        Complete: () => [state, null],
+        Complete: (cmd: any) => [completedReview(cmd.accepted, cmd.feedback), completedReviewEvent(cmd.accepted, cmd.feedback)],
       }),
     Locked: (s: any) =>
       matchReviewCommand<[ReviewState, ReviewEvent | null]>(command, {
@@ -45,7 +46,15 @@ export function transition(
         Submit: () => [state, null],
         Lock: () => [state, null],
         Unlock: () => [activeReview(s.task), lockReleasedEvent],
-        Complete: (cmd: any) => [inactive, completedReviewEvent(cmd.accepted, cmd.feedback)],
+        Complete: (cmd: any) => [completedReview(cmd.accepted, cmd.feedback), completedReviewEvent(cmd.accepted, cmd.feedback)],
+      }),
+    Completed: () =>
+      matchReviewCommand<[ReviewState, ReviewEvent | null]>(command, {
+        Activate: () => [state, null],
+        Submit: () => [state, null],
+        Lock: () => [state, null],
+        Unlock: () => [state, null],
+        Complete: () => [state, null],
       }),
   });
 }
@@ -58,6 +67,7 @@ export function isActive(state: ReviewState): boolean {
     Inactive: () => false,
     Active: () => true,
     Locked: () => true,
+    Completed: () => false,
   });
 }
 
@@ -69,6 +79,7 @@ export function canStartReview(state: ReviewState): boolean {
     Inactive: () => true,
     Active: () => false,
     Locked: () => false,
+    Completed: () => false,
   });
 }
 

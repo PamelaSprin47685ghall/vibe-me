@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   getPluginToolPolicy,
   RUNNER_SUB_AGENT_DISABLED_TOOLS,
-} from "./agentToolPolicies.js";
+} from "./agent-tool-policy.js";
 
 describe("agent tool policies", () => {
   test("returns main policy by default and for unknown roles", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { resolveExternalBasePath } from './index';
+import { resolveExternalBasePath, resolveExternalPath } from './index';
 
 describe('resolveExternalBasePath', () => {
   it('treats path with extension as file → parent dir + filename', () => {
@@ -24,5 +24,30 @@ describe('resolveExternalBasePath', () => {
     const result = resolveExternalBasePath('/tmp/../home/user/file.ts');
     expect(result.basePath).toBe('/home/user');
     expect(result.pathConstraint).toBe('file.ts');
+  });
+});
+
+describe('resolveExternalPath', () => {
+  const cwd = '/workspace/project';
+
+  it('resolves external relative file paths', () => {
+    expect(resolveExternalPath('../sibling/file.ts', cwd)).toEqual({
+      externalBasePath: '/workspace/sibling',
+      externalPathConstraint: 'file.ts',
+    });
+  });
+
+  it('resolves external relative directories', () => {
+    expect(resolveExternalPath('../sibling', cwd)).toEqual({
+      externalBasePath: '/workspace/sibling',
+      externalPathConstraint: null,
+    });
+  });
+
+  it('keeps cwd-relative paths internal', () => {
+    expect(resolveExternalPath('src/file.ts', cwd)).toEqual({
+      externalBasePath: null,
+      externalPathConstraint: null,
+    });
   });
 });

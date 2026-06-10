@@ -26,6 +26,7 @@ export function createResolveDelegatedAgentAiSettings(deps: HostDependencies) {
       configFile.subagentAiDefaults?.[agentId],
       configFile.agentAiDefaults?.[agentId],
       await resolveDescriptorAiSettings(deps, config, agentId),
+      resolveWorkspaceExecFallback(workspace),
     ];
 
     return {
@@ -80,4 +81,19 @@ function resolveWorkspaceAiSettings(
 ): NamedSettings | undefined {
   const e = workspace?.aiSettingsByAgent?.[agentId];
   return e ? { modelString: e.model, thinkingLevel: e.thinkingLevel } : undefined;
+}
+
+function resolveWorkspaceExecFallback(
+  workspace:
+    | {
+        readonly aiSettingsByAgent?: Record<
+          string,
+          { readonly model: string; readonly thinkingLevel?: string }
+        >;
+      }
+    | undefined,
+): NamedSettings | undefined {
+  if (!workspace?.aiSettingsByAgent) return undefined;
+  const exec = workspace.aiSettingsByAgent["exec"] ?? Object.values(workspace.aiSettingsByAgent)[0];
+  return exec ? { modelString: exec.model, thinkingLevel: exec.thinkingLevel } : undefined;
 }

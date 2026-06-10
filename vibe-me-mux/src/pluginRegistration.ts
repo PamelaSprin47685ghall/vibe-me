@@ -7,7 +7,7 @@ import { defaultCoordinator, TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from "engine
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
 import { createTodoWriteNudgeWrapper } from "./wrappers/todoWriteNudge.js";
 import { createLoopCommand } from "./commands/loop.js";
-import { buildAgentToolPolicies, type MuxAgentToolPolicies } from "./agentToolPolicies.js";
+import { buildAgentToolPolicies, type MuxAgentToolPolicies } from "./agent-tool-policy.js";
 import { createToolCatalog, type ExecuteHostFileRead } from "./toolRegistration.js";
 import { getMcpServers } from "./mcpServers.js";
 import type { ToolDefinition, ToolWrapper, ToolLike, PluginToolArgs } from "./types/contract.js";

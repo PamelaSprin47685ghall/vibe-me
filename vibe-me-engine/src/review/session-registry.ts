@@ -1,7 +1,13 @@
 import type { AbortSuppressor } from '../util/abort.js';
-import type { ReviewState, ReviewEvent, ReviewResult } from './session-types.js';
-import { STATE_TRANSITIONS } from './session-types.js';
-import { ReviewSessionNode } from './session-node.js';
+import {
+  type ReviewState as ADTState,
+  type ReviewCommand,
+  lockCommand,
+  unlockCommand,
+  completeReviewCommand,
+} from '../types/review.js';
+import { isActive as isActiveState, transition as pureTransition } from './state.js';
+import { ReviewSessionNode, type ReviewResult } from './session-node.js';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 export const sessionRegistry = new Map<string, ReviewSessionNode>();
@@ -39,7 +45,7 @@ export function activateReview(sessionID: string, task: string, parentSessionID?
 
 export function isReviewActive(sessionID: string): boolean {
   const node = sessionRegistry.get(sessionID);
-  return node?.state === 'AwaitingSubmission' || node?.state === 'UnderReview';
+  return node ? isActiveState(node.state) : false;
 }
 
 export function deactivateReview(sessionID: string): void {
@@ -61,15 +67,15 @@ export function clearReviewSessions(): void {
 
 export function tryAcquireReviewLock(sessionID: string): boolean {
   const node = sessionRegistry.get(sessionID);
-  return node?.transition('ACQUIRE_LOCK') ?? false;
+  return node?.transition(lockCommand(sessionID)) ?? false;
 }
 
 export function releaseReviewLock(sessionID: string): void {
-  sessionRegistry.get(sessionID)?.transition('RELEASE_LOCK');
+  sessionRegistry.get(sessionID)?.transition(completeReviewCommand(true));
 }
 
 export function unlockReview(sessionID: string): void {
-  sessionRegistry.get(sessionID)?.transition('UNLOCK');
+  sessionRegistry.get(sessionID)?.transition(unlockCommand);
 }
 
 export function tryLockReview(sessionID: string): boolean {
@@ -87,7 +93,7 @@ export function resolvePendingReview(sessionID: string, result: ReviewResult): b
   if (!node) return false;
   node.lastFeedback = result.feedback;
   node.completeResolution(result);
-  node.transition('COMPLETE');
+  node.transition(completeReviewCommand(result.accepted, result.feedback));
   return true;
 }
 
@@ -95,7 +101,7 @@ export function completeReview(sessionID: string, result: ReviewResult): void {
   const node = sessionRegistry.get(sessionID);
   if (!node) return;
   node.lastFeedback = result.feedback;
-  node.transition('COMPLETE');
+  node.transition(completeReviewCommand(result.accepted, result.feedback));
 }
 
 // ── Query ────────────────────────────────────────────────────────────────
@@ -104,7 +110,7 @@ export function getReviewTask(sessionID: string): string | undefined {
   return sessionRegistry.get(sessionID)?.originalTask;
 }
 
-export function getReviewState(sessionID: string): ReviewState | undefined {
+export function getReviewState(sessionID: string): ADTState | undefined {
   return sessionRegistry.get(sessionID)?.state;
 }
 
@@ -112,10 +118,11 @@ export function getLastFeedback(sessionID: string): string | null | undefined {
   return sessionRegistry.get(sessionID)?.lastFeedback;
 }
 
-export function canTransition(sessionID: string, event: ReviewEvent): boolean {
+export function canTransition(sessionID: string, command: ReviewCommand): boolean {
   const node = sessionRegistry.get(sessionID);
   if (!node) return false;
-  return STATE_TRANSITIONS[node.state]?.[event] !== undefined;
+  const [next] = pureTransition(node.state, command);
+  return next !== node.state;
 }
 
 // ── Mutation ─────────────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ import {
   resolvePendingReview,
   clearReviewSessions,
 } from './session-registry.js';
-import type { ReviewResult } from './session-types.js';
+import type { ReviewResult } from './session-node.js';
 
 describe('Review State Machine - Atomic Transitions', () => {
   beforeEach(() => {

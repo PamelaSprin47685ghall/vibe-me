@@ -53,3 +53,8 @@ export function unsafeUnwrapSome<T>(value: Maybe<T>): T {
   if (value._tag === 'None') throw new Error('Called unsafeUnwrapSome on None');
   return value.value;
 }
+
+/** Compile-time exhaustiveness check for ADT match functions. */
+export function assertNever(_: never): never {
+  throw new Error('Unreachable state');
+}

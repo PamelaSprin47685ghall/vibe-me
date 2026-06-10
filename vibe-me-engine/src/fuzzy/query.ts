@@ -1,5 +1,37 @@
 import path from 'node:path';
 
+export interface ResolvedFuzzySearchPath {
+  basePath: string;
+  pathConstraint: string | null;
+  external: boolean;
+}
+
+function normalizeRelativePath(fromPath: string, toPath: string): string {
+  return path.relative(fromPath, toPath).replaceAll(path.sep, '/');
+}
+
+function isPathOutside(basePath: string, targetPath: string): boolean {
+  const relativePath = path.relative(basePath, targetPath);
+  return relativePath === '..' || relativePath.startsWith(`..${path.sep}`) || path.isAbsolute(relativePath);
+}
+
+export function resolveFuzzySearchPath(
+  inputPath: string | undefined | null,
+  cwd = process.cwd(),
+): ResolvedFuzzySearchPath {
+  const basePath = path.resolve(cwd);
+  const trimmedPath = inputPath?.trim();
+  if (!trimmedPath) return { basePath, pathConstraint: null, external: false };
+
+  const resolvedPath = path.resolve(basePath, trimmedPath);
+  if (path.isAbsolute(trimmedPath) || isPathOutside(basePath, resolvedPath)) {
+    const externalPath = resolveExternalBasePath(resolvedPath);
+    return { basePath: externalPath.basePath, pathConstraint: externalPath.pathConstraint, external: true };
+  }
+
+  return { basePath, pathConstraint: normalizeRelativePath(basePath, resolvedPath) || null, external: false };
+}
+
 export function normalizePathConstraint(
   pathConstraint: string,
   cwd = process.cwd(),
@@ -66,6 +98,18 @@ export function buildQuery(
   parts.push(...normalizeExcludes(exclude, cwd));
   parts.push(pattern);
   return parts.join(' ');
+}
+
+export function resolveExternalPath(
+  inputPath: string | undefined | null,
+  cwd = process.cwd(),
+): { externalBasePath: string | null; externalPathConstraint: string | null } {
+  const searchPath = resolveFuzzySearchPath(inputPath, cwd);
+  if (!searchPath.external) return { externalBasePath: null, externalPathConstraint: null };
+  return {
+    externalBasePath: searchPath.basePath,
+    externalPathConstraint: searchPath.pathConstraint,
+  };
 }
 
 export function resolveExternalBasePath(absPath: string): {

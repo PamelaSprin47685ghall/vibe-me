@@ -8,7 +8,12 @@ export type LockedReview = {
   readonly task: string;
   readonly reviewerId: string;
 };
-export type ReviewState = Inactive | ActiveReview | LockedReview;
+export type CompletedReview = {
+  readonly _tag: 'Completed';
+  readonly accepted: boolean;
+  readonly feedback?: string;
+};
+export type ReviewState = Inactive | ActiveReview | LockedReview | CompletedReview;
 
 export const inactive: Inactive = { _tag: 'Inactive' };
 
@@ -19,6 +24,9 @@ export function activeReview(task: string): ActiveReview {
 export function lockedReview(task: string, reviewerId: string): LockedReview {
   return { _tag: 'Locked', task, reviewerId };
 }
+export function completedReview(accepted: boolean, feedback?: string): CompletedReview {
+  return { _tag: 'Completed', accepted, ...(feedback !== undefined ? { feedback } : {}) };
+}
 
 export function matchReviewState<R>(
   state: ReviewState,
@@ -26,12 +34,14 @@ export function matchReviewState<R>(
     readonly Inactive: () => R;
     readonly Active: (state: ActiveReview) => R;
     readonly Locked: (state: LockedReview) => R;
+    readonly Completed: (state: CompletedReview) => R;
   },
 ): R {
   switch (state._tag) {
     case 'Inactive': return patterns.Inactive();
     case 'Active': return patterns.Active(state);
     case 'Locked': return patterns.Locked(state);
+    case 'Completed': return patterns.Completed(state);
   }
 }
 

@@ -1,7 +1,7 @@
 import { type ToolDefinition, tool } from '@opencode-ai/plugin';
-import { fuzzyFind, fuzzyGrep, resolveExternalBasePath } from 'engine/fuzzy';
+import { fuzzyFind, fuzzyGrep, resolveExternalBasePath, resolveExternalPath } from 'engine/fuzzy';
 
-export { resolveExternalBasePath };
+export { resolveExternalBasePath, resolveExternalPath };
 
 const z = tool.schema;
 

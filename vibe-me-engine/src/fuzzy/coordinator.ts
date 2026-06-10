@@ -1,6 +1,5 @@
-import path from 'node:path';
 import { FinderManager, createExternalFinder } from './finder.js';
-import { buildQuery, resolveExternalBasePath } from './query.js';
+import { buildQuery, resolveFuzzySearchPath } from './query.js';
 import { formatFindOutput, formatGrepOutput, fileAnnotation } from './format.js';
 import { ScopedIteratorStore } from '../util/iterator.js';
 
@@ -22,12 +21,6 @@ export interface FuzzyGrepState {
 type FinderLike = Awaited<ReturnType<typeof FinderManager.get>>;
 
 function resolveStore(opts: SearchOptions) { return opts.store ?? globalIteratorStore; }
-
-function resolveExternalPath(inputPath: string | undefined) {
-  if (!inputPath || !path.isAbsolute(inputPath)) return { externalBasePath: null as string | null, externalPathConstraint: null as string | null };
-  const info = resolveExternalBasePath(path.resolve(inputPath));
-  return { externalBasePath: info.basePath, externalPathConstraint: info.pathConstraint };
-}
 
 async function acquireFinder(externalBasePath: string | null, cwd: string): Promise<FinderLike> {
   return externalBasePath ? await createExternalFinder(externalBasePath) : await FinderManager.get(cwd);
@@ -51,9 +44,10 @@ export async function fuzzyFind(
     }
   } else {
     if (!params.pattern) return { output: 'pattern is required on the first call', isError: true };
-    const { externalBasePath, externalPathConstraint } = resolveExternalPath(params.path);
+    const searchPath = resolveFuzzySearchPath(params.path, activeCwd);
+    const externalBasePath = searchPath.external ? searchPath.basePath : null;
     searchState = {
-      query: buildQuery(externalBasePath ? externalPathConstraint : params.path, params.pattern, undefined, externalBasePath ?? activeCwd, !!externalBasePath),
+      query: buildQuery(searchPath.pathConstraint, params.pattern, undefined, searchPath.basePath, searchPath.external),
       pageSize: params.limit ?? 30, pageIndex: 0, externalBasePath,
     };
   }
@@ -91,8 +85,9 @@ export async function fuzzyGrep(
     }
   } else {
     if (!params.pattern) return { output: 'pattern is required on the first call', isError: true };
-    const { externalBasePath, externalPathConstraint } = resolveExternalPath(params.path);
-    const query = buildQuery(externalBasePath ? externalPathConstraint : params.path, params.pattern, params.exclude, externalBasePath ?? activeCwd, !!externalBasePath);
+    const searchPath = resolveFuzzySearchPath(params.path, activeCwd);
+    const externalBasePath = searchPath.external ? searchPath.basePath : null;
+    const query = buildQuery(searchPath.pathConstraint, params.pattern, params.exclude, searchPath.basePath, searchPath.external);
 
     const hasRegexSyntax = params.pattern !== params.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     let mode: 'plain' | 'regex' | 'fuzzy' = hasRegexSyntax ? 'regex' : 'plain';

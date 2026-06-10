@@ -30,8 +30,8 @@ export type {
   MuxPluginToolPolicy,
 } from "./types/tool.js";
 export type { HostDependencies, RuntimeHandle, TaskServiceLike, TaskCreateInput, TaskWaitOptions, TaskCreateResult } from "./types/deps.js";
-export type { MuxAgentName, SubAgentRole, MuxAgentToolPolicies } from "./agentToolPolicies.js";
-export { buildAgentToolPolicies, getPluginToolPolicy } from "./agentToolPolicies.js";
+export type { MuxAgentName, SubAgentRole, MuxAgentToolPolicies } from "./agent-tool-policy.js";
+export { buildAgentToolPolicies, getPluginToolPolicy } from "./agent-tool-policy.js";
 export { findCapsFiles, type CapsFileInfo } from "engine/caps";
 export { buildCapsFileReadData, type CapsFileReadEntry } from "./context/capsFileReadMessages.js";
 export { deduplicateReadOutputs } from "./dedup/index.js";

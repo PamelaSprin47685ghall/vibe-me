@@ -12,16 +12,7 @@ import {
   completedResult,
   failedResult,
 } from '../types/runner.js';
-import { none, some } from '../types/general.js';
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/** Compile-time exhaustiveness check. */
-function assertNever(_: never): never {
-  throw new Error('Unreachable state');
-}
+import { assertNever, none, some } from '../types/general.js';
 
 // ---------------------------------------------------------------------------
 // State machine: pure transition

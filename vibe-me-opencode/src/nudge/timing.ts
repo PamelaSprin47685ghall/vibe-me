@@ -5,27 +5,39 @@ import { isReviewActive } from 'engine/review';
 import { asMessageArray } from '../utils/session-messages';
 import { lookupChildAgent } from '../utils/child-agent';
 import { managedRunnerSessions } from '../runner/index.js';
-import { isAbortEventError, isSessionBusyError, createPromptBody } from './pure';
-import type { NudgeState } from './state';
+import { isAbortEventError, isSessionBusyError, createPromptBody } from 'engine/util';
+import type { NudgeShellState } from './state';
+import {
+  hasStoppedSession,
+  hasRetryPendingSession,
+  hasNudgedSession,
+  addNudgedSession,
+  deleteNudgedSession,
+  rememberAgent,
+  getDeliveredCount,
+  setDeliveredCount,
+  getAgent,
+  stopSession,
+  addRetryPendingSession,
+} from './state';
 
 export async function nudgeIfNeeded(
-  state: NudgeState,
+  state: NudgeShellState,
   ctx: PluginInput,
   sessionID: string,
-): Promise<void> {
-  if (state.hasStoppedSession(sessionID)) return;
-  if (state.hasRetryPendingSession(sessionID)) return;
-  if (state.hasNudgedSession(sessionID)) return;
+): Promise<NudgeShellState> {
+  if (hasStoppedSession(state, sessionID)) return state;
+  if (hasRetryPendingSession(state, sessionID)) return state;
+  if (hasNudgedSession(state, sessionID)) return state;
 
-  state.addNudgedSession(sessionID);
+  state = addNudgedSession(state, sessionID);
 
   let todos: string[];
   try {
     const result = await ctx.client.session.todo({ path: { id: sessionID } });
     todos = (result.data ?? []).map((t: { status: string }) => t.status).filter(s => !TERMINAL_TODO_STATUSES.has(s));
   } catch {
-    state.deleteNudgedSession(sessionID);
-    return;
+    return deleteNudgedSession(state, sessionID);
   }
 
   let lastAssistantMessage: string | undefined;
@@ -36,7 +48,7 @@ export async function nudgeIfNeeded(
     messageCount = messages.length;
     const lastAssistant = [...messages].reverse().find((m) => m.info?.role === 'assistant');
     if (lastAssistant) {
-      state.rememberAgent(sessionID, (lastAssistant.info as { agent?: unknown }).agent);
+      state = rememberAgent(state, sessionID, (lastAssistant.info as { agent?: unknown }).agent);
       lastAssistantMessage = (lastAssistant.parts ?? [])
         .filter((p) => p.type === 'text' && p.text)
         .map((p) => p.text ?? '')
@@ -46,10 +58,9 @@ export async function nudgeIfNeeded(
 
   if (
     messageCount !== undefined &&
-    state.getDeliveredCount(sessionID) === messageCount
+    getDeliveredCount(state, sessionID) === messageCount
   ) {
-    state.deleteNudgedSession(sessionID);
-    return;
+    return deleteNudgedSession(state, sessionID);
   }
 
   const context: NudgeInputContext = {
@@ -61,8 +72,7 @@ export async function nudgeIfNeeded(
 
   const action = defaultCoordinator.shouldNudge(sessionID, context);
   if (action === 'none') {
-    state.deleteNudgedSession(sessionID);
-    return;
+    return deleteNudgedSession(state, sessionID);
   }
 
   let promptText: string;
@@ -74,35 +84,33 @@ export async function nudgeIfNeeded(
     const jobs = globalJobRegistry;
     const isSelfJob = jobs.get(sessionID)?.status === 'running';
     if (!isSelfJob) {
-      state.deleteNudgedSession(sessionID);
-      return;
+      return deleteNudgedSession(state, sessionID);
     }
     if (managedRunnerSessions.has(sessionID)) {
-      state.deleteNudgedSession(sessionID);
-      return;
+      return deleteNudgedSession(state, sessionID);
     }
     promptText = buildRunnerNudgePrompt();
-  } else { return; }
+  } else { return state; }
 
   try {
-    state.lastNudgedSession = sessionID;
-    const agent = state.getAgent(sessionID) ?? lookupChildAgent(sessionID);
+    state = { ...state, lastNudgedSession: sessionID };
+    const agent = getAgent(state, sessionID) ?? lookupChildAgent(sessionID);
     await ctx.client.session.prompt({
       path: { id: sessionID },
       body: createPromptBody(agent, promptText),
     });
     if (messageCount !== undefined) {
-      state.setDeliveredCount(sessionID, messageCount);
+      state = setDeliveredCount(state, sessionID, messageCount);
     }
-    state.deleteNudgedSession(sessionID);
+    return deleteNudgedSession(state, sessionID);
   } catch (error) {
     if (isAbortEventError(error)) {
-      state.stopSession(sessionID);
+      return stopSession(state, sessionID);
     } else if (isSessionBusyError(error)) {
-      state.deleteNudgedSession(sessionID);
+      return deleteNudgedSession(state, sessionID);
     } else {
-      state.addRetryPendingSession(sessionID);
-      state.deleteNudgedSession(sessionID);
+      state = addRetryPendingSession(state, sessionID);
+      return deleteNudgedSession(state, sessionID);
     }
   }
 }

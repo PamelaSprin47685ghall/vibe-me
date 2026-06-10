@@ -7,7 +7,7 @@ import {
   clearReviewSessions,
   setPendingReview,
 } from './session-registry.js';
-import type { ReviewState, ReviewResult } from './session-types.js';
+import type { ReviewResult } from './session-node.js';
 
 describe('ReviewSessionNode Aggregate', () => {
   beforeEach(() => {

@@ -1,11 +1,23 @@
 import type { AbortSuppressor } from '../util/abort.js';
-import { STATE_TRANSITIONS } from './session-types.js';
-import type { ReviewState, ReviewEvent, ReviewResult } from './session-types.js';
+import {
+  type ReviewState as ADTState,
+  type ReviewCommand,
+  inactive,
+  activateCommand,
+  matchReviewState,
+} from '../types/review.js';
+import { transition as pureTransition } from './state.js';
+
+export interface ReviewResult {
+  readonly accepted: boolean;
+  readonly feedback?: string;
+  readonly terminated?: boolean;
+}
 
 export class ReviewSessionNode implements Disposable {
-  #state: ReviewState = 'Idle';
-  
-  get state(): ReviewState { return this.#state; }
+  #state: ADTState = inactive;
+
+  get state(): ADTState { return this.#state; }
   readonly createdAt = Date.now();
   originalTask?: string;
   lastFeedback?: string | null;
@@ -16,22 +28,27 @@ export class ReviewSessionNode implements Disposable {
 
   constructor(public readonly id: string) {}
 
-  transition(event: ReviewEvent): boolean {
-    const nextState = STATE_TRANSITIONS[this.#state]?.[event];
-    if (!nextState) return false;
+  transition(command: ReviewCommand): boolean {
+    const [nextState, _event] = pureTransition(this.#state, command);
+    if (nextState === this.#state) return false;
     this.#state = nextState;
-    this.#onTransition(event, nextState);
+    this.#onTransition(nextState);
     return true;
   }
 
-  #onTransition(_event: ReviewEvent, newState: ReviewState): void {
-    if (newState === 'Completed') this.completeResolution();
+  #onTransition(newState: ADTState): void {
+    matchReviewState(newState, {
+      Inactive: () => {},
+      Active: () => {},
+      Locked: () => {},
+      Completed: () => this.completeResolution(),
+    });
   }
 
   activate(task: string): void {
     this.originalTask = task;
-    if (!this.transition('ACTIVATE')) {
-      throw new Error(`Cannot activate from ${this.state}`);
+    if (!this.transition(activateCommand(task))) {
+      throw new Error(`Cannot activate from ${this.state._tag}`);
     }
   }
 
