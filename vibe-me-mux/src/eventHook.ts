@@ -1,6 +1,12 @@
 import type { JobRegistry } from "engine/runner";
 import type { NudgeInputContext } from "engine/todo";
-import type { PluginEventHook } from "./types/tool.js";
+import type { PluginEvent, PluginEventHelpers, PluginEventHook } from "./types/tool.js";
+import {
+  extractLastAssistantMessage,
+  selectNudgePrompt,
+  createStreamEndState,
+  type StreamEndState,
+} from "./eventHook/stream-end.js";
 
 export interface EventHookDeps {
   cleanupRegistry: (registry: JobRegistry, id: string) => void;
@@ -18,123 +24,105 @@ export interface EventHookDeps {
   LOOP_NUDGE_PROMPT: string;
 }
 
-export function createEventHook(deps: EventHookDeps): PluginEventHook {
-  const {
-    cleanupRegistry,
-    globalJobRegistry,
-    deactivateReview,
-    isReviewActive,
-    clearIteratorScope,
-    coordinator,
-    hasActiveJob,
-    buildRunnerNudgePrompt,
-    TODO_NUDGE_PROMPT,
-    LOOP_NUDGE_PROMPT,
-  } = deps;
+async function handleStreamEnd(
+  state: StreamEndState,
+  deps: EventHookDeps,
+  event: PluginEvent,
+  helpers: PluginEventHelpers | undefined,
+  workspaceId: string,
+): Promise<void> {
+  const muxStopReason = (event.properties as { metadata?: { muxStopReason?: string } } | undefined)?.metadata
+    ?.muxStopReason;
+  if (muxStopReason === "queued-message") return;
+  if (!helpers) return;
 
-  const runnerNudgedWorkspaces = new Set<string>();
-  const stoppedWorkspaces = new Set<string>();
-  const retryPendingWorkspaces = new Set<string>();
-  const deliveredCounts = new Map<string, number>();
-  const lastNudgeSignature = new Map<string, string>();
+  const parts = (event.properties as { parts?: Array<{ type: string; text?: string }> })?.parts ?? [];
+  const lastAssistantMessage = extractLastAssistantMessage(parts);
+  const hasActiveRunner = deps.hasActiveJob(workspaceId);
+
+  if (!hasActiveRunner) {
+    state.runnerNudgedWorkspaces.delete(workspaceId);
+    state.lastNudgeSignature.delete(workspaceId);
+  }
+
+  if (state.stoppedWorkspaces.has(workspaceId)) return;
+
+  const prompts = {
+    todo: deps.TODO_NUDGE_PROMPT,
+    loop: deps.LOOP_NUDGE_PROMPT,
+    runner: deps.buildRunnerNudgePrompt,
+  };
+
+  if (hasActiveRunner) {
+    const action = deps.coordinator.shouldNudge(workspaceId, {
+      todos: [],
+      lastAssistantMessage,
+      hasActiveRunner: true,
+      isLoopActive: false,
+    });
+    if (action !== "nudge-runner" || state.runnerNudgedWorkspaces.has(workspaceId)) return;
+
+    const signature = `runner:${lastAssistantMessage.slice(0, 200)}`;
+    if (state.lastNudgeSignature.get(workspaceId) === signature) return;
+    try {
+      if (await helpers.nudge(workspaceId, deps.buildRunnerNudgePrompt())) {
+        state.runnerNudgedWorkspaces.add(workspaceId);
+        state.lastNudgeSignature.set(workspaceId, signature);
+        state.deliveredCounts.set(workspaceId, (state.deliveredCounts.get(workspaceId) ?? 0) + 1);
+      }
+    } catch {}
+    return;
+  }
+
+  let todos: readonly string[];
+  try {
+    todos = (await helpers.getTodos(workspaceId)) ?? [];
+  } catch {
+    return;
+  }
+
+  const action = deps.coordinator.shouldNudge(workspaceId, {
+    todos,
+    lastAssistantMessage,
+    hasActiveRunner,
+    isLoopActive: deps.isReviewActive(workspaceId),
+  });
+  const promptText = selectNudgePrompt(action, prompts);
+  if (!promptText) return;
+
+  const signature = `${todos.length}:${lastAssistantMessage.slice(0, 200)}`;
+  if (state.lastNudgeSignature.get(workspaceId) === signature) return;
+
+  try {
+    await helpers.nudge(workspaceId, promptText);
+    state.lastNudgeSignature.set(workspaceId, signature);
+    state.deliveredCounts.set(workspaceId, (state.deliveredCounts.get(workspaceId) ?? 0) + 1);
+  } catch {}
+}
+
+export function createEventHook(deps: EventHookDeps): PluginEventHook {
+  const state = createStreamEndState();
 
   return async (event, helpers) => {
     const { type, workspaceId } = event;
     if (!workspaceId) return;
 
     switch (type) {
-      case "stream-end": {
-        const muxStopReason = (event.properties as { metadata?: { muxStopReason?: string } } | undefined)?.metadata
-          ?.muxStopReason;
-        if (muxStopReason === "queued-message") break;
-
-        if (!helpers) break;
-
-        const parts = (event.properties as { parts?: Array<{ type: string; text?: string }> })?.parts ?? [];
-        const lastAssistantMessage = parts
-          .filter((part) => part.type === "text" && part.text)
-          .map((part) => part.text!)
-          .join("\n");
-        const hasActiveRunner = hasActiveJob(workspaceId);
-
-        if (!hasActiveRunner) {
-          runnerNudgedWorkspaces.delete(workspaceId);
-          lastNudgeSignature.delete(workspaceId);
-        }
-
-        if (stoppedWorkspaces.has(workspaceId)) break;
-
-        if (hasActiveRunner) {
-          const context: NudgeInputContext = {
-            todos: [],
-            lastAssistantMessage,
-            hasActiveRunner: true,
-            isLoopActive: false,
-          };
-          const action = coordinator.shouldNudge(workspaceId, context);
-
-          if (action === "nudge-runner" && !runnerNudgedWorkspaces.has(workspaceId)) {
-            const signature = `runner:${lastAssistantMessage.slice(0, 200)}`;
-            if (lastNudgeSignature.get(workspaceId) === signature) break;
-            try {
-              if (await helpers.nudge(workspaceId, buildRunnerNudgePrompt())) {
-                runnerNudgedWorkspaces.add(workspaceId);
-                lastNudgeSignature.set(workspaceId, signature);
-                deliveredCounts.set(workspaceId, (deliveredCounts.get(workspaceId) ?? 0) + 1);
-              }
-            } catch {}
-          }
-
-          break;
-        }
-
-        let todos: readonly string[];
-        try {
-          todos = (await helpers.getTodos(workspaceId)) ?? [];
-        } catch {
-          break;
-        }
-
-        const context: NudgeInputContext = {
-          todos,
-          lastAssistantMessage,
-          hasActiveRunner,
-          isLoopActive: isReviewActive(workspaceId),
-        };
-
-        const action = coordinator.shouldNudge(workspaceId, context);
-        const promptText =
-          action === "nudge-todo"
-            ? TODO_NUDGE_PROMPT
-            : action === "nudge-loop"
-              ? LOOP_NUDGE_PROMPT
-              : action === "nudge-runner"
-                ? buildRunnerNudgePrompt()
-                : null;
-        if (!promptText) break;
-
-        const signature = `${todos.length}:${lastAssistantMessage.slice(0, 200)}`;
-        if (lastNudgeSignature.get(workspaceId) === signature) break;
-
-        try {
-          await helpers.nudge(workspaceId, promptText);
-          lastNudgeSignature.set(workspaceId, signature);
-          deliveredCounts.set(workspaceId, (deliveredCounts.get(workspaceId) ?? 0) + 1);
-        } catch {}
+      case "stream-end":
+        await handleStreamEnd(state, deps, event, helpers, workspaceId);
         break;
-      }
       case "stream-abort":
-        cleanupRegistry(globalJobRegistry, workspaceId);
-        deactivateReview(workspaceId);
-        clearIteratorScope(workspaceId);
-        runnerNudgedWorkspaces.delete(workspaceId);
-        stoppedWorkspaces.add(workspaceId);
-        retryPendingWorkspaces.delete(workspaceId);
+        deps.cleanupRegistry(deps.globalJobRegistry, workspaceId);
+        deps.deactivateReview(workspaceId);
+        deps.clearIteratorScope(workspaceId);
+        state.runnerNudgedWorkspaces.delete(workspaceId);
+        state.stoppedWorkspaces.add(workspaceId);
+        state.retryPendingWorkspaces.delete(workspaceId);
         break;
       case "error":
         if ((event.properties as { readonly errorType?: string } | undefined)?.errorType === "aborted") {
-          coordinator.suppress(workspaceId);
-          stoppedWorkspaces.add(workspaceId);
+          deps.coordinator.suppress(workspaceId);
+          state.stoppedWorkspaces.add(workspaceId);
         }
         break;
     }

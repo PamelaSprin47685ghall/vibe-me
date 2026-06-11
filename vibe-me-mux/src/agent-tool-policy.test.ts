@@ -54,16 +54,16 @@ describe("getPluginToolPolicy", () => {
     expect(enabled.has("bash")).toBe(false);
   });
 
-  test("editor keeps delegated runner but not direct bash or other subagent tools", () => {
+  test("editor loses runner along with direct bash and other subagent tools", () => {
     const remove = removePatternsFor("editor");
     const enabled = enabledToolNamesFor("editor");
 
-    expect(remove.has("runner")).toBe(false);
+    expect(remove.has("runner")).toBe(true);
     expect(remove.has("bash")).toBe(true);
     expect(remove.has("bash_.*")).toBe(true);
     expect(remove.has("browser")).toBe(true);
     expect(remove.has("file_edit_.*")).toBe(false);
-    expect(enabled.has("runner")).toBe(true);
+    expect(enabled.has("runner")).toBe(false);
     expect(enabled.has("bash")).toBe(false);
     expect(enabled.has("bash_output")).toBe(false);
     expect(enabled.has("file_edit_replace_string")).toBe(true);
