@@ -2,7 +2,7 @@ import { describe, expect, test, mock } from "bun:test";
 import { createTodoWriteNudgeWrapper } from "./todoWriteNudge.js";
 import type { ToolLike } from "../types/contract.js";
 
-const NUDGE = "// Think thrice before acting — consider calling reverie tool to improve reasoning";
+const NUDGE = "// Think thrice before acting — NOW consider calling reverie tool to improve reasoning";
 
 function makeBaseTool(executeResult: unknown): ToolLike {
   return {
