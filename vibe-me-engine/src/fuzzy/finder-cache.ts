@@ -1,1 +1,0 @@
-export { getCachedFinder as obtainFinder, destroyFinder as releaseFinder, destroyAllFinders as releaseAll } from './finder-registry.js';

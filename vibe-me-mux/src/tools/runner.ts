@@ -6,6 +6,7 @@ import type { HostDependencies } from "../types/deps.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 import { RUNNER_TOOLS } from "engine";
 import type { JobEntry } from "engine/runner";
+import { buildMuxRunnerPrompt } from "./runner-prompt.js";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -69,48 +70,10 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
         cwd: config.cwd,
       });
 
-      const depInfo = a.dependencies?.length
-        ? `Dependencies: ${a.dependencies.join(", ")}`
-        : "";
-
-      const prompt = execResult.background
-        ? [
-            `The following ${a.language ?? "shell"} program has been executed.`,
-            "",
-            "任务已转入后台。",
-            "",
-            "Program:",
-            a.program,
-            depInfo && `\n${depInfo}`,
-            "",
-            `What to summarize: ${a.what_to_summarize}`,
-            "",
-            `Initial output (first 5 seconds):`,
-            execResult.output,
-            "",
-            `Job ID: ${execResult.jobId}`,
-            "",
-            "You can use runner_wait to check for new output from the running process " +
-              "by passing the above jobId. Make sure to keep waiting until the task completes.",
-          ]
-            .filter(Boolean)
-            .join("\n")
-        : [
-            `The following ${a.language ?? "shell"} program has been executed.`,
-            "",
-            "Task completed.",
-            "",
-            "Program:",
-            a.program,
-            depInfo && `\n${depInfo}`,
-            "",
-            `What to summarize: ${a.what_to_summarize}`,
-            "",
-            "Execution output:",
-            execResult.output,
-          ]
-            .filter(Boolean)
-            .join("\n");
+      const prompt = buildMuxRunnerPrompt(
+        { language: a.language ?? "shell", program: a.program, dependencies: a.dependencies, whatToSummarize: a.what_to_summarize },
+        { output: execResult.output, background: execResult.background, jobId: execResult.jobId },
+      );
 
       const aiSettings = await resolveDelegatedAgentAiSettings(config, "explore");
       const createResult = await taskService.create({

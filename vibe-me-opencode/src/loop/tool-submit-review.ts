@@ -48,30 +48,16 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
       }
 
       try {
-        const parts: Array<{ type: 'text'; text: string }> = [];
-
-        parts.push({
-          type: 'text',
-          text: REVIEW_INSTRUCTIONS,
-        });
-
-        parts.push({
-          type: 'text',
-          text: `=== Change Report ===\n\n${args.report}`,
-        });
-
-        parts.push({
-          type: 'text',
-          text: `=== Affected Files ===\n\n${args.affectedFiles.join('\n')}`,
-        });
-
         const task = getReviewTask(sessionID);
-        if (task) {
-          parts.push({
-            type: 'text',
-            text: `=== Original Task ===\n\n${task}`,
-          });
-        }
+        const sections = [
+          REVIEW_INSTRUCTIONS,
+          `=== Change Report ===\n\n${args.report}`,
+          `=== Affected Files ===\n\n${args.affectedFiles.join('\n')}`,
+          task ? `=== Original Task ===\n\n${task}` : null,
+        ];
+        const parts: Array<{ type: 'text'; text: string }> = sections
+          .filter((text): text is string => text !== null)
+          .map((text) => ({ type: 'text' as const, text }));
 
         const parentID = resolveSubsessionParentID(sessionID);
         const createResult = await client.session.create({

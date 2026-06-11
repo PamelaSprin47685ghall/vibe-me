@@ -58,10 +58,6 @@ export function unlockReview(sessionID: string): void {
   registry = reduce(registry, { type: 'unlock', id: sessionID });
 }
 
-export function releaseReviewLock(sessionID: string): void {
-  registry = reduce(registry, { type: 'accept', id: sessionID });
-}
-
 export function setPendingReview(sessionID: string, resolve: (result: ReviewResult) => void): void {
   effects.pendingResolutions.set(sessionID, resolve);
 }
@@ -76,15 +72,6 @@ export function resolvePendingReview(sessionID: string, result: ReviewResult): b
   return resolvePending(effects, sessionID, result);
 }
 
-export function completeReview(sessionID: string, result: ReviewResult): void {
-  const action = matchReviewResult<RegistryAction>(result,
-    () => ({ type: 'accept', id: sessionID }),
-    (feedback) => ({ type: 'reject', id: sessionID, feedback }),
-    () => ({ type: 'deactivate', id: sessionID }),
-  );
-  registry = reduce(registry, action);
-}
-
 export function getReviewTask(sessionID: string): string | undefined {
   return taskOf(registry, sessionID);
 }
@@ -93,18 +80,10 @@ export function getReviewState(sessionID: string) {
   return stateOf(registry, sessionID);
 }
 
-export function getLastFeedback(sessionID: string): string | undefined {
-  return registry.get(sessionID)?.lastFeedback;
-}
-
 export function isReviewActive(sessionID: string): boolean {
   return sessionIsActive(registry, sessionID);
 }
 
 export function addChild(parentID: string, childID: string): void {
   registry = reduce(registry, { type: 'addChild', parentId: parentID, childId: childID });
-}
-
-export function setLastFeedback(sessionID: string, feedback: string | null): void {
-  registry = reduce(registry, { type: 'setFeedback', id: sessionID, feedback });
 }

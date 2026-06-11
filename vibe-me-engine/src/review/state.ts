@@ -80,16 +80,6 @@ export function isActive(state: ReviewState): boolean {
   });
 }
 
-export function canStartReview(state: ReviewState): boolean {
-  return matchReviewState(state, {
-    Inactive: () => true,
-    Active: () => false,
-    Locked: () => false,
-    Accepted: () => false,
-    Rejected: () => false,
-  });
-}
-
 export function createInitialState(): ReviewState {
   return inactive;
 }

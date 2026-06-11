@@ -37,9 +37,7 @@ export {
 };
 export type { NudgeAction, NudgeContext, NudgeCoordinatorState, SessionNudgeState };
 
-export const TODO_NUDGE_CHECK_TAG = '<skip-todo-check />';
 export const TERMINAL_TODO_STATUSES: ReadonlySet<string> = new Set(['completed', 'cancelled', 'abandoned']);
-export function hasOpenTodos(todos: readonly string[]): boolean { return todos.length > 0; }
 
 export class NudgeCoordinator {
   private state = createNudgeCoordinatorState();
@@ -63,6 +61,5 @@ export class NudgeCoordinator {
 }
 
 export const defaultCoordinator = new NudgeCoordinator();
-export function clearNudgeSession(sessionId: string): void { defaultCoordinator.clearSession(sessionId); }
 
 export type { NudgeContext as NudgeInputContext };
