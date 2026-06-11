@@ -35,10 +35,22 @@ export function createHooks(
       nudgeHook.handleChatMessage({ sessionID: input.sessionID, agent, parts: output.parts });
       const defaults = isAgentRole(agent) ? getAgentToolDefaults(agent) : null;
       if (!defaults) return;
-      output.message.tools = mergeTools(
+      const tools = mergeTools(
         output.message.tools as Record<string, unknown> | undefined,
-        defaults
+        defaults,
       );
+      if (agent !== 'browser') {
+        const existing = output.message.tools as Record<string, unknown> | undefined;
+        if (existing) {
+          for (const key of Object.keys(existing)) {
+            if (key.startsWith('stealth-browser-mcp_')) {
+              tools[key] = false;
+            }
+          }
+        }
+        tools['stealth-browser-mcp_*'] = false;
+      }
+      output.message.tools = tools;
     },
 
     'experimental.chat.messages.transform': async (
