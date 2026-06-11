@@ -6,7 +6,7 @@ interface ReverieToolArgs {
   readonly files: readonly string[];
 }
 import type { HostDependencies } from "../types/deps.js";
-import { AGENT_POLICIES } from "engine/agent-policy";
+import { REVERIE_TOOLS } from "engine/agent-policy";
 import { delegateToSubAgent } from "./delegate.js";
 import { readReverieFiles } from "engine/reverie-files";
 
@@ -52,7 +52,7 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "reverie",
           toolPolicy: {
-            disabledTools: [...AGENT_POLICIES.reverie.disabledTools],
+            disabledTools: [...REVERIE_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
           },
         },
       });

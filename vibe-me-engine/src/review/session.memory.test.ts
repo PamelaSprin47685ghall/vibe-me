@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import {
+  type ReviewResult,
   activateReview,
   deactivateReview,
   addChild,
@@ -23,14 +24,14 @@ describe('Review Session Memory Leak Prevention', () => {
       addChild(parentID, childID);
     }
 
-    const resolversCalled: { terminated?: boolean }[] = [];
+    const resolversCalled: ReviewResult[] = [];
     for (const childID of childrenIDs) {
       setPendingReview(childID, (result) => resolversCalled.push(result));
     }
 
     deactivateReview(parentID);
     expect(resolversCalled.length).toBe(100);
-    for (const result of resolversCalled) expect(result.terminated).toBe(true);
+    for (const result of resolversCalled) expect(result._tag).toBe('Terminated');
   });
 
   it('handles deep child hierarchies', () => {

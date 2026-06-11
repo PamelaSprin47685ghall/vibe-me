@@ -1,7 +1,7 @@
 export const REVIEW_CRITERIA = `# Evaluation Criteria
 
 1. Does the implementation make full use of language features? Are the correct algorithms and data structures used?
-2. Is the implementation no more complex than necessary?
+2. Is the implementation no more complex than necessary? Are there any garbage code, dead code, legacy compatible wrappers or unnecessary workarounds?
 3. Is the program structure elegant and free of redundancy?
 4. Are there no oversized files, overly long functions, or avoidable complexity?
 5. Are there necessary unit or integration tests?
@@ -30,7 +30,4 @@ export const REVIEWER_NUDGE_PROMPT =
   '  submit_review_result({ "feedback": null })          // Accept\n' +
   '  submit_review_result({ "feedback": "details..." })  // Reject\n\n' +
   'Do not explain what you plan to do — call the tool immediately.';
-
-export { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from '../todo/index.js';
-
 

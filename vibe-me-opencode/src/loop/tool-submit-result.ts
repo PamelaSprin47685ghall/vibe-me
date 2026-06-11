@@ -1,6 +1,6 @@
 import type { ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { resolvePendingReview } from 'engine/review';
+import { accepted, rejected, resolvePendingReview } from 'engine/review';
 
 export function createSubmitReviewResultTool(): ToolDefinition {
   return tool({
@@ -26,10 +26,8 @@ export function createSubmitReviewResultTool(): ToolDefinition {
             ? null
             : args.feedback;
 
-      const resolved = resolvePendingReview(context.sessionID, {
-        accepted: feedback == null,
-        feedback: feedback ?? undefined,
-      });
+      const result = feedback == null ? accepted : rejected(feedback);
+      const resolved = resolvePendingReview(context.sessionID, result);
       if (!resolved) {
         return 'Error: No pending review to resolve.';
       }

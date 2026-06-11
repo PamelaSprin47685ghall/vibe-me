@@ -2,6 +2,7 @@ import type { JobRecord } from './job-data.js';
 import { markAborted } from './job-data.js';
 import type { JobHandles } from './job-effects.js';
 import { releaseHandles, cleanupFiles } from './job-effects.js';
+import { running } from '../types/runner/status.js';
 
 export interface JobEntry {
   record: JobRecord;
@@ -11,7 +12,7 @@ export interface JobEntry {
 export type JobRegistry = Map<string, JobEntry>;
 
 function disposeEntry(entry: JobEntry): void {
-  if (entry.record.status === 'running') {
+  if (entry.record.status._tag === running._tag) {
     entry.record = markAborted(entry.record);
   }
   releaseHandles(entry.handles);

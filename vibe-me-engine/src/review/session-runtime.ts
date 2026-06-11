@@ -1,6 +1,10 @@
-import type { ReviewResult } from './session-node.js';
+import { type ReviewResult, matchReviewResult } from './session-node.js';
+
+export type { ReviewResult, Accepted, Rejected, Terminated } from './session-node.js';
+export { accepted, rejected, terminated, matchReviewResult } from './session-node.js';
 import {
   type SessionRegistry,
+  type RegistryAction,
   emptyRegistry,
   reduce,
   sessionIsActive,
@@ -19,8 +23,8 @@ import { lockCommand } from '../types/review.js';
 let registry: SessionRegistry = emptyRegistry();
 let effects: SessionEffects = emptyEffects();
 
-export function activateReview(sessionID: string, task: string): void {
-  registry = reduce(registry, { type: 'activate', id: sessionID, task });
+export function activateReview(sessionID: string, task: string, createdAt: number = Date.now()): void {
+  registry = reduce(registry, { type: 'activate', id: sessionID, task, createdAt });
 }
 
 function allDescendantIds(sessionId: string): string[] {
@@ -55,7 +59,7 @@ export function unlockReview(sessionID: string): void {
 }
 
 export function releaseReviewLock(sessionID: string): void {
-  registry = reduce(registry, { type: 'complete', id: sessionID, accepted: true });
+  registry = reduce(registry, { type: 'accept', id: sessionID });
 }
 
 export function setPendingReview(sessionID: string, resolve: (result: ReviewResult) => void): void {
@@ -63,12 +67,22 @@ export function setPendingReview(sessionID: string, resolve: (result: ReviewResu
 }
 
 export function resolvePendingReview(sessionID: string, result: ReviewResult): boolean {
-  registry = reduce(registry, { type: 'complete', id: sessionID, accepted: result.accepted, feedback: result.feedback });
+  const action = matchReviewResult<RegistryAction>(result,
+    () => ({ type: 'accept', id: sessionID }),
+    (feedback) => ({ type: 'reject', id: sessionID, feedback }),
+    () => ({ type: 'deactivate', id: sessionID }),
+  );
+  registry = reduce(registry, action);
   return resolvePending(effects, sessionID, result);
 }
 
 export function completeReview(sessionID: string, result: ReviewResult): void {
-  registry = reduce(registry, { type: 'complete', id: sessionID, accepted: result.accepted, feedback: result.feedback });
+  const action = matchReviewResult<RegistryAction>(result,
+    () => ({ type: 'accept', id: sessionID }),
+    (feedback) => ({ type: 'reject', id: sessionID, feedback }),
+    () => ({ type: 'deactivate', id: sessionID }),
+  );
+  registry = reduce(registry, action);
 }
 
 export function getReviewTask(sessionID: string): string | undefined {

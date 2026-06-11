@@ -4,7 +4,7 @@ interface BrowserToolArgs {
   readonly intent: string;
 }
 import type { HostDependencies } from "../types/deps.js";
-import { AGENT_POLICIES } from "engine/agent-policy";
+import { BROWSER_TOOLS } from "engine/agent-policy";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -33,7 +33,7 @@ export function createBrowserTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "browser",
           toolPolicy: {
-            disabledTools: [...AGENT_POLICIES.browser.disabledTools],
+            disabledTools: [...BROWSER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
           },
         },
       });

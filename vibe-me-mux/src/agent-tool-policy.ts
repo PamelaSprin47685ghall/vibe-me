@@ -1,7 +1,7 @@
 import {
-  AGENT_POLICIES,
+  getAgentTools,
+  computeDefaultPermissions,
   agentRoleFromString,
-  agentRoleToString,
 } from "engine/agent-policy";
 
 export interface MuxPluginToolPolicy {
@@ -55,17 +55,21 @@ export function getPluginToolPolicy(
   const roleResult = agentRoleFromString(role || "orchestrator");
   if (roleResult._tag === "Err") return undefined;
 
-  const policy = AGENT_POLICIES[agentRoleToString(roleResult.value) as keyof typeof AGENT_POLICIES];
-  if (!policy) return undefined;
+  const toolMap = getAgentTools(roleResult.value);
+  const permMap = computeDefaultPermissions(roleResult.value);
 
-  const deniedPermissionNames = Object.entries(policy.permissions)
-    .filter(([, permission]) => permission === "deny")
-    .map(([name]) => name);
+  const disabledToolNames = [...toolMap.entries()]
+    .filter(([, p]) => p._tag === 'Deny')
+    .map(([n]) => n);
+
+  const deniedPermissionNames = [...permMap.entries()]
+    .filter(([, p]) => p._tag === 'Deny')
+    .map(([n]) => n);
 
   return {
     add: [],
     remove: expandMuxToolPatterns([
-      ...policy.disabledTools,
+      ...disabledToolNames,
       ...deniedPermissionNames,
     ]),
   };

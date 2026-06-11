@@ -96,14 +96,14 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
           abortSignal,
         );
 
-        if (result.feedback == null) {
+        if (result._tag === 'Accepted') {
           deactivateReview(sessionID);
           return 'Review passed. Your changes have been accepted. loop mode has ended.';
         }
 
-        if (result.terminated) {
+        if (result._tag === 'Terminated') {
           deactivateReview(sessionID);
-          return `Review terminated: ${result.feedback}`;
+          return 'Review terminated.';
         }
 
         return `Review feedback:\n\n${result.feedback}\n\nAddress the feedback above. loop mode is still active — fix the issues and call submit_review again.`;

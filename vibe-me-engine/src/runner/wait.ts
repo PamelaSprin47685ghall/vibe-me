@@ -8,12 +8,12 @@ export async function wait(options: WaitOptions): Promise<WaitResult> {
   if (!entry) return { output: '', completed: true, message: '[System] No active job — it has already finished or was cleaned up.' };
 
   const { record } = entry;
-  if (record.status === 'completed' || record.status === 'aborted') {
+  if (record.status._tag === 'Completed' || record.status._tag === 'Aborted') {
     const newOutput = truncateTail(record.finalOutput.substring(record.bytesRead), MAX_OUTPUT_BYTES).trim();
     cleanupJob(sessionId);
     return {
       output: newOutput, completed: true,
-      message: record.status === 'completed' ? '[System] Task has completed.' : '[System] Task was aborted.',
+      message: record.status._tag === 'Completed' ? '[System] Task has completed.' : '[System] Task was aborted.',
     };
   }
 
@@ -22,9 +22,9 @@ export async function wait(options: WaitOptions): Promise<WaitResult> {
   const newOutput = record.finalOutput.substring(record.bytesRead).trim();
   entry.record = { ...record, bytesRead: record.finalOutput.length };
 
-  if (entry.record.status !== 'running') {
+  if (entry.record.status._tag !== 'Running') {
     cleanupJob(sessionId);
-    return { output: newOutput || '(no new output)', completed: true, message: entry.record.status === 'completed' ? '[System] Task has completed.' : '[System] Task was aborted.' };
+    return { output: newOutput || '(no new output)', completed: true, message: entry.record.status._tag === 'Completed' ? '[System] Task has completed.' : '[System] Task was aborted.' };
   }
 
   if (!newOutput) {

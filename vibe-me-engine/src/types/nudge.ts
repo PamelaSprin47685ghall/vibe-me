@@ -1,4 +1,4 @@
-import { Result, ok, err } from './general.js';
+import { Result, ok, err, Maybe, none } from './general.js';
 
 export type NudgeTodo = { readonly _tag: 'NudgeTodo' };
 export type NudgeLoop = { readonly _tag: 'NudgeLoop' };
@@ -55,14 +55,10 @@ export type NudgeContext = {
   readonly isLoopActive: boolean;
 };
 
-export function createNudgeContext(params: NudgeContext): NudgeContext {
-  return { ...params };
-}
-
-export type TimestampKey = 'todoAt' | 'loopAt' | 'runnerAt' | 'lastIndex';
+export type TimestampKey = 'todoAt' | 'loopAt' | 'runnerAt';
 
 // Compile-time guard: every NudgeAction maps to a valid TimestampKey.
-const _timestampKeyMap = {
+const timestampKeyMap = {
   NudgeTodo: 'todoAt',
   NudgeLoop: 'loopAt',
   NudgeRunner: 'runnerAt',
@@ -71,7 +67,7 @@ const _timestampKeyMap = {
 
 /** Look up the throttle-tracking key for a given action. */
 export function timestampKeyForAction(action: NudgeAction): TimestampKey {
-  return _timestampKeyMap[action._tag];
+  return timestampKeyMap[action._tag];
 }
 
 
@@ -79,14 +75,14 @@ export type SessionNudgeState = {
   readonly todoAt: number;
   readonly loopAt: number;
   readonly runnerAt: number;
-  readonly lastIndex: number;
+  readonly lastIndex: Maybe<number>;
 };
 
 export const freshSessionNudgeState: SessionNudgeState = {
   todoAt: 0,
   loopAt: 0,
   runnerAt: 0,
-  lastIndex: -1,
+  lastIndex: none,
 };
 
 export type NudgeCoordinatorState = {

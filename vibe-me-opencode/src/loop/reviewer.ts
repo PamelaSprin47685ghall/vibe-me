@@ -3,23 +3,24 @@ import {
   deactivateReview,
   REVIEWER_NUDGE_PROMPT,
   setPendingReview,
+  terminated,
+  type ReviewResult,
 } from 'engine/review';
 import { isAbortError } from 'engine/util';
 import { promptWithAbort } from '../utils/abort-signal';
-import { extractSessionText } from '../utils/session-messages';
 import { GRACE_TIMEOUT, MAX_REVIEWER_NUDGES, REVIEWER_GRACE_MS } from './constants';
-import { createDeferred, type ReviewResult } from './types';
+import { createDeferred } from './types';
 
 export async function runReviewerWithNudge(
   client: PluginInput['client'],
   childID: string,
   parts: Array<{ type: 'text'; text: string }>,
-  directory?: string,
+  _directory?: string,
   abortSignal?: AbortSignal,
 ): Promise<ReviewResult> {
   if (abortSignal?.aborted) {
     deactivateReview(childID);
-    return { accepted: false, feedback: 'Review aborted.', terminated: true };
+    return terminated;
   }
 
   const deferred = createDeferred<ReviewResult>();
@@ -30,7 +31,7 @@ export async function runReviewerWithNudge(
   while (true) {
     if (abortSignal?.aborted) {
       deactivateReview(childID);
-      return { accepted: false, feedback: 'Review aborted.', terminated: true };
+      return terminated;
     }
 
     const iterAbort = new AbortController();
@@ -71,20 +72,9 @@ export async function runReviewerWithNudge(
     if (result.type === 'error') {
       deactivateReview(childID);
       if (isAbortError(result.error)) {
-        return {
-          accepted: false,
-          feedback: 'Review aborted.',
-          terminated: true,
-        };
+        return terminated;
       }
-      return {
-        accepted: false,
-        feedback:
-          result.error instanceof Error
-            ? result.error.message
-            : String(result.error),
-        terminated: true,
-      };
+      return terminated;
     }
 
     const graceResult = await Promise.race([
@@ -102,13 +92,7 @@ export async function runReviewerWithNudge(
     nudgeCount++;
     if (nudgeCount >= MAX_REVIEWER_NUDGES) {
       deactivateReview(childID);
-      const text = await extractSessionText(client, childID, directory);
-      return {
-        accepted: false,
-        feedback:
-          text || 'Reviewer failed to complete review after multiple attempts.',
-        terminated: true,
-      };
+      return terminated;
     }
   }
 }

@@ -82,7 +82,7 @@ export async function nudgeIfNeeded(
     promptText = LOOP_NUDGE_PROMPT;
   } else if (action === 'nudge-runner') {
     const jobs = globalJobRegistry;
-    const isSelfJob = jobs.get(sessionID)?.record.status === 'running';
+    const isSelfJob = jobs.get(sessionID)?.record.status._tag === 'Running';
     if (!isSelfJob) {
       return deleteNudgedSession(state, sessionID);
     }

@@ -4,7 +4,7 @@ interface EditorToolArgs {
   readonly intents: readonly string[];
 }
 import type { HostDependencies } from "../types/deps.js";
-import { AGENT_POLICIES } from "engine";
+import { EDITOR_TOOLS } from "engine";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -40,7 +40,7 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "editor" as const,
           toolPolicy: {
-            disabledTools: [...AGENT_POLICIES.editor.disabledTools],
+            disabledTools: [...EDITOR_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
           },
         },
       };

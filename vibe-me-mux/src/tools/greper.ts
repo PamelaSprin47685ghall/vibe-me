@@ -4,7 +4,7 @@ interface GreperToolArgs {
   readonly intents: readonly string[];
 }
 import type { HostDependencies } from "../types/deps.js";
-import { AGENT_POLICIES } from "engine/agent-policy";
+import { GREPER_TOOLS } from "engine/agent-policy";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -40,7 +40,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "greper" as const,
           toolPolicy: {
-            disabledTools: [...AGENT_POLICIES.greper.disabledTools],
+            disabledTools: [...GREPER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
           },
         },
       };

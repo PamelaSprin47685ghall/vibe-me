@@ -1,7 +1,7 @@
 import {
   type AgentRole,
-  applyUniversalPermissionDeny,
-  isAgentRole,
+  agentRoleFromString,
+  computeDefaultPermissions,
 } from 'engine/agent-policy';
 import { getBrowserConfig } from './browser/index.js';
 import { getEditorConfig } from './editor/index.js';
@@ -81,21 +81,18 @@ export function applyAgentConfig(opencodeConfig: Record<string, unknown>, mcps: 
     const agent = entry as Record<string, unknown>;
     const perm =
       (agent.permission as Record<string, string> | undefined) ?? {};
-    if (isAgentRole(name)) {
-      const defaults = getAgentPermissionDefaults(name);
-      for (const [key, value] of Object.entries(defaults)) {
-        if (perm[key] === undefined) perm[key] = value;
-      }
-      applyUniversalPermissionDeny(name, perm);
-    } else {
-      applyUniversalPermissionDeny('runner', perm);
+    const roleResult = agentRoleFromString(name);
+    const effectiveRole: AgentRole = roleResult._tag === 'Ok' ? roleResult.value : { _tag: 'Runner' };
+    const permDefaults = computeDefaultPermissions(effectiveRole);
+    for (const [key, value] of permDefaults) {
+      if (perm[key] === undefined) perm[key] = value._tag === 'Allow' ? 'allow' : 'deny';
     }
     if (perm['stealth-browser-mcp_star'] !== undefined) {
       perm['stealth-browser-mcp_*'] = perm['stealth-browser-mcp_star'];
     }
     agent.permission = perm;
 
-    if (isAgentRole(name)) {
+    if (roleResult._tag === 'Ok') {
       agent.tools = mergeTools(
         agent.tools as Record<string, unknown> | undefined,
         getAgentToolDefaults(name),

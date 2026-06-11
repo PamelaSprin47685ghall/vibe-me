@@ -1,4 +1,6 @@
-export type JobStatus = 'running' | 'completed' | 'aborted';
+import { type JobStatus, running, completed, aborted } from '../types/runner/status.js';
+
+export type { JobStatus };
 
 export const MAX_OUTPUT_BYTES = 1024 * 1024;
 
@@ -23,7 +25,7 @@ export function emptyJob(
   return {
     sessionId, stdoutFile, projectDir, parentSessionId,
     startTime: Date.now(),
-    status: 'running',
+    status: running,
     bytesRead: 0,
     finalOutput: '',
     taskId: undefined,
@@ -36,9 +38,9 @@ export function appendOutput(record: JobRecord, chunk: string): JobRecord {
 }
 
 export function markCompleted(record: JobRecord): JobRecord {
-  return { ...record, status: 'completed' };
+  return { ...record, status: completed };
 }
 
 export function markAborted(record: JobRecord): JobRecord {
-  return { ...record, status: 'aborted' };
+  return { ...record, status: aborted };
 }

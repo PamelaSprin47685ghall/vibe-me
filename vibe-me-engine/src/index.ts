@@ -4,21 +4,21 @@ export * from './types/runner.js';
 export * from './types/agent-policy.js';
 export * from './types/nudge.js';
 export type {
-  Inactive, ActiveReview, LockedReview, CompletedReview, ReviewState,
-  ActivateCommand, SubmitCommand, LockCommand, UnlockCommand, CompleteReviewCommand, ReviewCommand,
-  ActivatedEvent, SubmittedEvent, LockAcquiredEvent, LockReleasedEvent, CompletedReviewEvent, ReviewEvent,
+  Inactive, ActiveReview, LockedReview, AcceptedReview, RejectedReview, ReviewState,
+  ActivateCommand, SubmitCommand, LockCommand, UnlockCommand, AcceptCommand, RejectCommand, ReviewCommand,
+  ActivatedEvent, SubmittedEvent, LockAcquiredEvent, LockReleasedEvent, AcceptedEvent, RejectedEvent, ReviewEvent,
 } from './types/review.js';
 export {
-  inactive, activeReview, lockedReview, completedReview, matchReviewState,
-  activateCommand, submitCommand, lockCommand, unlockCommand, completeReviewCommand, matchReviewCommand,
-  activatedEvent, submittedEvent, lockAcquiredEvent, lockReleasedEvent, completedReviewEvent, matchReviewEvent,
+  inactive, activeReview, lockedReview, acceptedReview, rejectedReview, matchReviewState,
+  activateCommand, submitCommand, lockCommand, unlockCommand, acceptCommand, rejectCommand, matchReviewCommand,
+  activatedEvent, submittedEvent, lockAcquiredEvent, lockReleasedEvent, acceptedEvent, rejectedEvent, matchReviewEvent,
 } from './types/review.js';
 export {
   startExecution, evaluateWait, computeResult, shouldContinue, truncateOutput,
 } from './runner/state.js';
 
 // Kernel state machines — selective re-exports to avoid naming conflicts with kernel ADTs
-export { type AgentRuntimePolicy, AGENT_POLICIES, AGENT_ROLE_LIST, isAgentRole, getAgentPolicy, applyUniversalPermissionDeny } from './agent-policy/index.js';
+export { getAgentTools, computeDefaultPermissions, UNIVERSAL_PERMISSION_RULES, ORCHESTRATOR_TOOLS, EDITOR_TOOLS, REVIEWER_TOOLS, GREPER_TOOLS, BROWSER_TOOLS, RUNNER_TOOLS, REVERIE_TOOLS, agentRoleFromString, agentRoleToString, matchAgentRole, type AgentRole, type CanonicalToolName, type ToolMap } from './agent-policy/index.js';
 export * from './todo/index.js';
 export * from './review/index.js';
 

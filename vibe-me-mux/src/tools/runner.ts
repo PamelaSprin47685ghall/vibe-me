@@ -4,7 +4,7 @@ import { requireWorkspaceId } from "../types/contract.js";
 import { isForegroundWaitBackgroundedError } from "./submitReview.js";
 import type { HostDependencies } from "../types/deps.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
-import { AGENT_POLICIES } from "engine";
+import { RUNNER_TOOLS } from "engine";
 import type { JobEntry } from "engine/runner";
 
 const parameters: JsonSchema = {
@@ -124,7 +124,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
         experiments: {
           subagentRole: "runner",
           toolPolicy: {
-             disabledTools: [...AGENT_POLICIES.runner.disabledTools],
+             disabledTools: [...RUNNER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
           },
         },
       });

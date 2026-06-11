@@ -5,24 +5,42 @@ import {
 } from '../types/review.js';
 import { transition } from './state.js';
 
-export interface ReviewResult {
-  readonly accepted: boolean;
-  readonly feedback?: string;
-  readonly terminated?: boolean;
+export type Accepted = { readonly _tag: 'Accepted' };
+export type Rejected = { readonly _tag: 'Rejected'; readonly feedback: string };
+export type Terminated = { readonly _tag: 'Terminated' };
+export type ReviewResult = Accepted | Rejected | Terminated;
+
+export const accepted: Accepted = { _tag: 'Accepted' };
+export function rejected(feedback: string): Rejected {
+  return { _tag: 'Rejected', feedback };
+}
+export const terminated: Terminated = { _tag: 'Terminated' };
+
+export function matchReviewResult<T>(
+  result: ReviewResult,
+  onAccepted: () => T,
+  onRejected: (feedback: string) => T,
+  onTerminated: () => T,
+): T {
+  switch (result._tag) {
+    case 'Accepted': return onAccepted();
+    case 'Rejected': return onRejected(result.feedback);
+    case 'Terminated': return onTerminated();
+  }
 }
 
 export interface ReviewSession {
   readonly id: string;
   readonly state: ReviewState;
   readonly createdAt: number;
-  readonly originalTask?: string;
-  readonly lastFeedback?: string;
-  readonly parentId?: string;
+  readonly originalTask: string | undefined;
+  readonly lastFeedback: string | undefined;
+  readonly parentId: string | undefined;
   readonly childIds: readonly string[];
 }
 
-export function emptySession(id: string): ReviewSession {
-  return { id, state: inactive, createdAt: Date.now(), childIds: [] };
+export function emptySession(id: string, createdAt: number): ReviewSession {
+  return { id, state: inactive, createdAt, childIds: [], originalTask: undefined, lastFeedback: undefined, parentId: undefined };
 }
 
 export function applyCommand(session: ReviewSession, command: ReviewCommand): ReviewSession {

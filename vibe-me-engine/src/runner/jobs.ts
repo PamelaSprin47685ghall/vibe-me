@@ -7,6 +7,7 @@ import { createHandles } from './job.js';
 import { executeShellProgram, executePythonProgram, executeJavascriptProgram } from './programs.js';
 import type { ExecuteOptions, ExecuteResult } from './types.js';
 
+
 export function truncateTail(text: string, max: number): string {
   return text.length <= max ? text : text.slice(-max);
 }
@@ -27,7 +28,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
   const cwd = options.cwd ?? process.cwd();
 
   const existingEntry = globalJobRegistry.get(sessionId);
-  if (existingEntry?.record.status === 'running') throw new Error('A task is already running. Use wait() or abort() first.');
+  if (existingEntry?.record.status._tag === 'Running') throw new Error('A task is already running. Use wait() or abort() first.');
   if (existingEntry) cleanupJob(sessionId);
 
   const logPath = getRunnerLogPath(sessionId);
@@ -58,7 +59,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
           ? await executePythonProgram({ program, language, dependencies, cwd, projectDir, runner })
           : await executeJavascriptProgram({ program, language, dependencies, cwd, projectDir, runner }, projectDir!);
       handles.childProcess = null;
-      if (entry.record.status === 'running') {
+      if (entry.record.status._tag === 'Running') {
         entry.record = result.cancelled ? markAborted(entry.record) : markCompleted(entry.record);
       }
       if (result.exitCode !== undefined && result.exitCode !== 0) {
@@ -67,7 +68,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
         try { handles.writeStream?.write(msg); } catch {}
       }
     } catch (error) {
-      if (entry.record.status === 'running') entry.record = markAborted(entry.record);
+      if (entry.record.status._tag === 'Running') entry.record = markAborted(entry.record);
       const msg = `\n[runner] ${error instanceof Error ? error.message : String(error)}\n`;
       entry.record = appendOutput(entry.record, msg);
       try { handles.writeStream?.write(msg); } catch {}

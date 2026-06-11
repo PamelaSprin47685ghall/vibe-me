@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import {
+  type ReviewResult,
   activateReview,
   addChild,
   deactivateReview,
@@ -27,14 +28,14 @@ describe('Review Session Runtime', () => {
       addChild(rootID, childID);
     }
 
-    const resolvers: { terminated?: boolean }[] = [];
+    const resolvers: ReviewResult[] = [];
     for (const childID of childIDs) {
       setPendingReview(childID, (result) => resolvers.push(result));
     }
 
     deactivateReview(rootID);
     expect(resolvers.length).toBe(100);
-    expect(resolvers.every(r => r.terminated)).toBe(true);
+    expect(resolvers.every(r => r._tag === 'Terminated')).toBe(true);
   });
 
   it('prevents re-activation of active session', () => {

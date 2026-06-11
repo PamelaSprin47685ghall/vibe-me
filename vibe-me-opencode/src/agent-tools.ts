@@ -1,9 +1,8 @@
 import {
-  AGENT_POLICIES,
   type AgentRole,
   agentRoleFromString,
-  agentRoleToString,
   getAgentTools,
+  computeDefaultPermissions,
 } from 'engine/agent-policy';
 
 export type ToolDefaults = Record<string, boolean>;
@@ -20,8 +19,18 @@ export function mergeTools(
 }
 
 export function getAgentPermissionDefaults(agent: AgentRole | string): Record<string, string> {
-  const key = typeof agent === 'string' ? agent : agentRoleToString(agent);
-  return { ...AGENT_POLICIES[key as keyof typeof AGENT_POLICIES].permissions };
+  const role: AgentRole =
+    typeof agent === 'string'
+      ? (() => {
+          const r = agentRoleFromString(agent);
+          if (r._tag === 'Err') throw new Error(r.error);
+          return r.value;
+        })()
+      : agent;
+  const permMap = computeDefaultPermissions(role);
+  const result: Record<string, string> = {};
+  for (const [name, perm] of permMap) result[name] = perm._tag === 'Allow' ? 'allow' : 'deny';
+  return result;
 }
 
 export function getAgentToolDefaults(agent: AgentRole | string): ToolDefaults {

@@ -9,8 +9,4 @@ export function createDeferred<T>(): Deferred<T> {
   return { promise, resolve };
 }
 
-export type ReviewResult = {
-  accepted: boolean;
-  feedback?: string | null;
-  terminated?: boolean;
-};
+export type { ReviewResult } from 'engine/review';

@@ -56,7 +56,7 @@ export async function handleLoopReview(
 
   const result = await runReviewerWithNudge(ctx.client, childID, parts, ctx.directory);
 
-  if (result.feedback == null) {
+  if (result._tag === 'Accepted') {
     output.parts.push({
       type: 'text',
       text: `Pre-review passed. Task "${task}" already meets all criteria — no changes needed.`,
@@ -64,10 +64,10 @@ export async function handleLoopReview(
     return;
   }
 
-  if (result.terminated) {
+  if (result._tag === 'Terminated') {
     output.parts.push({
       type: 'text',
-      text: `Pre-review could not complete. ${result.feedback}`,
+      text: 'Pre-review could not complete.',
     });
     return;
   }

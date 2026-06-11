@@ -10,6 +10,9 @@ import {
   clearReviewSessions,
   getReviewTask,
   getReviewState,
+  type ReviewResult,
+  accepted,
+  rejected,
 } from './session-runtime.js';
 
 describe('Review Runtime', () => {
@@ -42,17 +45,18 @@ describe('Review Runtime', () => {
   describe('pending resolution', () => {
     it('resolves pending review', () => {
       let resolved = false;
-      let result: { accepted: boolean; feedback?: string } | undefined;
+      let result: ReviewResult | undefined;
       activateReview('session-1', 'task-1');
       setPendingReview('session-1', (res) => { resolved = true; result = res; });
-      const success = resolvePendingReview('session-1', { accepted: true, feedback: 'Approved' });
+      const success = resolvePendingReview('session-1', rejected('Approved'));
       expect(success).toBe(true);
       expect(resolved).toBe(true);
-      expect(result?.feedback).toBe('Approved');
+      expect(result?._tag).toBe('Rejected');
+      if (result?._tag === 'Rejected') expect(result.feedback).toBe('Approved');
     });
 
     it('returns false when no pending review', () => {
-      const success = resolvePendingReview('nonexistent', { accepted: false, feedback: 'test' });
+      const success = resolvePendingReview('nonexistent', rejected('test'));
       expect(success).toBe(false);
     });
   });

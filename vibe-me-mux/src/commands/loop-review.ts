@@ -4,7 +4,7 @@ import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
 import { delegateToSubAgent } from "../tools/delegate.js";
 import { isPassingReviewReport } from "../tools/submitReview.js";
-import { AGENT_POLICIES } from "engine/agent-policy";
+import { REVIEWER_TOOLS } from "engine/agent-policy";
 import { buildLoopMessage } from "./loop-message.js";
 
 const PRE_REVIEW_TIMEOUT_MS = 5 * 60 * 1000;
@@ -54,7 +54,7 @@ export function createLoopReviewCommand(deps: HostDependencies): PluginSlashComm
             aiSettingsAgentId: "plan",
             experiments: {
               subagentRole: "reviewer",
-              toolPolicy: { disabledTools: [...AGENT_POLICIES.reviewer.disabledTools] },
+              toolPolicy: { disabledTools: [...REVIEWER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n) },
             },
           }),
           new Promise<string>((resolve) =>

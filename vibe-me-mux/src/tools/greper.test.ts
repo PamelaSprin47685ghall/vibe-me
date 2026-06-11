@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import type { PluginToolConfiguration } from "../types/tool.js";
-import { AGENT_POLICIES } from "engine/agent-policy";
+import { GREPER_TOOLS } from "engine/agent-policy";
 import { FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME } from "./submitReview.js";
 import type {
   HostDependencies,
@@ -102,7 +102,7 @@ describe("greper tool", () => {
       experiments: {
         subagentRole: "greper",
         toolPolicy: {
-          disabledTools: [...AGENT_POLICIES.greper.disabledTools],
+          disabledTools: [...GREPER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
         },
       },
     });

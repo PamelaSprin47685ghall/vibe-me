@@ -16,6 +16,7 @@ import {
   freshSessionNudgeState,
   timestampKeyForAction,
 } from '../types/nudge.js';
+import { some, matchMaybe } from '../types/general.js';
 
 // =========================================================================
 // 1. CONSTANTS
@@ -126,7 +127,7 @@ export function updateNudgeState(
   const updated: SessionNudgeState = {
     ...prev,
     [key]: now,
-    lastIndex: prev.lastIndex + 1,
+    lastIndex: matchMaybe(prev.lastIndex, { None: () => some(0), Some: (n) => some(n + 1) }),
   };
 
   const nextMap = new Map(state.sessions);

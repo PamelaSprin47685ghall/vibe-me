@@ -1,5 +1,5 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { isAgentRole } from 'engine/agent-policy';
+import { agentRoleFromString } from 'engine/agent-policy';
 import { createCapsMessagesInjector } from '../caps/index.js';
 import { createToolOutputDeduper } from '../dedup/index.js';
 import { createSyntaxCheckHook } from '../tree-sitter/index.js';
@@ -33,7 +33,7 @@ export function createHooks(
     ) => {
       const agent = input.agent ?? lookupChildAgent(input.sessionID) ?? 'orchestrator';
       nudgeHook.handleChatMessage({ sessionID: input.sessionID, agent, parts: output.parts });
-      const defaults = isAgentRole(agent) ? getAgentToolDefaults(agent) : null;
+      const defaults = agentRoleFromString(agent)._tag === 'Ok' ? getAgentToolDefaults(agent) : null;
       if (!defaults) return;
       const tools = mergeTools(
         output.message.tools as Record<string, unknown> | undefined,

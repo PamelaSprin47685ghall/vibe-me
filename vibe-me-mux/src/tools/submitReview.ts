@@ -2,7 +2,7 @@ import type { JsonSchema, ToolDefinition } from "../types/contract.js";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
 import { REVIEW_INSTRUCTIONS } from "engine/review";
-import { AGENT_POLICIES } from "engine/agent-policy";
+import { REVIEWER_TOOLS } from "engine/agent-policy";
 import type { DelegateOptions } from "./delegate.js";
 
 export const FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME =
@@ -132,7 +132,7 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
             experiments: {
               subagentRole: "reviewer",
               toolPolicy: {
-                disabledTools: [...AGENT_POLICIES.reviewer.disabledTools],
+                disabledTools: [...REVIEWER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
               },
             },
           },

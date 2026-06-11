@@ -4,20 +4,23 @@ import {
   activateCommand,
   lockCommand,
   unlockCommand,
-  completeReviewCommand,
+  acceptCommand,
+  rejectCommand,
 } from '../types/review.js';
 import { transition, isActive as isActiveState } from './state.js';
 import { type ReviewSession, emptySession, applyCommand, withTask, withFeedback, addChild } from './session-node.js';
 
-export type { ReviewSession, ReviewResult } from './session-node.js';
+export type { ReviewSession, ReviewResult, Accepted, Rejected, Terminated } from './session-node.js';
+export { accepted, rejected, terminated, matchReviewResult } from './session-node.js';
 
 export type RegistryAction =
-  | { readonly type: 'activate'; readonly id: string; readonly task: string }
+  | { readonly type: 'activate'; readonly id: string; readonly task: string; readonly createdAt: number }
   | { readonly type: 'deactivate'; readonly id: string }
   | { readonly type: 'evict'; readonly cutoff: number }
   | { readonly type: 'lock'; readonly id: string; readonly reviewerId: string }
   | { readonly type: 'unlock'; readonly id: string }
-  | { readonly type: 'complete'; readonly id: string; readonly accepted: boolean; readonly feedback?: string }
+  | { readonly type: 'accept'; readonly id: string }
+  | { readonly type: 'reject'; readonly id: string; readonly feedback: string }
   | { readonly type: 'setFeedback'; readonly id: string; readonly feedback: string | null }
   | { readonly type: 'addChild'; readonly parentId: string; readonly childId: string }
   | { readonly type: 'clear' };
@@ -29,12 +32,13 @@ export function emptyRegistry(): SessionRegistry { return new Map(); }
 export function reduce(registry: SessionRegistry, action: RegistryAction): SessionRegistry {
   switch (action.type) {
     case 'activate': {
-      const cur = registry.get(action.id) ?? withTask(emptySession(action.id), action.task);
+      const cur = registry.get(action.id) ?? withTask(emptySession(action.id, action.createdAt), action.task);
       return set(registry, action.id, applyCommand(withTask(cur, action.task), activateCommand(action.task)));
     }
     case 'lock': return transitionIn(registry, action.id, lockCommand(action.reviewerId));
     case 'unlock': return transitionIn(registry, action.id, unlockCommand);
-    case 'complete': return transitionIn(registry, action.id, completeReviewCommand(action.accepted, action.feedback), s => withFeedback(s, action.feedback ?? ''));
+    case 'accept': return transitionIn(registry, action.id, acceptCommand);
+    case 'reject': return transitionIn(registry, action.id, rejectCommand(action.feedback), s => withFeedback(s, action.feedback));
     case 'deactivate': {
       if (!registry.has(action.id)) return registry;
       const m = new Map(registry); m.delete(action.id); return m;

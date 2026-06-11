@@ -1,9 +1,6 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import {
-  deactivateReview,
-  isReviewActive,
-  LOOP_NUDGE_PROMPT,
-} from 'engine/review';
+import { deactivateReview, isReviewActive } from 'engine/review';
+import { LOOP_NUDGE_PROMPT } from 'engine/todo';
 import {
   createPromptBody,
   getEventAgent,
