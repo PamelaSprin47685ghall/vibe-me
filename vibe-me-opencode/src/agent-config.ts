@@ -90,6 +90,9 @@ export function applyAgentConfig(opencodeConfig: Record<string, unknown>, mcps: 
     } else {
       applyUniversalPermissionDeny('runner', perm);
     }
+    if (perm['stealth-browser-mcp_star'] !== undefined) {
+      perm['stealth-browser-mcp_*'] = perm['stealth-browser-mcp_star'];
+    }
     agent.permission = perm;
 
     if (isAgentRole(name)) {
