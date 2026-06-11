@@ -76,4 +76,40 @@ describe('loop nudge state machine', () => {
     expect(ctx.client.session.prompt).toHaveBeenCalledTimes(2);
     expect(ctx.client.session.prompt.mock.calls[1]?.[0].body.parts[0].text).toBe(LOOP_NUDGE_PROMPT);
   });
+
+  test('does not duplicate nudge when multiple events arrive concurrently', async () => {
+    const ctx = createMockContext();
+    ctx.client.session.todo = mock(() => ({ data: [] }));
+    const hook = createNudgeCoordinatorHook(ctx);
+    activateReview('ses-1', 'task');
+
+    await Promise.all([
+      hook.handleEvent({
+        event: {
+          type: 'message.updated',
+          properties: {
+            sessionID: 'ses-1',
+            info: {
+              role: 'assistant',
+              agent: 'orchestrator',
+              finish: 'stop',
+              time: { completed: 1 },
+            },
+          },
+        },
+      }),
+      hook.handleEvent({
+        event: {
+          type: 'session.next.step.ended',
+          properties: { sessionID: 'ses-1', finish: 'stop' },
+        },
+      }),
+      hook.handleEvent({
+        event: { type: 'session.idle', properties: { sessionID: 'ses-1' } },
+      }),
+    ]);
+
+    expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
+    expect(ctx.client.session.prompt.mock.calls[0]?.[0].body.parts[0].text).toBe(LOOP_NUDGE_PROMPT);
+  });
 });

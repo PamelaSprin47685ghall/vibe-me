@@ -26,7 +26,7 @@ export const SKIP_LOOP_RE = /<skip-loop-check\s*\/?>/i;
 export const QUESTION_RE = /\?\s*$/;
 
 export const REVERIE_NUDGE =
-  '// Think thrice before acting — consider calling reverie tool to improve reasoning';
+  '// Think thrice before acting — NOW consider calling reverie tool to improve reasoning';
 
 export const TODO_NUDGE_PROMPT =
   'There are still incomplete todos. Continue working through the remaining items. ' +
