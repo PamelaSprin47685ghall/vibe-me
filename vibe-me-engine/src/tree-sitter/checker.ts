@@ -40,7 +40,7 @@ function errorMessage(error: unknown): string {
 }
 
 function syntaxCheckFailed(lang: string, reason: string): SyntaxCheckResult {
-  return { ok: false, lang, errors: [], reason };
+  return { ok: false, lang, reason };
 }
 
 function loadNativePack(): NativePack {

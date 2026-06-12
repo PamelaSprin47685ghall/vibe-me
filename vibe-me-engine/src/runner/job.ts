@@ -1,5 +1,5 @@
-export type { JobRecord, JobStatus } from './job-data.js';
-export { MAX_OUTPUT_BYTES, emptyJob, appendOutput, markCompleted, markAborted } from './job-data.js';
+export type { JobRecord } from './job-data.js';
+export { MAX_OUTPUT_BYTES, emptyJob, jobOutput } from './job-data.js';
 
 export type { JobHandles } from './job-effects.js';
 export { createHandles, releaseHandles, cleanupFiles } from './job-effects.js';

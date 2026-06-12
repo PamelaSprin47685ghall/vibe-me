@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import type { ChildProcess } from 'node:child_process';
 import { killTree } from './process.js';
 import { createTempScript, getTempScriptPath } from './script.js';
 import { createJavascriptPrelude, rewriteJavascriptModuleSpecifiers, ensureJavascriptProject } from './javascript.js';
@@ -11,9 +12,11 @@ export interface InternalExecuteOptions {
   cwd: string;
   projectDir: string | undefined;
   runner: {
-    onSpawn: (child: import('node:child_process').ChildProcess) => void;
+    onSpawn: (child: ChildProcess) => void;
     abortSignal: AbortSignal;
     onOutput: (chunk: string) => void;
+    onExit: (code: number | null) => void;
+    onError: (message: string) => void;
   };
 }
 
@@ -22,7 +25,7 @@ export async function spawnRunnerProgram(
   command: string,
   args: string[],
   cwd: string,
-): Promise<{ exitCode: number | undefined; cancelled: boolean }> {
+): Promise<void> {
   const childProcess = spawn(command, args, {
     cwd,
     env: { ...process.env },
@@ -38,19 +41,25 @@ export async function spawnRunnerProgram(
   const onAbort = () => killTree(childProcess);
   runner.abortSignal.addEventListener('abort', onAbort, { once: true });
 
-  const { promise, resolve, reject } = Promise.withResolvers<{ exitCode: number | undefined; cancelled: boolean }>();
-  childProcess.on('error', (error) => {
-    runner.abortSignal.removeEventListener('abort', onAbort);
-    reject(error);
+  return new Promise<void>((resolve) => {
+    childProcess.on('error', (error) => {
+      runner.abortSignal.removeEventListener('abort', onAbort);
+      childProcess.stdout?.removeAllListeners();
+      childProcess.stderr?.removeAllListeners();
+      runner.onError(error.message);
+      resolve();
+    });
+    childProcess.on('close', (code) => {
+      runner.abortSignal.removeEventListener('abort', onAbort);
+      childProcess.stdout?.removeAllListeners();
+      childProcess.stderr?.removeAllListeners();
+      runner.onExit(code === null ? null : code);
+      resolve();
+    });
   });
-  childProcess.on('close', (code) => {
-    runner.abortSignal.removeEventListener('abort', onAbort);
-    resolve({ exitCode: code === null ? undefined : code, cancelled: runner.abortSignal.aborted });
-  });
-  return promise;
 }
 
-export async function executeShellProgram(options: InternalExecuteOptions): Promise<{ exitCode: number | undefined; cancelled: boolean }> {
+export async function executeShellProgram(options: InternalExecuteOptions): Promise<void> {
   const extension = process.platform === 'win32' ? 'ps1' : 'sh';
   const scriptPath = createTempScript(getTempScriptPath(options.cwd, extension), options.program);
   return spawnRunnerProgram(
@@ -61,7 +70,7 @@ export async function executeShellProgram(options: InternalExecuteOptions): Prom
   );
 }
 
-export async function executePythonProgram(options: InternalExecuteOptions): Promise<{ exitCode: number | undefined; cancelled: boolean }> {
+export async function executePythonProgram(options: InternalExecuteOptions): Promise<void> {
   const scriptPath = createTempScript(getTempScriptPath(options.cwd, 'py'), options.program);
   const args = ['--isolated'];
   for (const dep of options.dependencies ?? []) args.push('--with', dep);
@@ -69,7 +78,7 @@ export async function executePythonProgram(options: InternalExecuteOptions): Pro
   return spawnRunnerProgram(options.runner, 'uvx', args, options.cwd);
 }
 
-export async function executeJavascriptProgram(options: InternalExecuteOptions, projectDir: string): Promise<{ exitCode: number | undefined; cancelled: boolean }> {
+export async function executeJavascriptProgram(options: InternalExecuteOptions, projectDir: string): Promise<void> {
   await ensureJavascriptProject(projectDir, options.dependencies);
   const scriptBody = `${createJavascriptPrelude(options.cwd)}${await rewriteJavascriptModuleSpecifiers(options.program, options.cwd)}`;
   const scriptPath = createTempScript(`${projectDir}/script.mts`, scriptBody);

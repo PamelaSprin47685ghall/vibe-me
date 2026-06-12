@@ -15,12 +15,9 @@ export interface ExecuteOptions {
   cwd?: string;
 }
 
-export interface ExecuteResult {
-  output: string;
-  background: boolean;
-  jobId?: string;
-  message?: string;
-}
+export type ExecuteResult =
+  | { readonly _tag: 'Completed'; readonly output: string }
+  | { readonly _tag: 'Backgrounded'; readonly output: string; readonly jobId: string };
 
 export interface WaitOptions {
   jobs: JobRegistry;

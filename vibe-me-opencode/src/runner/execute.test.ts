@@ -46,7 +46,7 @@ describe('execute', () => {
       language: 'shell',
     });
 
-    expect(result.background).toBe(false);
+    expect(result._tag).toBe('Completed');
     expect(result.output).toContain('hello');
   });
 
@@ -58,7 +58,7 @@ describe('execute', () => {
       language: 'python',
     });
 
-    expect(result.background).toBe(false);
+    expect(result._tag).toBe('Completed');
     expect(result.output).toContain('hello from python');
   });
 
@@ -73,7 +73,7 @@ describe('execute', () => {
         earlyTimeoutMs: 50,
       });
 
-      expect(result.background).toBe(true);
+      expect(result._tag).toBe('Backgrounded');
       expect(result.jobId).toBe('test-bg-js');
       abort(jobs, 'test-bg-js');
     },
@@ -93,7 +93,7 @@ describe('execute', () => {
         earlyTimeoutMs: 50,
       });
 
-      expect(result.background).toBe(true);
+      expect(result._tag).toBe('Backgrounded');
       abort(jobs, 'test-bg-js-require');
     },
   );
@@ -122,7 +122,7 @@ describe('execute', () => {
           earlyTimeoutMs: 50,
           cwd: tmpDir,
         });
-        expect(result.background).toBe(true);
+        expect(result._tag).toBe('Backgrounded');
         abort(jobs, 'test-bg-js-relimport');
       } finally {
         rmSync(tmpDir, { recursive: true, force: true });
@@ -139,7 +139,7 @@ describe('execute', () => {
       earlyTimeoutMs: 50,
     });
 
-    expect(result.background).toBe(true);
+    expect(result._tag).toBe('Backgrounded');
     expect(result.jobId).toBe('test-slow');
   });
 

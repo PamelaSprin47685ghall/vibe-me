@@ -59,7 +59,6 @@ describe("edit tool", () => {
     spyOn(checkerModule, "checkSyntax").mockResolvedValue({
       ok: false,
       lang: "typescript",
-      errors: [],
       reason: "parser returned undefined",
     });
 

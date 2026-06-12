@@ -16,6 +16,5 @@ export type SyntaxCheckResult =
   | {
       ok: false;
       lang: string;
-      errors: [];
       reason: string;
     };

@@ -1,132 +1,63 @@
-import type {
-  ExecuteCommand,
-  ExecuteEvent,
-  ExecuteResult,
-  JobState,
-  RunningState,
-  WaitCommand,
-  WaitResult,
-} from '../types/runner.js';
+import type { ExecuteCommand } from '../types/runner/command.js';
+import type { ExecuteEvent } from '../types/runner/event.js';
+import type { ExecuteResult, WaitResult } from '../types/runner/result.js';
+import { completedResult, failedResult, waitCompletedResult, waitAbortedResult, stillRunningResult } from '../types/runner/result.js';
+import type { JobState, RunningState } from '../types/runner/state.js';
+import { MAX_OUTPUT_BYTES, completedState, abortedState } from '../types/runner/state.js';
 import type { Maybe } from '../types/general.js';
-import {
-  completedResult,
-  failedResult,
-} from '../types/runner.js';
 import { assertNever, none, some } from '../types/general.js';
 
-// ---------------------------------------------------------------------------
-// State machine: pure transition
-// ---------------------------------------------------------------------------
+export function truncateOutput(output: string, maxBytes: number): string {
+  return output.length <= maxBytes ? output : output.slice(0, maxBytes);
+}
 
-/**
- * Transition the runner state machine by one event.
- * Returns the current state unchanged for invalid event/state combinations.
- */
 export function transition(state: JobState, event: ExecuteEvent): JobState {
   switch (state._tag) {
-    case 'Idle': {
-      switch (event._tag) {
-        case 'Output':
-        case 'Error':
-        case 'Exit':
-        case 'Timeout':
-          return state;
-        default:
-          return assertNever(event);
-      }
-    }
-
-    case 'Running': {
-      switch (event._tag) {
-        case 'Output':
-          return {
-            ...state,
-            output: state.output + event.data,
-            bytesRead: state.bytesRead + event.data.length,
-          };
-        case 'Error':
-          return {
-            ...state,
-            output: state.output + event.message,
-            bytesRead: state.bytesRead + event.message.length,
-          };
-        case 'Exit':
-          return event.code === 0
-            ? { _tag: 'Completed', output: state.output }
-            : { _tag: 'Aborted', output: state.output };
-        case 'Timeout':
-          return { _tag: 'Aborted', output: state.output };
-        default:
-          return assertNever(event);
-      }
-    }
-
+    case 'Idle':
     case 'Completed':
     case 'Aborted':
       return state;
-
-    default:
-      return assertNever(state);
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Lifecycle: ExecuteCommand
-// ---------------------------------------------------------------------------
-
-/** Create the initial Running state from an ExecuteCommand. */
-export function startExecution(
-  _cmd: ExecuteCommand,
-  startTime: number,
-): RunningState {
-  return {
-    _tag: 'Running',
-    startTime,
-    bytesRead: 0,
-    output: '',
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Lifecycle: WaitCommand
-// ---------------------------------------------------------------------------
-
-/** Check whether the given state satisfies a WaitCommand. */
-export function evaluateWait(
-  state: JobState,
-  cmd: WaitCommand,
-  elapsedMs: number,
-): WaitResult {
-  switch (state._tag) {
-    case 'Completed':
-      return { _tag: 'Completed', output: state.output };
-    case 'Aborted':
-      return { _tag: 'StillRunning', output: state.output };
-    case 'Idle':
-      return { _tag: 'StillRunning', output: '' };
     case 'Running':
-      if (elapsedMs >= cmd.ms) {
-        return { _tag: 'TimedOut' };
+      switch (event._tag) {
+        case 'Output':
+          return { ...state, output: truncateOutput(state.output + event.data, MAX_OUTPUT_BYTES) };
+        case 'Error':
+          return abortedState(truncateOutput(state.output + event.message, MAX_OUTPUT_BYTES));
+        case 'Exit':
+          return event.code === null ? abortedState(state.output) : completedState(state.output);
+        default:
+          return assertNever(event);
       }
-      return { _tag: 'StillRunning', output: state.output };
     default:
       return assertNever(state);
   }
 }
 
-// ---------------------------------------------------------------------------
-// Factories
-// ---------------------------------------------------------------------------
+export function startExecution(_cmd: ExecuteCommand, startTime: number): RunningState {
+  return { _tag: 'Running', startTime, bytesRead: 0, output: '' };
+}
 
 export function createInitialState(): JobState {
   return { _tag: 'Idle' };
 }
 
-// ---------------------------------------------------------------------------
-// Result extraction
-// ---------------------------------------------------------------------------
+export function evaluateWait(state: JobState): { readonly result: WaitResult; readonly nextState: JobState } {
+  switch (state._tag) {
+    case 'Idle':
+      return { result: stillRunningResult(''), nextState: state };
+    case 'Running': {
+      const incremental = state.output.slice(state.bytesRead);
+      return { result: stillRunningResult(incremental), nextState: { ...state, bytesRead: state.output.length } };
+    }
+    case 'Completed':
+      return { result: waitCompletedResult(state.output), nextState: state };
+    case 'Aborted':
+      return { result: waitAbortedResult(state.output), nextState: state };
+    default:
+      return assertNever(state);
+  }
+}
 
-/** Extract a result from a terminal state. Returns `none` if not terminal. */
 export function computeResult(state: JobState): Maybe<ExecuteResult> {
   switch (state._tag) {
     case 'Idle':
@@ -141,16 +72,7 @@ export function computeResult(state: JobState): Maybe<ExecuteResult> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Timeout check (pure — caller provides the clock)
-// ---------------------------------------------------------------------------
-
-/** Returns `false` when the job should stop (idle, terminal, or timed out). */
-export function shouldContinue(
-  state: JobState,
-  timeoutMs: number,
-  now: number,
-): boolean {
+export function shouldContinue(state: JobState, timeoutMs: number, now: number): boolean {
   switch (state._tag) {
     case 'Idle':
     case 'Completed':
@@ -161,14 +83,4 @@ export function shouldContinue(
     default:
       return assertNever(state);
   }
-}
-
-// ---------------------------------------------------------------------------
-// Output truncation
-// ---------------------------------------------------------------------------
-
-/** Keep the first `maxBytes` characters of the output. */
-export function truncateOutput(output: string, maxBytes: number): string {
-  if (output.length <= maxBytes) return output;
-  return output.slice(0, maxBytes);
 }

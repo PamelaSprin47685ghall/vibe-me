@@ -44,7 +44,6 @@ describe("AOP Syntax Diagnostics Formatter Tests", () => {
     const result: SyntaxCheckResult = {
       ok: false,
       lang: "typescript",
-      errors: [],
       reason: "parser load failed: missing grammar",
     };
 

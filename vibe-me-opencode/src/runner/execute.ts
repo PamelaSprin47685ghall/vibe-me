@@ -70,8 +70,8 @@ export function buildRunnerPromptText(
     args.dependencies,
     args.what_to_summarize,
     execResult.output,
-    execResult.background,
-    execResult.message,
+    execResult._tag,
+    execResult._tag === 'Backgrounded' ? execResult.jobId : undefined,
   );
 }
 

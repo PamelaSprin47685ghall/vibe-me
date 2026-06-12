@@ -39,7 +39,7 @@ describe('wait', () => {
       earlyTimeoutMs: 50,
     });
 
-    if (execResult.background) {
+    if (execResult._tag === 'Backgrounded') {
       const waitResult: WaitResult = await wait({
         jobs,
         sessionId: 'test-wait',
@@ -59,7 +59,7 @@ describe('wait', () => {
       earlyTimeoutMs: 50,
     });
 
-    if (execResult.background) {
+    if (execResult._tag === 'Backgrounded') {
       const waitResult: WaitResult = await wait({
         jobs,
         sessionId: 'test-complete',

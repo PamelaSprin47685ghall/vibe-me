@@ -1,8 +1,8 @@
 import type { JobRecord } from './job-data.js';
-import { markAborted } from './job-data.js';
 import type { JobHandles } from './job-effects.js';
 import { releaseHandles, cleanupFiles } from './job-effects.js';
-import { running } from '../types/runner/status.js';
+import { transition } from './state.js';
+import { exitEvent } from '../types/runner/event.js';
 
 export interface JobEntry {
   record: JobRecord;
@@ -16,8 +16,8 @@ export function createJobRegistry(): JobRegistry {
 }
 
 function disposeEntry(entry: JobEntry): void {
-  if (entry.record.status._tag === running._tag) {
-    entry.record = markAborted(entry.record);
+  if (entry.record.state._tag === 'Running') {
+    entry.record = { ...entry.record, state: transition(entry.record.state, exitEvent(null)) };
   }
   releaseHandles(entry.handles);
   cleanupFiles(entry.record);

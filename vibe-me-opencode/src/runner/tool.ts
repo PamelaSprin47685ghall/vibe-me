@@ -58,7 +58,7 @@ export function createRunnerTool(ctx: PluginInput, jobs: JobRegistry): ToolDefin
           abortSignal,
         );
 
-        if (execResult.background) {
+        if (execResult._tag === 'Backgrounded') {
           const nudgeResult = await runNudgeLoop(client, childID, abortSignal, jobs);
           if (nudgeResult) return nudgeResult;
         }

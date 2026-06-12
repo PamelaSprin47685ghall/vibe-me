@@ -13,9 +13,11 @@ describe("Runner Security & Multi-Pipe Stripping (Memory Stub)", () => {
                 setTimeout(() => callback(Buffer.from("Line 1\nLine 2\nLine 3\n")), 5);
               }
             },
+            removeAllListeners: () => {},
           },
           stderr: {
             on: () => {},
+            removeAllListeners: () => {},
           },
           on: (event: string, callback: (code: number) => void) => {
             if (event === "close") {
@@ -39,7 +41,7 @@ describe("Runner Security & Multi-Pipe Stripping (Memory Stub)", () => {
       earlyTimeoutMs: 200,
     });
 
-    expect(result.background).toBe(false);
+    expect(result._tag).toBe("Completed");
     expect(result.output).toContain("Line 1");
     expect(result.output).toContain("Line 3");
   });

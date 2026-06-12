@@ -69,7 +69,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
 
       const prompt = buildMuxRunnerPrompt(
         { language: a.language ?? "shell", program: a.program, dependencies: a.dependencies, whatToSummarize: a.what_to_summarize },
-        { output: execResult.output, background: execResult.background, jobId: execResult.jobId },
+        execResult,
       );
 
       const aiSettings = await resolveDelegatedAgentAiSettings(config, "explore");
@@ -113,7 +113,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
           return `Runner task (${createResult.data.taskId}) moved to background. Use task tools to monitor it.`;
         }
         runnerDeps.cleanupJob(jobId);
-        const partial = execResult.background
+        const partial = execResult._tag === 'Backgrounded'
           ? "\n\nPartial output before abort:\n" + execResult.output
           : "";
         return `Runner task was aborted.${partial}`;

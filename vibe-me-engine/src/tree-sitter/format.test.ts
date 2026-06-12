@@ -89,7 +89,6 @@ describe("Aspect Output Normalization", () => {
     const mockResult: SyntaxCheckResult = {
       ok: false,
       lang: "typescript",
-      errors: [],
       reason: "parser returned undefined",
     };
 

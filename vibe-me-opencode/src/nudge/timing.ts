@@ -65,7 +65,7 @@ export function selectNudgePromptText(action: string, sessionID: string): string
   if (action === 'nudge-todo') return TODO_NUDGE_PROMPT;
   if (action === 'nudge-loop') return LOOP_NUDGE_PROMPT;
   if (action === 'nudge-runner') {
-    if (opencodeRunnerJobs.get(sessionID)?.record.status._tag !== 'Running') return null;
+    if (opencodeRunnerJobs.get(sessionID)?.record.state._tag !== 'Running') return null;
     if (managedRunnerSessions.has(sessionID)) return null;
     return buildRunnerNudgePrompt();
   }

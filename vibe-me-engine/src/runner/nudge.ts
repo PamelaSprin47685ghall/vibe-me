@@ -13,12 +13,12 @@ export function buildRunnerNudgePrompt(): string {
 
 export function hasActiveJob(jobs: JobRegistry, sessionId: string): boolean {
   const entry = jobs.get(sessionId);
-  if (entry?.record.status._tag === 'Running') return true;
+  if (entry?.record.state._tag === 'Running') return true;
   for (const [, e] of jobs) {
-    if (e.record.parentSessionId === sessionId && e.record.status._tag === 'Running') return true;
+    if (e.record.parentSessionId === sessionId && e.record.state._tag === 'Running') return true;
   }
   for (const [, e] of jobs) {
-    if (e.record.taskId === sessionId && e.record.status._tag === 'Running') return true;
+    if (e.record.taskId === sessionId && e.record.state._tag === 'Running') return true;
   }
   return false;
 }

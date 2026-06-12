@@ -13,7 +13,7 @@ import type {
 
 function createMockRunnerDeps() {
   const mockExecute = mock(() =>
-    Promise.resolve({ background: false, output: "command output" }),
+    Promise.resolve({ _tag: 'Completed' as const, output: 'command output' }),
   );
   const mockCleanupJob = mock(() => undefined);
   const mockGlobalJobRegistry = new Map<string, JobEntry>();

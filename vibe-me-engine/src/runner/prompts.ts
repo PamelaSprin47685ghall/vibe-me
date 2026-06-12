@@ -13,16 +13,17 @@ export function buildRunnerPrompt(
   dependencies: string[] | undefined,
   whatToSummarize: string,
   output: string,
-  background: boolean,
-  message?: string,
+  tag: 'Completed' | 'Backgrounded',
+  jobId?: string,
 ): string {
   const depInfo = dependencies?.length ? `Dependencies: ${dependencies.join(', ')}\n\n` : '';
-  const headline = background
+  const headline = tag === 'Backgrounded'
     ? `The following ${language} program is running in background.`
     : `The following ${language} program has been executed.`;
-  const nextStep = background
+  const nextStep = tag === 'Backgrounded'
     ? 'Use runner_wait to poll for more output or runner_abort to stop the task.'
     : 'Task completed.';
+  const extra = tag === 'Backgrounded' && jobId ? `Job ID: ${jobId}` : null;
   return [
     headline,
     '',
@@ -36,9 +37,9 @@ export function buildRunnerPrompt(
     'What to summarize:',
     whatToSummarize,
     '',
-    background ? 'Initial output:' : 'Execution output:',
+    tag === 'Backgrounded' ? 'Initial output:' : 'Execution output:',
     output,
-    message ?? null,
+    extra,
   ].filter(Boolean).join('\n');
 }
 

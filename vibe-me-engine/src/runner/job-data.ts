@@ -1,19 +1,15 @@
-import { type JobStatus, running, completed, aborted } from '../types/runner/status.js';
+import type { JobState } from '../types/runner/state.js';
+import { startExecution } from './state.js';
 
-export type { JobStatus };
-
-export const MAX_OUTPUT_BYTES = 1024 * 1024;
+export { MAX_OUTPUT_BYTES } from '../types/runner/state.js';
 
 export interface JobRecord {
   readonly sessionId: string;
   readonly stdoutFile: string;
   readonly projectDir: string | undefined;
   readonly parentSessionId: string | undefined;
-  readonly startTime: number;
-  readonly status: JobStatus;
-  readonly bytesRead: number;
-  readonly finalOutput: string;
   readonly taskId: string | undefined;
+  readonly state: JobState;
 }
 
 export function emptyJob(
@@ -25,24 +21,11 @@ export function emptyJob(
 ): JobRecord {
   return {
     sessionId, stdoutFile, projectDir, parentSessionId,
-    startTime,
-    status: running,
-    bytesRead: 0,
-    finalOutput: '',
     taskId: undefined,
+    state: startExecution({ sessionId, program: '', language: 'shell' }, startTime),
   };
 }
 
-export function appendOutput(record: JobRecord, chunk: string): JobRecord {
-  if (record.finalOutput.length >= MAX_OUTPUT_BYTES) return record;
-  const remainingBytes = MAX_OUTPUT_BYTES - record.finalOutput.length;
-  return { ...record, finalOutput: record.finalOutput + chunk.slice(0, remainingBytes) };
-}
-
-export function markCompleted(record: JobRecord): JobRecord {
-  return { ...record, status: completed };
-}
-
-export function markAborted(record: JobRecord): JobRecord {
-  return { ...record, status: aborted };
+export function jobOutput(state: JobState): string {
+  return state._tag === 'Idle' ? '' : state.output;
 }

@@ -15,6 +15,8 @@ export type AbortedState = {
 };
 export type JobState = IdleState | RunningState | CompletedState | AbortedState;
 
+export const MAX_OUTPUT_BYTES = 1024 * 1024;
+
 export const idleState: IdleState = { _tag: 'Idle' };
 
 export function runningState(
@@ -31,21 +33,4 @@ export function completedState(output: string): CompletedState {
 
 export function abortedState(output: string): AbortedState {
   return { _tag: 'Aborted', output };
-}
-
-export function matchJobState<R>(
-  state: JobState,
-  patterns: {
-    readonly Idle: (state: IdleState) => R;
-    readonly Running: (state: RunningState) => R;
-    readonly Completed: (state: CompletedState) => R;
-    readonly Aborted: (state: AbortedState) => R;
-  },
-): R {
-  switch (state._tag) {
-    case 'Idle': return patterns.Idle(state);
-    case 'Running': return patterns.Running(state);
-    case 'Completed': return patterns.Completed(state);
-    case 'Aborted': return patterns.Aborted(state);
-  }
 }
