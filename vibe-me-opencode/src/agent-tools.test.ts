@@ -6,10 +6,10 @@ import {
 } from './agent-tools.js';
 
 const allToolKeys = [
-  'read', 'write', 'edit', 'runner', 'glob', 'fuzzy_find', 'fuzzy_grep',
+  'read', 'write', 'edit', 'executor', 'glob', 'fuzzy_find', 'fuzzy_grep',
   'grep', 'editor', 'greper', 'reverie', 'submit_review',
   'submit_review_result', 'todowrite', 'webfetch', 'websearch', 'browser', 'task',
-  'runner_wait', 'runner_abort', 'stealth_browser_mcp_star',
+  'stealth_browser_mcp_star',
 ] as const;
 
 function makeToolDefaults(
@@ -25,8 +25,6 @@ describe('getAgentPermissionDefaults', () => {
     expect(getAgentPermissionDefaults('orchestrator')).toEqual({
       bash: 'deny',
       'stealth-browser-mcp_star': 'deny',
-      runner_wait: 'deny',
-      runner_abort: 'deny',
       submit_review_result: 'deny',
       glob: 'deny',
       fuzzy_find: 'deny',
@@ -39,8 +37,6 @@ describe('getAgentPermissionDefaults', () => {
     expect(getAgentPermissionDefaults('editor')).toEqual({
       bash: 'deny',
       'stealth-browser-mcp_star': 'deny',
-      runner_wait: 'deny',
-      runner_abort: 'deny',
       submit_review_result: 'deny',
       fuzzy_find: 'allow',
       fuzzy_grep: 'allow',
@@ -54,8 +50,6 @@ describe('getAgentPermissionDefaults', () => {
     expect(getAgentPermissionDefaults('greper')).toEqual({
       bash: 'deny',
       'stealth-browser-mcp_star': 'deny',
-      runner_wait: 'deny',
-      runner_abort: 'deny',
       submit_review_result: 'deny',
       fuzzy_find: 'allow',
       fuzzy_grep: 'allow',
@@ -68,22 +62,6 @@ describe('getAgentPermissionDefaults', () => {
   test('browser', () => {
     expect(getAgentPermissionDefaults('browser')).toEqual({
       bash: 'deny',
-      runner_wait: 'deny',
-      runner_abort: 'deny',
-      submit_review_result: 'deny',
-      glob: 'deny',
-      fuzzy_find: 'deny',
-      fuzzy_grep: 'deny',
-      grep: 'deny',
-      question: 'deny',
-      todowrite: 'deny',
-    });
-  });
-
-  test('runner', () => {
-    expect(getAgentPermissionDefaults('runner')).toEqual({
-      bash: 'deny',
-      'stealth-browser-mcp_star': 'deny',
       submit_review_result: 'deny',
       glob: 'deny',
       fuzzy_find: 'deny',
@@ -98,8 +76,6 @@ describe('getAgentPermissionDefaults', () => {
     expect(getAgentPermissionDefaults('reverie')).toEqual({
       bash: 'deny',
       'stealth-browser-mcp_star': 'deny',
-      runner_wait: 'deny',
-      runner_abort: 'deny',
       submit_review_result: 'deny',
       glob: 'deny',
       fuzzy_find: 'deny',
@@ -114,8 +90,6 @@ describe('getAgentPermissionDefaults', () => {
     expect(getAgentPermissionDefaults('reviewer')).toEqual({
       bash: 'deny',
       'stealth-browser-mcp_star': 'deny',
-      runner_wait: 'deny',
-      runner_abort: 'deny',
       glob: 'deny',
       fuzzy_find: 'deny',
       fuzzy_grep: 'deny',
@@ -134,7 +108,7 @@ describe('getAgentToolDefaults', () => {
   test('orchestrator', () => {
     expect(getAgentToolDefaults('orchestrator')).toEqual(
       makeToolDefaults([
-        'read', 'runner', 'glob', 'editor', 'greper', 'reverie',
+        'read', 'executor', 'glob', 'editor', 'greper', 'reverie',
         'submit_review', 'todowrite', 'webfetch', 'websearch', 'browser',
       ]),
     );
@@ -148,19 +122,13 @@ describe('getAgentToolDefaults', () => {
 
   test('greper', () => {
     expect(getAgentToolDefaults('greper')).toEqual(
-      makeToolDefaults(['read', 'runner', 'glob', 'fuzzy_find', 'fuzzy_grep']),
+      makeToolDefaults(['read', 'executor', 'glob', 'fuzzy_find', 'fuzzy_grep']),
     );
   });
 
   test('browser', () => {
     expect(getAgentToolDefaults('browser')).toEqual(
       makeToolDefaults(['read', 'stealth_browser_mcp_star']),
-    );
-  });
-
-  test('runner', () => {
-    expect(getAgentToolDefaults('runner')).toEqual(
-      makeToolDefaults(['runner_wait', 'runner_abort']),
     );
   });
 

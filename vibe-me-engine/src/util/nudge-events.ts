@@ -1,6 +1,5 @@
 import { isAbortErrorName } from './abort.js';
 import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from 'engine/todo';
-import { buildRunnerNudgePrompt } from 'engine/runner';
 
 // ── Retry progress sets ─────────────────────────────────────────────────────
 // Events and part types that signal ongoing (non-terminal) progress during
@@ -65,7 +64,7 @@ export function isSessionBusyError(error: unknown): boolean {
 }
 
 export function isNudgePrompt(text: unknown): boolean {
-  return text === TODO_NUDGE_PROMPT || text === LOOP_NUDGE_PROMPT || text === buildRunnerNudgePrompt();
+  return text === TODO_NUDGE_PROMPT || text === LOOP_NUDGE_PROMPT;
 }
 
 export function getSessionID(type: string, props: Record<string, unknown>): string | undefined {

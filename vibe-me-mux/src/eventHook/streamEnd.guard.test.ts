@@ -56,40 +56,6 @@ describe("createEventHook", () => {
     expect(nudge).not.toHaveBeenCalled();
   });
 
-  test("stream-end nudges runner once per active streak and resets after cleanup", async () => {
-    const { deps, mockHasActiveJob, mockShouldNudge } = createMockDeps();
-    const { helpers, nudge, getTodos } = makeHelpers();
-    const event: PluginEvent = {
-      type: "stream-end",
-      workspaceId: "ws1",
-      properties: { parts: [] },
-    };
-
-    mockHasActiveJob.mockReturnValue(true);
-    mockShouldNudge.mockReturnValue("nudge-runner");
-
-    const hook = createEventHook(deps);
-    await hook(event, helpers);
-    await hook(event, helpers);
-
-    expect(nudge).toHaveBeenCalledTimes(1);
-    expect(nudge).toHaveBeenCalledWith("ws1", "runner-nudge");
-
-    mockHasActiveJob.mockReturnValue(false);
-    mockShouldNudge.mockReturnValue("none");
-
-    await hook(event, helpers);
-
-    expect(getTodos).toHaveBeenCalledTimes(1);
-
-    mockHasActiveJob.mockReturnValue(true);
-    mockShouldNudge.mockReturnValue("nudge-runner");
-
-    await hook(event, helpers);
-
-    expect(nudge).toHaveBeenCalledTimes(2);
-  });
-
   test("stream-end with getTodos failure does not nudge", async () => {
     const { deps, mockShouldNudge } = createMockDeps();
     const { helpers, nudge, getTodos } = makeHelpers();

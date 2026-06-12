@@ -4,14 +4,13 @@ import { createMockDeps } from "./test-helpers.js";
 import type { PluginEvent } from "../types/tool.js";
 
 describe("createEventHook", () => {
-  test("stream-abort cleans up jobs scoped by workspaceId", () => {
-    const { deps, mockCleanupRegistry, mockDeactivateReview } = createMockDeps();
+  test("stream-abort deactivates review and clears iterator scope", () => {
+    const { deps, mockDeactivateReview, mockClearIteratorScope } = createMockDeps();
     const event: PluginEvent = { type: "stream-abort", workspaceId: "ws1" };
     const hook = createEventHook(deps);
     void hook(event);
-    expect(mockCleanupRegistry).toHaveBeenCalledTimes(1);
-    expect(mockCleanupRegistry).toHaveBeenCalledWith(expect.any(Map), "ws1");
     expect(mockDeactivateReview).toHaveBeenCalledWith("ws1");
+    expect(mockClearIteratorScope).toHaveBeenCalledWith("ws1");
   });
 
   test("error with abort errorType", () => {

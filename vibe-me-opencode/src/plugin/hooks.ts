@@ -19,7 +19,7 @@ export function createHooks(
   const capsInjector = createCapsMessagesInjector(ctx.directory, [
     'browser',
     'greper',
-    'runner',
+    'executor',
     'title',
   ]);
   const syntaxCheckHook = createSyntaxCheckHook(ctx);

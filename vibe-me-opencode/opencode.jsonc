@@ -33,8 +33,11 @@
     "browser": {
       "model": "ollama-cloud/kimi-k2.6"
     },
-    "runner": {
+    "executor": {
       "model": "ollama-cloud/deepseek-v4-flash"
+    },
+    "summarizer": {
+      "model": "ollama-cloud/kimi-k2.6"
     },
     "editor": {
       "model": "ollama-cloud/glm-5.1"

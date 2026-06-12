@@ -6,9 +6,9 @@ const SAMPLE_TOOL_NAMES = [
   "bash_output",
   "browser",
   "editor",
+  "executor",
   "file_edit_replace_string",
   "read",
-  "runner",
   "stealth_browser_mcp_spawn_browser",
   "web_fetch",
   "websearch",
@@ -54,16 +54,16 @@ describe("getPluginToolPolicy", () => {
     expect(enabled.has("bash")).toBe(false);
   });
 
-  test("editor loses runner along with direct bash and other subagent tools", () => {
+  test("editor loses executor along with direct bash and other subagent tools", () => {
     const remove = removePatternsFor("editor");
     const enabled = enabledToolNamesFor("editor");
 
-    expect(remove.has("runner")).toBe(true);
+    expect(remove.has("executor")).toBe(true);
     expect(remove.has("bash")).toBe(true);
     expect(remove.has("bash_.*")).toBe(true);
     expect(remove.has("browser")).toBe(true);
     expect(remove.has("file_edit_.*")).toBe(false);
-    expect(enabled.has("runner")).toBe(false);
+    expect(enabled.has("executor")).toBe(false);
     expect(enabled.has("bash")).toBe(false);
     expect(enabled.has("bash_output")).toBe(false);
     expect(enabled.has("file_edit_replace_string")).toBe(true);
@@ -89,8 +89,6 @@ describe("getPluginToolPolicy full remove lists per role", () => {
     "fuzzy_grep",
     "glob",
     "grep",
-    "runner_abort",
-    "runner_wait",
     "stealth_browser_mcp_.*",
     "submit_review_result",
     "task",
@@ -119,12 +117,10 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "bash_.*",
       "browser",
       "editor",
+      "executor",
       "grep",
       "greper",
       "reverie",
-      "runner",
-      "runner_abort",
-      "runner_wait",
       "stealth_browser_mcp_.*",
       "submit_review",
       "submit_review_result",
@@ -156,8 +152,6 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "grep",
       "greper",
       "reverie",
-      "runner_abort",
-      "runner_wait",
       "stealth_browser_mcp_.*",
       "submit_review",
       "submit_review_result",
@@ -186,6 +180,7 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "bash_.*",
       "browser",
       "editor",
+      "executor",
       "file_edit_.*",
       "fuzzy_find",
       "fuzzy_grep",
@@ -193,9 +188,6 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "grep",
       "greper",
       "reverie",
-      "runner",
-      "runner_abort",
-      "runner_wait",
       "submit_review",
       "submit_review_result",
       "task",
@@ -216,43 +208,6 @@ describe("getPluginToolPolicy full remove lists per role", () => {
     expect([...policy!.remove].sort()).toEqual(expected);
   });
 
-  test("runner remove list", () => {
-    const expected = [
-      "ask_user_question",
-      "bash",
-      "bash_.*",
-      "browser",
-      "editor",
-      "file_edit_.*",
-      "fuzzy_find",
-      "fuzzy_grep",
-      "glob",
-      "grep",
-      "greper",
-      "read",
-      "reverie",
-      "runner",
-      "stealth_browser_mcp_.*",
-      "submit_review",
-      "submit_review_result",
-      "task",
-      "task_.*",
-      "todo_read",
-      "todoread",
-      "todo_write",
-      "todowrite",
-      "web_fetch",
-      "web_search",
-      "webfetch",
-      "websearch",
-      "write",
-    ].sort();
-    const policy = getPluginToolPolicy("exec", "runner");
-    expect(policy).toBeDefined();
-    expect(policy!.add).toEqual([]);
-    expect([...policy!.remove].sort()).toEqual(expected);
-  });
-
   test("reverie remove list", () => {
     const expected = [
       "ask_user_question",
@@ -260,6 +215,7 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "bash_.*",
       "browser",
       "editor",
+      "executor",
       "file_edit_.*",
       "fuzzy_find",
       "fuzzy_grep",
@@ -268,9 +224,6 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "greper",
       "read",
       "reverie",
-      "runner",
-      "runner_abort",
-      "runner_wait",
       "stealth_browser_mcp_.*",
       "submit_review",
       "submit_review_result",
@@ -299,6 +252,7 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "bash_.*",
       "browser",
       "editor",
+      "executor",
       "file_edit_.*",
       "fuzzy_find",
       "fuzzy_grep",
@@ -306,9 +260,6 @@ describe("getPluginToolPolicy full remove lists per role", () => {
       "grep",
       "greper",
       "reverie",
-      "runner",
-      "runner_abort",
-      "runner_wait",
       "stealth_browser_mcp_.*",
       "submit_review",
       "task",

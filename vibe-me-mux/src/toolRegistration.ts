@@ -1,9 +1,7 @@
 import { createEditorTool } from "./tools/editor.js";
 import { createGreperTool } from "./tools/greper.js";
 import { createReverieTool } from "./tools/reverie.js";
-import { createRunnerTool } from "./tools/runner.js";
-import { createRunnerWaitTool } from "./tools/runnerWait.js";
-import { createRunnerAbortTool } from "./tools/runnerAbort.js";
+import { createExecutorTool } from "./tools/executor.js";
 import { createBrowserTool } from "./tools/browser.js";
 import { createSubmitReviewTool } from "./tools/submitReview.js";
 import { createWebsearchTool } from "./tools/websearch.js";
@@ -12,7 +10,7 @@ import { createFuzzyGrepTool } from "./tools/fuzzyGrep.js";
 import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
 import { createWriteTool } from "./tools/write.js";
 import { createReadTool } from "./tools/read.js";
-import { execute, cleanupJob } from "engine/runner";
+import { execute } from "engine/executor";
 import { type ReviewStore } from "engine/review";
 import { delegateToSubAgent } from "./tools/delegate.js";
 import type { HostDependencies } from "./types/deps.js";
@@ -27,9 +25,7 @@ type ToolCatalog = {
   readonly editor: ToolDefinition;
   readonly greper: ToolDefinition;
   readonly reverie: ToolDefinition;
-  readonly runner: ToolDefinition;
-  readonly runner_wait: ToolDefinition;
-  readonly runner_abort: ToolDefinition;
+  readonly executor: ToolDefinition;
   readonly browser: ToolDefinition;
   readonly submit_review: ToolDefinition;
   readonly websearch: ToolDefinition;
@@ -49,13 +45,7 @@ export function createToolCatalog(
     editor: createEditorTool(deps),
     greper: createGreperTool(deps),
     reverie: createReverieTool(deps),
-    runner: createRunnerTool(deps, {
-      execute,
-      cleanupJob: (jobId) => cleanupJob(deps.runnerJobs, jobId),
-      globalJobRegistry: deps.runnerJobs,
-    }),
-    runner_wait: createRunnerWaitTool(deps),
-    runner_abort: createRunnerAbortTool(deps),
+    executor: createExecutorTool(deps, { execute }),
     browser: createBrowserTool(deps),
     submit_review: createSubmitReviewTool(deps, {
       reviewStore,

@@ -1,11 +1,8 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, defaultCoordinator, TERMINAL_TODO_STATUSES, type NudgeInputContext } from 'engine/todo';
-import { buildRunnerNudgePrompt, hasActiveJob } from 'engine/runner';
 import type { ReviewStore } from 'engine/review';
 import { asMessageArray } from '../utils/session-messages';
 import { lookupChildAgent } from '../utils/child-agent';
-import { managedRunnerSessions } from '../runner/index.js';
-import { opencodeRunnerJobs } from '../runner/index.js';
 import { isAbortEventError, isSessionBusyError, createPromptBody } from 'engine/util';
 import type { NudgeShellState } from 'engine/nudge-shell';
 import {
@@ -61,14 +58,9 @@ export async function collectSessionSnapshot(
   return { todos, lastAssistantMessage, messageCount, agentFromMessage };
 }
 
-export function selectNudgePromptText(action: string, sessionID: string): string | null {
+export function selectNudgePromptText(action: string): string | null {
   if (action === 'nudge-todo') return TODO_NUDGE_PROMPT;
   if (action === 'nudge-loop') return LOOP_NUDGE_PROMPT;
-  if (action === 'nudge-runner') {
-    if (opencodeRunnerJobs.get(sessionID)?.record.state._tag !== 'Running') return null;
-    if (managedRunnerSessions.has(sessionID)) return null;
-    return buildRunnerNudgePrompt();
-  }
   return null;
 }
 
@@ -96,14 +88,14 @@ export async function nudgeIfNeeded(
   const context: NudgeInputContext = {
     todos,
     lastAssistantMessage,
-    hasActiveRunner: hasActiveJob(opencodeRunnerJobs, sessionID),
+    hasActiveRunner: false,
     isLoopActive: reviewStore.isReviewActive(sessionID),
   };
 
   const action = defaultCoordinator.shouldNudge(sessionID, context, Date.now());
   if (action === 'none') return deleteNudgedSession(state, sessionID);
 
-  const promptText = selectNudgePromptText(action, sessionID);
+  const promptText = selectNudgePromptText(action);
   if (!promptText) return deleteNudgedSession(state, sessionID);
 
   try {

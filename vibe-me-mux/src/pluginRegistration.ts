@@ -1,6 +1,5 @@
 import { createCapsInjector } from "./context/capsInjector.js";
 import { createEventHook } from "./eventHook.js";
-import { cleanupRegistry, hasActiveJob, buildRunnerNudgePrompt } from "engine/runner";
 import { createReviewStore } from "engine/review";
 import { globalIteratorStore, clearIteratorScope } from "engine/util";
 import { defaultCoordinator, TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from "engine/todo";
@@ -83,13 +82,9 @@ export function createRegistration(
     ],
     contextInjector: createCapsInjector(),
     eventHook: createEventHook({
-      cleanupRegistry,
-      globalJobRegistry: deps.runnerJobs,
       reviewStore,
       clearIteratorScope: (id: string) => clearIteratorScope(globalIteratorStore, id),
       coordinator: defaultCoordinator,
-      hasActiveJob: (sessionId: string) => hasActiveJob(deps.runnerJobs, sessionId),
-      buildRunnerNudgePrompt,
       TODO_NUDGE_PROMPT,
       LOOP_NUDGE_PROMPT,
     }),

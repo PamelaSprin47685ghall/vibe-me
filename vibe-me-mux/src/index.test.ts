@@ -1,10 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createJobRegistry } from "engine/runner";
 import { createRegistration } from "./index.js";
 
 const mockDependencies = {
   log: { debug: () => undefined },
-  runnerJobs: createJobRegistry(),
   loadConfigOrDefault: () => ({ projects: new Map() }),
   readAgentDefinition: () => Promise.reject(new Error("not used")),
   resolveAgentFrontmatter: () => Promise.reject(new Error("not used")),
@@ -21,9 +19,7 @@ describe("createRegistration", () => {
       "editor",
       "greper",
       "reverie",
-      "runner",
-      "runner_wait",
-      "runner_abort",
+      "executor",
       "browser",
       "submit_review",
       "websearch",

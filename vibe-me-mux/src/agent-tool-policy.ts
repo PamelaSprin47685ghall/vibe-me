@@ -7,13 +7,13 @@ export interface MuxPluginToolPolicy {
 }
 
 export type MuxAgentName = "exec" | "explore";
-export type SubAgentRole = "editor" | "greper" | "runner" | "browser" | "reverie" | "reviewer";
+export type SubAgentRole = "editor" | "greper" | "browser" | "reverie" | "reviewer" | "summarizer";
 
 const MUX_TOOL_PATTERNS_BY_POLICY_NAME: Record<string, readonly string[]> = {
   read: ["read"],
   write: ["write"],
   edit: ["file_edit_.*"],
-  runner: ["runner"],
+  executor: ["executor"],
   glob: ["glob"],
   fuzzy_find: ["fuzzy_find"],
   fuzzy_grep: ["fuzzy_grep"],
@@ -28,8 +28,6 @@ const MUX_TOOL_PATTERNS_BY_POLICY_NAME: Record<string, readonly string[]> = {
   browser: ["browser"],
   task: ["task", "task_.*"],
   todowrite: ["todo_read", "todoread", "todo_write", "todowrite"],
-  runner_wait: ["runner_wait"],
-  runner_abort: ["runner_abort"],
   stealth_browser_mcp_star: ["stealth_browser_mcp_.*"],
   "stealth-browser-mcp_star": ["stealth_browser_mcp_.*"],
   bash: ["bash", "bash_.*"],

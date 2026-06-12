@@ -7,7 +7,7 @@ import { createGreperTool } from '../greper/index.js';
 import { createSubmitReviewResultTool, createSubmitReviewTool } from '../loop/index.js';
 import { createOllamaWebFetchTool, createOllamaWebSearchTool } from '../ollama-web/index.js';
 import { createReverieTool } from '../reverie/index.js';
-import { createRunnerAbortTool, createRunnerTool, createRunnerWaitTool, opencodeRunnerJobs } from '../runner/index.js';
+import { createExecutorTool } from '../executor/index.js';
 
 export function createTools(ctx: PluginInput, reviewStore: ReviewStore, nudgeTool: Record<string, unknown>) {
   return {
@@ -19,11 +19,9 @@ export function createTools(ctx: PluginInput, reviewStore: ReviewStore, nudgeToo
     submit_review_result: createSubmitReviewResultTool(reviewStore),
     webfetch: createOllamaWebFetchTool(),
     websearch: createOllamaWebSearchTool(),
-    runner: createRunnerTool(ctx, opencodeRunnerJobs),
+    executor: createExecutorTool(ctx),
     browser: createBrowserTool(ctx),
     fuzzy_find: createFuzzyFindTool(),
     fuzzy_grep: createFuzzyGrepTool(),
-    runner_wait: createRunnerWaitTool(opencodeRunnerJobs),
-    runner_abort: createRunnerAbortTool(opencodeRunnerJobs),
   };
 }

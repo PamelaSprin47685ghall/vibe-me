@@ -29,33 +29,6 @@ describe("createEventHook", () => {
     expect(nudge).toHaveBeenCalledWith("ws1", "todo-nudge-prompt");
   });
 
-  test("stream-end with nudge-runner action sends runner prompt", async () => {
-    const { deps, mockHasActiveJob, mockShouldNudge } = createMockDeps();
-    mockHasActiveJob.mockReturnValue(true);
-    mockShouldNudge.mockReturnValue("nudge-runner");
-    const { helpers, nudge, getTodos } = makeHelpers();
-    const event: PluginEvent = {
-      type: "stream-end",
-      workspaceId: "ws1",
-      properties: { parts: [] },
-    };
-
-    const hook = createEventHook(deps);
-    await hook(event, helpers);
-
-    expect(getTodos).not.toHaveBeenCalled();
-    expect(mockShouldNudge).toHaveBeenCalledWith(
-      "ws1",
-      expect.objectContaining({
-        todos: [],
-        hasActiveRunner: true,
-        isLoopActive: false,
-      }),
-      expect.any(Number),
-    );
-    expect(nudge).toHaveBeenCalledWith("ws1", "runner-nudge");
-  });
-
   test("stream-end with nudge-loop action sends loop prompt", async () => {
     const { deps, mockShouldNudge } = createMockDeps();
     mockShouldNudge.mockReturnValue("nudge-loop");

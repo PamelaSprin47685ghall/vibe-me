@@ -1,10 +1,8 @@
 import { mock } from "bun:test";
-import type { JobRegistry } from "engine/runner";
 import type { ReviewStore } from "engine/review";
 import type { EventHookDeps } from "../eventHook.js";
 
 export function createMockDeps() {
-  const mockCleanupRegistry = mock<(registry: JobRegistry, id: string) => void>(() => undefined);
   const mockDeactivateReview = mock(() => undefined);
   const mockSuppress = mock(() => undefined);
   const mockShouldNudge = mock<(
@@ -12,8 +10,6 @@ export function createMockDeps() {
     context: unknown,
     now: number,
   ) => string>(() => "none");
-  const mockHasActiveJob = mock(() => false);
-  const mockBuildRunnerNudgePrompt = mock(() => "runner-nudge");
   const mockIsReviewActive = mock(() => false);
   const mockClearIteratorScope = mock(() => undefined);
 
@@ -32,22 +28,15 @@ export function createMockDeps() {
   } satisfies ReviewStore;
 
   return {
-    mockCleanupRegistry,
     mockDeactivateReview,
     mockSuppress,
     mockShouldNudge,
-    mockHasActiveJob,
-    mockBuildRunnerNudgePrompt,
     mockIsReviewActive,
     mockClearIteratorScope,
     deps: {
-      cleanupRegistry: mockCleanupRegistry,
-      globalJobRegistry: new Map<string, never>() as JobRegistry,
       reviewStore: mockReviewStore,
       clearIteratorScope: mockClearIteratorScope,
       coordinator: { shouldNudge: mockShouldNudge, suppress: mockSuppress },
-      hasActiveJob: mockHasActiveJob,
-      buildRunnerNudgePrompt: mockBuildRunnerNudgePrompt,
       TODO_NUDGE_PROMPT: "todo-nudge-prompt",
       LOOP_NUDGE_PROMPT: "loop-nudge-prompt",
     } satisfies EventHookDeps,

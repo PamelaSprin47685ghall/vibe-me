@@ -1,6 +1,5 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { defaultCoordinator } from 'engine/todo';
-import { cleanupRegistry } from 'engine/runner';
 import type { ReviewStore } from 'engine/review';
 import {
   resumeSession,
@@ -12,7 +11,6 @@ import {
 } from 'engine/nudge-shell';
 import type { NudgeShellState } from 'engine/nudge-shell';
 import { nudgeIfNeeded } from './timing';
-import { opencodeRunnerJobs } from '../runner/index.js';
 import {
   isAbortEventError,
   isNudgePrompt,
@@ -31,7 +29,6 @@ export type EventHandler = (
 ) => NudgeShellState | Promise<NudgeShellState>;
 
 function handleSessionDelete(state: NudgeShellState, _props: Record<string, unknown>, sessionID: string): NudgeShellState {
-  cleanupRegistry(opencodeRunnerJobs, sessionID);
   defaultCoordinator.clearSession(sessionID);
   return clearSession(state, sessionID);
 }

@@ -1,7 +1,23 @@
 {
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "files": {
-    "includes": ["src/basher/**/*.ts", "src/editor/**/*.ts", "src/explorer/**/*.ts", "src/index.ts", "src/inject-caps/**/*.ts", "src/loop/**/*.ts", "src/nudge-todo/**/*.ts", "src/ollama-web/**/*.ts", "src/refer-caps/**/*.ts", "src/reverie/**/*.ts", "src/runner/**/*.ts", "src/utils/**/*.ts"]
+    "includes": [
+      "src/agent-config.ts",
+      "src/agent-tools.ts",
+      "src/browser/**/*.ts",
+      "src/editor/**/*.ts",
+      "src/executor/**/*.ts",
+      "src/greper/**/*.ts",
+      "src/index.ts",
+      "src/loop/**/*.ts",
+      "src/nudge/**/*.ts",
+      "src/ollama-web/**/*.ts",
+      "src/plugin/**/*.ts",
+      "src/reverie/**/*.ts",
+      "src/caps/**/*.ts",
+      "src/tree-sitter/**/*.ts",
+      "src/utils/**/*.ts"
+    ]
   },
   "vcs": {
     "enabled": false,

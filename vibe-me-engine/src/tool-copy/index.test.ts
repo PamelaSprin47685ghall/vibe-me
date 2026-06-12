@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { TOOL_COPY } from './index.js';
 
 const TOOLS = [
-  'editor', 'greper', 'reverie', 'browser', 'runner',
+  'editor', 'greper', 'reverie', 'browser', 'executor',
   'websearch', 'webfetch', 'fuzzy_find', 'fuzzy_grep',
 ] as const;
 
@@ -11,7 +11,7 @@ const PARAM_KEYS: Record<string, readonly string[]> = {
   greper: ['intents'],
   reverie: ['intent', 'files'],
   browser: ['intent'],
-  runner: ['language', 'program', 'dependencies', 'what_to_summarize'],
+  executor: ['language', 'program', 'dependencies', 'timeout_type'],
   websearch: ['query', 'numResults'],
   webfetch: ['url', 'extract_main', 'prefer_llms_txt', 'prompt', 'timeout'],
   fuzzy_find: ['pattern', 'path', 'limit', 'iterator'],

@@ -27,10 +27,13 @@ function resolvePolicy(agent: AgentRole | string): EffectivePolicy {
   return getEffectivePolicy(agent);
 }
 
-export function getAgentPermissionDefaults(agent: AgentRole | string): Record<string, string> {
+export function getAgentPermissionDefaults(
+  agent: AgentRole | string,
+): Record<string, string> {
   const { permissions } = resolvePolicy(agent);
   const result: Record<string, string> = {};
-  for (const [name, perm] of permissions) result[name] = perm._tag === 'Allow' ? 'allow' : 'deny';
+  for (const [name, perm] of permissions)
+    result[name] = perm._tag === 'Allow' ? 'allow' : 'deny';
   return result;
 }
 

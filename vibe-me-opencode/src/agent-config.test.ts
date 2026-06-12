@@ -10,7 +10,7 @@ describe('applyAgentConfig', () => {
 
     expect(agents).toBeDefined();
     expect(agents.editor).toBeDefined();
-    expect(agents.runner).toBeDefined();
+    expect(agents.summarizer).toBeDefined();
     expect(agents.reverie).toBeDefined();
     expect(agents.reviewer).toBeDefined();
     expect(agents.greper).toBeDefined();
@@ -33,19 +33,20 @@ describe('applyAgentConfig', () => {
     expect(editor.prompt).toBeDefined();
   });
 
-  it('renames basher to runner and deletes the basher key', () => {
+  it('drops legacy basher/runner entries entirely', () => {
     const opencodeConfig: Record<string, unknown> = {
       agent: { basher: { customField: 'from-basher' } },
     };
     applyAgentConfig(opencodeConfig, {});
 
     const agents = opencodeConfig.agent as Record<string, unknown>;
-
     expect(agents.basher).toBeUndefined();
-
-    const runner = agents.runner as Record<string, unknown>;
-    expect(runner.customField).toBe('from-basher');
-    expect(runner.mode).toBe('subagent');
+    expect(agents.runner).toBeUndefined();
+    // No agent inherits the legacy basher customization
+    for (const name of Object.keys(agents)) {
+      const entry = agents[name] as Record<string, unknown> | undefined;
+      expect(entry?.customField).toBeUndefined();
+    }
   });
 
   it('injects mcps when opencodeConfig.mcp is absent', () => {
@@ -94,7 +95,8 @@ describe('applyAgentConfig', () => {
     expect(permission.read).toBe('allow');
     expect(permission.bash).toBe('deny');
     expect(permission['stealth-browser-mcp_star']).toBe('deny');
-    expect(permission.runner_wait).toBe('deny');
+    expect(permission.runner_wait).toBeUndefined();
+    expect(permission.runner_abort).toBeUndefined();
     expect(permission.fuzzy_find).toBe('allow');
   });
 
@@ -111,7 +113,7 @@ describe('applyAgentConfig', () => {
     expect(permission['stealth-browser-mcp_star']).toBe('allow');
   });
 
-  it('uses Runner role defaults for unknown agent names', () => {
+  it('uses Reverie role defaults for unknown agent names', () => {
     const opencodeConfig: Record<string, unknown> = {
       agent: { unknown: {} },
     };

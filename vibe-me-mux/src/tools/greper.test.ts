@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { createJobRegistry } from "engine/runner";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import { GREPER_TOOLS } from "engine/agent-policy";
 import { FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME } from "./submitReview.js";
@@ -46,7 +45,6 @@ const mockTaskService: {
 
 const mockDeps: HostDependencies = {
   log: { debug: () => undefined },
-  runnerJobs: createJobRegistry(),
   loadConfigOrDefault: () => ({
     projects: new Map(),
     agentAiDefaults: {},

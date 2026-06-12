@@ -29,13 +29,13 @@ export const TOOL_COPY = {
       "intent": "A natural-language intent describing the desired web task. Must include all relevant background, design rationale, URLs, and specific requirements. Do not assume the agent knows anything about the project context."
     }
   },
-  "runner": {
-    "description": "Executes a shell command, Python code, or JavaScript/TypeScript program and returns a natural-language summary. Supports both quick synchronous execution and long-running background tasks. Automatically handles timeout management and provides incremental output monitoring. IMPORTANT: If executing Python (language=\"python\") or JavaScript (language=\"javascript\") code, you must specify all necessary third-party package dependencies (e.g. numpy, pandas, requests for Python; lodash, axios for JavaScript) in the \"dependencies\" argument so they can be installed and resolved before execution.",
+  "executor": {
+    "description": "Executes a shell command, Python code, or JavaScript/TypeScript program synchronously with a strict timeout budget. On completion (or timeout) the captured output is either returned directly or, when it exceeds 8192 bytes, summarized by a tightly-scoped sub-agent. IMPORTANT: If executing Python (language=\"python\") or JavaScript (language=\"javascript\") code, you must specify all necessary third-party package dependencies (e.g. numpy, pandas, requests for Python; lodash, axios for JavaScript) in the \"dependencies\" argument so they can be installed and resolved before execution.",
     "params": {
       "language": "Execution language: shell, python, or javascript",
       "program": "The program to execute. Can be a shell command, Python code, or JavaScript/TypeScript code depending on language.",
       "dependencies": "Dependencies to install (for python or javascript language). Explicitly specify all third-party libraries used in the code so they can be resolved before execution.",
-      "what_to_summarize": "What to look for in the output. Be specific."
+      "timeout_type": "Execution timeout budget. 'short' (1s) for fast local operations, 'long' (10s) for network-bound tasks."
     }
   },
   "websearch": {

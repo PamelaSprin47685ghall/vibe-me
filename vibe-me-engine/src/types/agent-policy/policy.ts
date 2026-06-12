@@ -20,7 +20,7 @@ export const CANONICAL_TOOL_NAMES = [
   'read',
   'write',
   'edit',
-  'runner',
+  'executor',
   'glob',
   'fuzzy_find',
   'fuzzy_grep',
@@ -35,8 +35,6 @@ export const CANONICAL_TOOL_NAMES = [
   'websearch',
   'browser',
   'task',
-  'runner_wait',
-  'runner_abort',
   'stealth_browser_mcp_star',
 ] as const;
 
