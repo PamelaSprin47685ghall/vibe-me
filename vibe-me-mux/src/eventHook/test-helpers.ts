@@ -7,7 +7,11 @@ export function createMockDeps() {
   const mockCleanupRegistry = mock<(registry: JobRegistry, id: string) => void>(() => undefined);
   const mockDeactivateReview = mock(() => undefined);
   const mockSuppress = mock(() => undefined);
-  const mockShouldNudge = mock(() => "none");
+  const mockShouldNudge = mock<(
+    sessionId: string,
+    context: unknown,
+    now: number,
+  ) => string>(() => "none");
   const mockHasActiveJob = mock(() => false);
   const mockBuildRunnerNudgePrompt = mock(() => "runner-nudge");
   const mockIsReviewActive = mock(() => false);

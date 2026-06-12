@@ -11,7 +11,7 @@ describe('loop nudge state machine', () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({ data: [] }));
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.activateReview('ses-1', 'task', 0);
     const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
@@ -37,7 +37,7 @@ describe('loop nudge state machine', () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({ data: [] }));
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.activateReview('ses-1', 'task', 0);
     const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
@@ -63,7 +63,7 @@ describe('loop nudge state machine', () => {
       }
     });
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.activateReview('ses-1', 'task', 0);
     const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
@@ -84,7 +84,7 @@ describe('loop nudge state machine', () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({ data: [] }));
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.activateReview('ses-1', 'task', 0);
     const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await Promise.all([

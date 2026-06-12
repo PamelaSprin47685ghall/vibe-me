@@ -49,6 +49,9 @@ export function createHooks(
         }
         tools['stealth-browser-mcp_*'] = false;
       }
+      if (agent === 'orchestrator') {
+        tools['patch'] = false;
+      }
       output.message.tools = tools;
     },
 

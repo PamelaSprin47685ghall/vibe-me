@@ -15,7 +15,7 @@ export interface EventHookDeps {
   reviewStore: ReviewStore;
   clearIteratorScope: (id: string) => void;
   coordinator: {
-    shouldNudge: (sessionId: string, context: NudgeInputContext) => string;
+    shouldNudge: (sessionId: string, context: NudgeInputContext, now: number) => string;
     suppress: (id: string) => void;
   };
   hasActiveJob: (sessionId: string) => boolean;
@@ -54,12 +54,12 @@ async function handleStreamEnd(
   };
 
   if (hasActiveRunner) {
-    const action = deps.coordinator.shouldNudge(workspaceId, {
-      todos: [],
-      lastAssistantMessage,
-      hasActiveRunner: true,
-      isLoopActive: false,
-    });
+      const action = deps.coordinator.shouldNudge(workspaceId, {
+        todos: [],
+        lastAssistantMessage,
+        hasActiveRunner: true,
+        isLoopActive: false,
+      }, Date.now());
     if (action !== "nudge-runner" || state.runnerNudgedWorkspaces.has(workspaceId)) return;
 
     const signature = `runner:${lastAssistantMessage.slice(0, 200)}`;
@@ -86,7 +86,7 @@ async function handleStreamEnd(
     lastAssistantMessage,
     hasActiveRunner,
     isLoopActive: deps.reviewStore.isReviewActive(workspaceId),
-  });
+  }, Date.now());
   const promptText = selectNudgePrompt(action, prompts);
   if (!promptText) return;
 

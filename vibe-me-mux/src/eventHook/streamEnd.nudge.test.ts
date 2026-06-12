@@ -24,6 +24,7 @@ describe("createEventHook", () => {
         todos: ["pending"],
         lastAssistantMessage: "done",
       }),
+      expect.any(Number),
     );
     expect(nudge).toHaveBeenCalledWith("ws1", "todo-nudge-prompt");
   });
@@ -50,6 +51,7 @@ describe("createEventHook", () => {
         hasActiveRunner: true,
         isLoopActive: false,
       }),
+      expect.any(Number),
     );
     expect(nudge).toHaveBeenCalledWith("ws1", "runner-nudge");
   });
@@ -95,6 +97,7 @@ describe("createEventHook", () => {
       expect.objectContaining({
         lastAssistantMessage: "first\nsecond",
       }),
+      expect.any(Number),
     );
   });
 });

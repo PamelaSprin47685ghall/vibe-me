@@ -90,7 +90,7 @@ describe('createLoopCommandManager', () => {
 
     test('does not toggle already active is a no-op', async () => {
       const reviewStore = createReviewStore();
-      reviewStore.activateReview('ses-1', 'existing task');
+    reviewStore.activateReview('ses-1', 'existing task', 0);
       const manager = createLoopCommandManager(createMockContext(), reviewStore);
       const output = createOutput();
 

@@ -15,18 +15,18 @@ describe('Review Runtime', () => {
 
   describe('state transitions', () => {
     it('starts active after activation', () => {
-      store.activateReview('session-1', 'task-1');
+      store.activateReview('session-1', 'task-1', 0);
       expect(store.isReviewActive('session-1')).toBe(true);
     });
 
     it('allows lock acquisition from active', () => {
-      store.activateReview('session-1', 'task-1');
+      store.activateReview('session-1', 'task-1', 0);
       expect(store.tryLockReview('session-1')).toBe(true);
       expect(store.tryLockReview('session-1')).toBe(false);
     });
 
     it('unlock returns to active', () => {
-      store.activateReview('session-1', 'task-1');
+      store.activateReview('session-1', 'task-1', 0);
       store.tryLockReview('session-1');
       store.unlockReview('session-1');
       expect(store.getReviewState('session-1')?._tag).toBe('Active');
@@ -41,7 +41,7 @@ describe('Review Runtime', () => {
     it('resolves pending review', () => {
       let resolved = false;
       let result: ReviewResult | undefined;
-      store.activateReview('session-1', 'task-1');
+      store.activateReview('session-1', 'task-1', 0);
       store.setPendingReview('session-1', (res) => { resolved = true; result = res; });
       const success = store.resolvePendingReview('session-1', rejected('Approved'));
       expect(success).toBe(true);
@@ -58,14 +58,14 @@ describe('Review Runtime', () => {
 
   describe('cleanup', () => {
     it('deactivates and removes session', () => {
-      store.activateReview('session-1', 'task-1');
+      store.activateReview('session-1', 'task-1', 0);
       store.deactivateReview('session-1');
       expect(store.isReviewActive('session-1')).toBe(false);
     });
 
     it('clears all sessions', () => {
-      store.activateReview('session-1', 'task-1');
-      store.activateReview('session-2', 'task-2');
+      store.activateReview('session-1', 'task-1', 0);
+      store.activateReview('session-2', 'task-2', 0);
       store.clearReviewSessions();
       expect(store.isReviewActive('session-1')).toBe(false);
       expect(store.isReviewActive('session-2')).toBe(false);
@@ -74,7 +74,7 @@ describe('Review Runtime', () => {
 
   describe('query', () => {
     it('stores original task', () => {
-      store.activateReview('session-1', 'Refactor auth');
+      store.activateReview('session-1', 'Refactor auth', 0);
       expect(store.getReviewTask('session-1')).toBe('Refactor auth');
     });
   });

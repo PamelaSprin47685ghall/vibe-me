@@ -9,18 +9,21 @@ export interface AbortSuppressor {
   isSuppressed: () => boolean;
 }
 
-export function createAbortSuppressor(suppressAfterMs: number): AbortSuppressor {
+export function createAbortSuppressor(
+  suppressAfterMs: number,
+  now: () => number,
+): AbortSuppressor {
   let suppressUntil = 0;
   return {
     signal: new AbortController().signal,
     suppress(): void {
-      suppressUntil = Date.now() + suppressAfterMs;
+      suppressUntil = now() + suppressAfterMs;
     },
     restore(): void {
       suppressUntil = 0;
     },
     isSuppressed(): boolean {
-      return Date.now() < suppressUntil;
+      return now() < suppressUntil;
     },
   };
 }

@@ -43,9 +43,9 @@ export class NudgeCoordinator {
   private state = createNudgeCoordinatorState();
   private suppressed = new Set<string>();
 
-  shouldNudge(sessionId: string, context: NudgeContext): string {
+  shouldNudge(sessionId: string, context: NudgeContext, now: number): string {
     if (this.suppressed.delete(sessionId)) return 'none';
-    const [newState, action] = updateNudgeState(this.state, sessionId, context, Date.now());
+    const [newState, action] = updateNudgeState(this.state, sessionId, context, now);
     this.state = newState;
     return nudgeActionToString(action);
   }

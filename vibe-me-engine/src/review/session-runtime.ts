@@ -21,7 +21,7 @@ export type { ReviewResult, Accepted, Rejected, Terminated } from './session-nod
 export { accepted, rejected, terminated, matchReviewResult } from './session-node.js';
 
 export interface ReviewStore {
-  activateReview(sessionID: string, task: string, createdAt?: number): void;
+  activateReview(sessionID: string, task: string, createdAt: number): void;
   deactivateReview(sessionID: string): void;
   clearReviewSessions(): void;
   tryLockReview(sessionID: string): boolean;
@@ -45,7 +45,7 @@ export function createReviewStore(): ReviewStore {
   };
 
   return {
-    activateReview(sessionID, task, createdAt = Date.now()) {
+    activateReview(sessionID, task, createdAt) {
       registry = reduce(registry, { type: 'activate', id: sessionID, task, createdAt });
     },
     deactivateReview(sessionID) {

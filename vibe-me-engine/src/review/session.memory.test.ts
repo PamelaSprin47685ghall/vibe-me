@@ -18,11 +18,11 @@ describe('Review Session Memory Leak Prevention', () => {
     const parentID = 'parent';
     const childrenIDs: string[] = [];
 
-    store.activateReview(parentID, 'parent task');
+    store.activateReview(parentID, 'parent task', 0);
     for (let i = 0; i < 100; i++) {
       const childID = `child-${i}`;
       childrenIDs.push(childID);
-      store.activateReview(childID, `child task ${i}`);
+      store.activateReview(childID, `child task ${i}`, 0);
       store.addChild(parentID, childID);
     }
 
@@ -43,7 +43,7 @@ describe('Review Session Memory Leak Prevention', () => {
     for (let i = 0; i < depth; i++) {
       const sessionID = `session-${i}`;
       sessionIDs.push(sessionID);
-      store.activateReview(sessionID, `task ${i}`);
+      store.activateReview(sessionID, `task ${i}`, 0);
       if (i > 0) store.addChild(sessionIDs[i - 1]!, sessionID);
     }
 
@@ -59,7 +59,7 @@ describe('Review Session Memory Leak Prevention', () => {
   it('cleans up on rapid create-destroy cycles', () => {
     for (let i = 0; i < 1000; i++) {
       const sessionID = `session-${i}`;
-      store.activateReview(sessionID, `task ${i}`);
+      store.activateReview(sessionID, `task ${i}`, 0);
       store.setPendingReview(sessionID, () => {});
       store.deactivateReview(sessionID);
     }

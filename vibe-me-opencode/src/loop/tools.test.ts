@@ -12,7 +12,7 @@ import { createMockContext } from './test-utils';
 describe('createSubmitReviewResultTool', () => {
   test('resolves pending result with null feedback (accept)', async () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('reviewer-1', 'task');
+    reviewStore.activateReview('reviewer-1', 'task', 0);
     reviewStore.tryLockReview('reviewer-1');
     const d = createDeferred<any>();
     reviewStore.setPendingReview('reviewer-1', (result) => d.resolve(result));
@@ -28,7 +28,7 @@ describe('createSubmitReviewResultTool', () => {
 
   test('resolves pending result with feedback (reject)', async () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('reviewer-1', 'task');
+    reviewStore.activateReview('reviewer-1', 'task', 0);
     reviewStore.tryLockReview('reviewer-1');
     const d = createDeferred<any>();
     reviewStore.setPendingReview('reviewer-1', (result) => d.resolve(result));
@@ -55,7 +55,7 @@ describe('createSubmitReviewResultTool', () => {
 
   test('treats empty string as null (accept)', async () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('reviewer-1', 'task');
+    reviewStore.activateReview('reviewer-1', 'task', 0);
     reviewStore.tryLockReview('reviewer-1');
     const d = createDeferred<any>();
     reviewStore.setPendingReview('reviewer-1', (result) => d.resolve(result));
@@ -84,7 +84,7 @@ describe('createSubmitReviewTool', () => {
 
   test('rejects concurrent review attempts', async () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.activateReview('ses-1', 'task', 0);
     reviewStore.tryLockReview('ses-1');
 
     const ctx = createMockContext();
@@ -98,7 +98,7 @@ describe('createSubmitReviewTool', () => {
 
   test('releases lock when reviewer session creation fails', async () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.activateReview('ses-1', 'task', 0);
 
     const ctx = createMockContext();
     ctx.client.session.create = mock(async () => ({ data: { id: undefined } }));
@@ -116,7 +116,7 @@ describe('createSubmitReviewTool', () => {
 
   test('releases lock when client.session.create throws', async () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.activateReview('ses-1', 'task', 0);
 
     const ctx = createMockContext();
     ctx.client.session.create = mock(async () => {

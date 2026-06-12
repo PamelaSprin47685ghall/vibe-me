@@ -100,7 +100,7 @@ export async function nudgeIfNeeded(
     isLoopActive: reviewStore.isReviewActive(sessionID),
   };
 
-  const action = defaultCoordinator.shouldNudge(sessionID, context);
+  const action = defaultCoordinator.shouldNudge(sessionID, context, Date.now());
   if (action === 'none') return deleteNudgedSession(state, sessionID);
 
   const promptText = selectNudgePromptText(action, sessionID);

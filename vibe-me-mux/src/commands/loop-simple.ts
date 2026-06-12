@@ -18,7 +18,7 @@ export function createLoopOnlyCommand(reviewStore: ReviewStore): PluginSlashComm
         return "Loop mode is already active. Submit your work via submit_review.";
       }
 
-      reviewStore.activateReview(workspaceId, task);
+      reviewStore.activateReview(workspaceId, task, Date.now());
       return buildLoopMessage(task, "Loop mode is active. Complete the task above, then call submit_review with:");
     },
   };

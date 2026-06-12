@@ -68,7 +68,7 @@ export async function handleLoopReview(
     return;
   }
 
-  reviewStore.activateReview(sessionID, task);
+  reviewStore.activateReview(sessionID, task, Date.now());
 
   output.parts.push({
     type: 'text',

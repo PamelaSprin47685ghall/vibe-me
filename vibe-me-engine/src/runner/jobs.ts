@@ -27,6 +27,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
   if (language === 'shell') program = stripHeadTailPipes(program).script;
   const timeoutMs = earlyTimeoutMs ?? RUNNER_EARLY_TIMEOUT_MS;
   const cwd = options.cwd ?? process.cwd();
+  const startTime = Date.now();
 
   const existingEntry = jobs.get(sessionId);
   if (existingEntry?.record.status._tag === 'Running') throw new Error('A task is already running. Use wait() or abort() first.');
@@ -37,7 +38,7 @@ export async function execute(options: ExecuteOptions): Promise<ExecuteResult> {
   if (language === 'javascript') projectDir = getRunnerProjectDir();
   else if (language === 'python') projectDir = getRunnerProjectDir(sessionId);
 
-  const record = emptyJob(sessionId, logPath, projectDir, options.parentSessionId);
+  const record = emptyJob(sessionId, logPath, projectDir, startTime, options.parentSessionId);
   const handles = createHandles(logPath);
   const entry: JobEntry = { record, handles };
   jobs.set(sessionId, entry);

@@ -25,7 +25,7 @@ export async function handleLoop(
     return;
   }
 
-  reviewStore.activateReview(input.sessionID, task);
+  reviewStore.activateReview(input.sessionID, task, Date.now());
 
   output.parts.push({
     type: 'text',

@@ -14,6 +14,7 @@ describe('SessionRegistry pure reducer', () => {
       const r = reduce(emptyRegistry(), { type: 'activate', id: 's1', task: 'refactor', createdAt: 1000 });
       expect(sessionIsActive(r, 's1')).toBe(true);
       expect(taskOf(r, 's1')).toBe('refactor');
+      expect(r.get('s1')?.createdAt).toBe(1000);
     });
 
     it('lock transitions to Locked', () => {

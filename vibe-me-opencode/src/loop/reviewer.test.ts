@@ -10,7 +10,7 @@ describe('reviewSessions state', () => {
 
   test('can activate and deactivate', () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'test task');
+    reviewStore.activateReview('ses-1', 'test task', 0);
     expect(reviewStore.isReviewActive('ses-1')).toBe(true);
     reviewStore.deactivateReview('ses-1');
     expect(reviewStore.isReviewActive('ses-1')).toBe(false);
@@ -18,7 +18,7 @@ describe('reviewSessions state', () => {
 
   test('stores original task', () => {
     const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'Refactor the auth module');
+    reviewStore.activateReview('ses-1', 'Refactor the auth module', 0);
     expect(reviewStore.getReviewTask('ses-1')).toBe('Refactor the auth module');
   });
 

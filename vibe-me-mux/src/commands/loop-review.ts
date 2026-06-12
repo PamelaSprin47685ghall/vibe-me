@@ -26,7 +26,7 @@ export function createLoopReviewCommand(deps: HostDependencies, reviewStore: Rev
       }
 
       if (!deps.taskService) {
-        reviewStore.activateReview(workspaceId, task);
+        reviewStore.activateReview(workspaceId, task, Date.now());
         return buildLoopMessage(task, "Loop mode is active (pre-review unavailable — no task service). Complete the task above, then call submit_review with:");
       }
 
@@ -65,7 +65,7 @@ export function createLoopReviewCommand(deps: HostDependencies, reviewStore: Rev
         preReviewReport = "PASS";
       }
 
-      reviewStore.activateReview(workspaceId, task);
+      reviewStore.activateReview(workspaceId, task, Date.now());
 
       if (isPassingReviewReport(preReviewReport)) {
         return buildLoopMessage(task, "Loop mode is active. Pre-review passed. Complete the task above, then call submit_review with:");

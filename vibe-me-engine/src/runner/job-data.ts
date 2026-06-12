@@ -20,11 +20,12 @@ export function emptyJob(
   sessionId: string,
   stdoutFile: string,
   projectDir: string | undefined,
+  startTime: number,
   parentSessionId?: string,
 ): JobRecord {
   return {
     sessionId, stdoutFile, projectDir, parentSessionId,
-    startTime: Date.now(),
+    startTime,
     status: running,
     bytesRead: 0,
     finalOutput: '',
@@ -34,7 +35,8 @@ export function emptyJob(
 
 export function appendOutput(record: JobRecord, chunk: string): JobRecord {
   if (record.finalOutput.length >= MAX_OUTPUT_BYTES) return record;
-  return { ...record, finalOutput: record.finalOutput + chunk };
+  const remainingBytes = MAX_OUTPUT_BYTES - record.finalOutput.length;
+  return { ...record, finalOutput: record.finalOutput + chunk.slice(0, remainingBytes) };
 }
 
 export function markCompleted(record: JobRecord): JobRecord {

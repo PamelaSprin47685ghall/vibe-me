@@ -12,7 +12,7 @@ describe('Review Session Runtime', () => {
   });
 
   it('enforces single aggregate lifecycle', () => {
-    store.activateReview('test-session', 'test task');
+    store.activateReview('test-session', 'test task', 0);
     expect(store.tryLockReview('test-session')).toBe(true);
     expect(store.tryLockReview('test-session')).toBe(false);
   });
@@ -21,9 +21,9 @@ describe('Review Session Runtime', () => {
     const rootID = 'root';
     const childIDs = Array.from({ length: 100 }, (_, i) => `child-${i}`);
 
-    store.activateReview(rootID, 'root task');
+    store.activateReview(rootID, 'root task', 0);
     for (const childID of childIDs) {
-      store.activateReview(childID, 'child task');
+      store.activateReview(childID, 'child task', 0);
       store.addChild(rootID, childID);
     }
 
@@ -38,7 +38,7 @@ describe('Review Session Runtime', () => {
   });
 
   it('prevents re-activation of active session', () => {
-    store.activateReview('test-session', 'test task');
-    store.activateReview('test-session', 'another task');
+    store.activateReview('test-session', 'test task', 0);
+    store.activateReview('test-session', 'another task', 0);
   });
 });
