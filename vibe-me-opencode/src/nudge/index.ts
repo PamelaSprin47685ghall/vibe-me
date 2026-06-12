@@ -1,3 +1,3 @@
 export { createNudgeCoordinatorHook } from './hook';
-export { emptyNudgeShellState } from './state';
-export type { NudgeShellState } from './state';
+export { emptyNudgeShellState } from 'engine/nudge-shell';
+export type { NudgeShellState } from 'engine/nudge-shell';

@@ -8,8 +8,8 @@ import {
   addRetryPendingSession,
   deleteRetryPendingSession,
   deleteNudgedSession,
-} from './state';
-import type { NudgeShellState } from './state';
+} from 'engine/nudge-shell';
+import type { NudgeShellState } from 'engine/nudge-shell';
 import { nudgeIfNeeded } from './timing';
 import {
   isAbortEventError,

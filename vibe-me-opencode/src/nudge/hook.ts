@@ -1,7 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { REVERIE_NUDGE } from 'engine/todo';
-import { emptyNudgeShellState, resumeSession, rememberAgent } from './state';
-import type { NudgeShellState } from './state';
+import { emptyNudgeShellState, resumeSession, rememberAgent } from 'engine/nudge-shell';
+import type { NudgeShellState } from 'engine/nudge-shell';
 import { getPartsText, isNudgePrompt, getSessionID, getEventAgent } from 'engine/util';
 import { createEventHandlers, matchCompositeHandler } from './event-handlers';
 

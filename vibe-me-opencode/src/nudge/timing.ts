@@ -6,7 +6,7 @@ import { asMessageArray } from '../utils/session-messages';
 import { lookupChildAgent } from '../utils/child-agent';
 import { managedRunnerSessions } from '../runner/index.js';
 import { isAbortEventError, isSessionBusyError, createPromptBody } from 'engine/util';
-import type { NudgeShellState } from './state';
+import type { NudgeShellState } from 'engine/nudge-shell';
 import {
   hasStoppedSession,
   hasRetryPendingSession,
@@ -19,7 +19,7 @@ import {
   getAgent,
   stopSession,
   addRetryPendingSession,
-} from './state';
+} from 'engine/nudge-shell';
 
 export async function nudgeIfNeeded(
   state: NudgeShellState,
