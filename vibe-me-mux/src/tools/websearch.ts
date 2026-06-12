@@ -1,3 +1,4 @@
+import { TOOL_COPY } from "engine/tool-copy";
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
 import { requireString, optionalNumber } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
@@ -14,11 +15,11 @@ const parameters: JsonSchema = {
   properties: {
     query: {
       type: "string",
-      description: "Natural language search query...",
+      description: TOOL_COPY.websearch.params.query,
     },
     numResults: {
       type: "number",
-      description: "Number of search results to return (default: 10)",
+      description: TOOL_COPY.websearch.params.numResults,
     },
   },
   required: ["query"],
@@ -29,8 +30,7 @@ export function createWebsearchTool(_deps: HostDependencies): ToolDefinition {
 
   return {
     name: "websearch",
-    description:
-      "Search the web for any topic and get clean, ready-to-use content.\n\nBest for: Finding current information, news, facts, people, companies, or answering questions about any topic.\nReturns: Clean text content from top search results.\n\nQuery tips:\ndescribe the ideal page, not keywords. \"blog post comparing React and Vue performance\" not \"React vs Vue\".\nUse category:people / category:company to search through Linkedin profiles / companies respectively.",
+    description: TOOL_COPY.websearch.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
       const query = requireString(args, 'query');

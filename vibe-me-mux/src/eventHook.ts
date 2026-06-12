@@ -1,8 +1,8 @@
 import type { JobRegistry } from "engine/runner";
 import type { NudgeInputContext } from "engine/todo";
+import { getPartsText } from "engine/util";
 import type { PluginEvent, PluginEventHelpers, PluginEventHook } from "./types/tool.js";
 import {
-  extractLastAssistantMessage,
   selectNudgePrompt,
   createStreamEndState,
   type StreamEndState,
@@ -37,7 +37,7 @@ async function handleStreamEnd(
   if (!helpers) return;
 
   const parts = (event.properties as { parts?: Array<{ type: string; text?: string }> })?.parts ?? [];
-  const lastAssistantMessage = extractLastAssistantMessage(parts);
+  const lastAssistantMessage = getPartsText(parts) ?? "";
   const hasActiveRunner = deps.hasActiveJob(workspaceId);
 
   if (!hasActiveRunner) {

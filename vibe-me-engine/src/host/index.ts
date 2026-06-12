@@ -18,6 +18,33 @@ export interface SubagentRequest {
 
 export interface HostAdapter {
   readonly promptSubagent: (request: SubagentRequest) => Promise<string>;
-  readonly readLocalFile: (path: string) => Promise<string>;
-  readonly abortTask: (taskId: string) => void;
+}
+
+export const SUBAGENT_REPORT_SEPARATOR = '\n---\n';
+
+export async function delegateIntents(
+  adapter: HostAdapter,
+  role: AgentRole,
+  title: string,
+  intents: readonly string[],
+): Promise<string> {
+  const reports = await Promise.all(
+    intents.map((prompt) => adapter.promptSubagent({ role, prompt, title })),
+  );
+  return reports.join(SUBAGENT_REPORT_SEPARATOR);
+}
+
+export interface ReverieFileSection {
+  readonly file: string;
+  readonly content: string | undefined;
+}
+
+export function buildReveriePrompt(
+  sections: readonly ReverieFileSection[],
+  intent: string,
+): string {
+  const rendered = sections.map(
+    ({ file, content }) => `=== ${file} ===\n\n${content ?? '(skipped)'}`,
+  );
+  return `${rendered.join('\n')}\nQuestion:\n${intent}`;
 }

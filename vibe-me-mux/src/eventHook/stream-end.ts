@@ -1,12 +1,3 @@
-export function extractLastAssistantMessage(
-  parts: ReadonlyArray<{ type: string; text?: string }>,
-): string {
-  return parts
-    .filter((part) => part.type === "text" && part.text)
-    .map((part) => part.text!)
-    .join("\n");
-}
-
 export function selectNudgePrompt(
   action: string,
   prompts: { todo: string; loop: string; runner: () => string },

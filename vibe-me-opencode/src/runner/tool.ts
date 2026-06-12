@@ -1,6 +1,7 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import { cleanupJob } from 'engine/runner';
+import { TOOL_COPY } from 'engine/tool-copy';
 import { isAbortError, promptWithAbort } from '../utils/abort-signal';
 import { extractSessionText } from '../utils/session-messages';
 import { extractToolContext } from '../utils/tool-context';
@@ -17,31 +18,23 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
   const client = ctx.client;
 
   return tool({
-    description:
-      'Executes a shell command, Python code, or JavaScript/TypeScript program and returns a natural-language summary. ' +
-      'Supports both quick synchronous execution and long-running background tasks. ' +
-      'Automatically handles timeout management and provides incremental output monitoring. ' +
-      'IMPORTANT: If executing Python (language="python") or JavaScript (language="javascript") code, you must specify all necessary third-party package dependencies (e.g. numpy, pandas, requests for Python; lodash, axios for JavaScript) in the "dependencies" argument so they can be installed and resolved before execution.',
+    description: TOOL_COPY.runner.description,
 
     args: {
       language: tool.schema
         .enum(['shell', 'python', 'javascript'])
         .default('shell')
-        .describe('Execution language: shell, python, or javascript'),
+        .describe(TOOL_COPY.runner.params.language),
       program: tool.schema
         .string()
-        .describe(
-          'The program to execute. Can be a shell command, Python code, or JavaScript/TypeScript code depending on language',
-        ),
+        .describe(TOOL_COPY.runner.params.program),
       dependencies: tool.schema
         .array(tool.schema.string())
         .optional()
-        .describe(
-          'Dependencies to install (for python or javascript language). For Python or JavaScript programs, explicitly specify all third-party libraries used in the code so they can be available.',
-        ),
+        .describe(TOOL_COPY.runner.params.dependencies),
       what_to_summarize: tool.schema
         .string()
-        .describe('What to look for in the output. Be specific.'),
+        .describe(TOOL_COPY.runner.params.what_to_summarize),
     },
 
     async execute(args, context) {

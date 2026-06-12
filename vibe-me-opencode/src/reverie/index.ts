@@ -1,9 +1,11 @@
-import { resolve } from 'node:path';
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import { readReverieFiles } from 'engine/reverie-files';
 import { REVERIE_SYSTEM_PROMPT } from 'engine/subagent';
-import { extractToolContext, runSubagent } from '../utils/session';
+import { reverieRole, buildReveriePrompt } from 'engine';
+import { TOOL_COPY } from 'engine/tool-copy';
+import { extractToolContext } from '../utils/session';
+import { createEngineAdapter } from '../utils/engine-adapter';
 
 export { REVERIE_SYSTEM_PROMPT };
 
@@ -11,20 +13,15 @@ export function createReverieTool(ctx: PluginInput): ToolDefinition {
   const client = ctx.client;
 
   return tool({
-    description:
-      'Receive a natural-language intent or question for deep reasoning and delegate to the reverie agent. IMPORTANT: Do NOT assume the reverie agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent and files. Failure to do so will cause severe confusion.',
+    description: TOOL_COPY.reverie.description,
 
     args: {
       intent: tool.schema
         .string()
-        .describe(
-          'A natural-language intent or question to contemplate. Must include all relevant background, design rationale, and specific requirements. Do not assume the agent knows anything about the project context.',
-        ),
+        .describe(TOOL_COPY.reverie.params.intent),
       files: tool.schema
         .array(tool.schema.string())
-        .describe(
-          'File paths to provide as context. Include any design docs, relevant code, or background material the agent needs to understand the question.',
-        ),
+        .describe(TOOL_COPY.reverie.params.files),
     },
 
     async execute(args, context) {
@@ -32,39 +29,14 @@ export function createReverieTool(ctx: PluginInput): ToolDefinition {
         context,
         ctx.directory,
       );
-
-      const parts: Array<{ type: 'text'; text: string }> = [];
-
       const readResults = await readReverieFiles(directory, args.files);
-      const readResultMap = new Map(
-        readResults.map((r) => [r.filePath, r.content]),
-      );
-
-      for (const file of args.files) {
-        const absolute = resolve(directory, file);
-        const content = readResultMap.get(absolute);
-        parts.push({
-          type: 'text',
-          text:
-            content != null
-              ? `=== ${file} ===\n\n${content}`
-              : `=== ${file} ===\n\n(skipped)`,
-        });
-      }
-
-      if (parts.length > 0) {
-        parts.push({ type: 'text', text: '' });
-      }
-      parts.push({ type: 'text', text: `Question:\n${args.intent}` });
-
-      return runSubagent(client, {
-        agent: 'reverie',
-        title: 'Reverie',
-        parts,
-        directory,
-        sessionID,
-        abortSignal,
-      });
+      const sections = args.files.map((file, i) => ({
+        file,
+        content: readResults[i]?.content,
+      }));
+      const prompt = buildReveriePrompt(sections, args.intent);
+      const adapter = createEngineAdapter(client, { directory, sessionID, abortSignal });
+      return adapter.promptSubagent({ role: reverieRole, prompt, title: 'Reverie' });
     },
   });
 }

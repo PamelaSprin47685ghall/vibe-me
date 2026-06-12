@@ -1,3 +1,4 @@
+import { TOOL_COPY } from "engine/tool-copy";
 import { randomUUID } from "node:crypto";
 import type { JsonSchema, PluginToolArgs, ToolDefinition } from "../types/contract.js";
 import { requireWorkspaceId } from "../types/contract.js";
@@ -14,12 +15,11 @@ const parameters: JsonSchema = {
     language: {
       type: "string",
       enum: ["shell", "python", "javascript"],
-      description: "Execution language",
+      description: TOOL_COPY.runner.params.language,
     },
     program: {
       type: "string",
-      description:
-        "The program to execute. Can be a shell command or Python code depending on language. Supports both quick synchronous execution and long-running background tasks.",
+      description: TOOL_COPY.runner.params.program,
     },
     dependencies: {
       type: "array",
@@ -27,11 +27,11 @@ const parameters: JsonSchema = {
         type: "string",
         description: "Python dependency package name",
       },
-      description: "Python dependencies to install (only for python language).",
+      description: TOOL_COPY.runner.params.dependencies,
     },
     what_to_summarize: {
       type: "string",
-      description: "What to look for in the output. Be specific.",
+      description: TOOL_COPY.runner.params.what_to_summarize,
     },
   },
   required: ["language", "program", "what_to_summarize"],
@@ -50,10 +50,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
 
   return {
     name: "runner",
-    description:
-      "Execute a shell command or Python program and delegate output summarization to a sub-agent. " +
-      "Supports quick synchronous execution and long-running background tasks. " +
-      "Automatically handles timeout management and provides incremental output monitoring.",
+    description: TOOL_COPY.runner.description,
     parameters,
     execute: async (config, args: PluginToolArgs) => {
       const a = args as { language: "shell" | "python" | "javascript"; program: string; dependencies?: string[]; what_to_summarize: string };

@@ -1,8 +1,9 @@
+import { TOOL_COPY } from "engine/tool-copy";
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
 import { requireStringArray } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
-import { deniedToolsFor } from "./policy.js";
-import { delegateToSubAgent } from "./delegate.js";
+import { greperRole, delegateIntents } from "engine";
+import { createEngineAdapter } from "./engine-adapter.js";
 
 const parameters: JsonSchema = {
   type: "object",
@@ -10,8 +11,7 @@ const parameters: JsonSchema = {
     intents: {
       type: "array",
       items: { type: "string" },
-      description:
-        "Array of independent code-search intents, each run in parallel via its own search subagent session. Include all relevant background, design rationale, file paths, and specific requirements.",
+      description: TOOL_COPY.greper.params.intents,
     },
   },
   required: ["intents"],
@@ -22,8 +22,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
 
   return {
     name: "greper",
-    description:
-      "Search the codebase based on natural-language intents. Each intent in the array spawns its own search subagent session. IMPORTANT: Do NOT assume the search agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
+    description: TOOL_COPY.greper.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
       const intents = requireStringArray(args, 'intents');
@@ -32,22 +31,8 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
         return "Error: `intents` must be a non-empty array.";
       }
 
-      const delegateOptions = {
-        aiSettingsAgentId: 'explore',
-        experiments: {
-          subagentRole: "greper" as const,
-          toolPolicy: {
-            disabledTools: deniedToolsFor("greper"),
-          },
-        },
-      };
-
-      const results = await Promise.all(
-        intents.map((singleIntent) =>
-          delegateToSubAgent(config, deps, "explore", singleIntent, "Greper", delegateOptions),
-        ),
-      );
-      return results.join("\n---\n");
+      const adapter = createEngineAdapter(config, deps);
+      return delegateIntents(adapter, greperRole, "Greper", intents);
     },
   };
 }

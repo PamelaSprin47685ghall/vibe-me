@@ -1,7 +1,10 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import { GREPER_SYSTEM_PROMPT } from 'engine/subagent';
-import { extractToolContext, runSubagent } from '../utils/session';
+import { greperRole, delegateIntents } from 'engine';
+import { TOOL_COPY } from 'engine/tool-copy';
+import { extractToolContext } from '../utils/session';
+import { createEngineAdapter } from '../utils/engine-adapter';
 
 export { GREPER_SYSTEM_PROMPT };
 
@@ -9,16 +12,13 @@ export function createGreperTool(ctx: PluginInput): ToolDefinition {
   const client = ctx.client;
 
   return tool({
-    description:
-      "Receive an array of natural-language intents for code search and delegate each to the search agent. Each intent in the array runs independently in parallel. Pass as many intents as you can at once — they will be executed concurrently. IMPORTANT: Do NOT assume the search agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
+    description: TOOL_COPY.greper.description,
 
     args: {
       intents: tool.schema
         .array(tool.schema.string())
         .min(1)
-        .describe(
-          'Array of independent search intents, each run in parallel via its own greper subagent session. Include all relevant background, design rationale, and specific requirements.',
-        ),
+        .describe(TOOL_COPY.greper.params.intents),
       _ui: tool.schema
         .string()
         .optional()
@@ -30,21 +30,8 @@ export function createGreperTool(ctx: PluginInput): ToolDefinition {
         context,
         ctx.directory,
       );
-
-      const results = await Promise.all(
-        args.intents.map((intent) =>
-          runSubagent(client, {
-            agent: 'greper',
-            title: 'Greper',
-            parts: [{ type: 'text', text: intent }],
-            directory,
-            sessionID,
-            abortSignal,
-          }),
-        ),
-      );
-
-      return results.join('\n---\n');
+      const adapter = createEngineAdapter(client, { directory, sessionID, abortSignal });
+      return delegateIntents(adapter, greperRole, 'Greper', args.intents);
     },
   });
 }

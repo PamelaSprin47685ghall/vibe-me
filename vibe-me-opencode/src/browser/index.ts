@@ -1,7 +1,10 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import { BROWSER_SYSTEM_PROMPT } from 'engine/subagent';
-import { extractToolContext, runSubagent } from '../utils/session.js';
+import { browserRole } from 'engine';
+import { TOOL_COPY } from 'engine/tool-copy';
+import { extractToolContext } from '../utils/session.js';
+import { createEngineAdapter } from '../utils/engine-adapter';
 
 export { BROWSER_SYSTEM_PROMPT };
 
@@ -9,13 +12,12 @@ export function createBrowserTool(ctx: PluginInput): ToolDefinition {
   const client = ctx.client;
 
   return tool({
-    description:
-      'Receive a natural-language intent for a web task and delegate to the browser agent. IMPORTANT: Do NOT assume the browser agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in your intent. Failure to do so will cause severe confusion.',
+    description: TOOL_COPY.browser.description,
 
     args: {
       intent: tool.schema
         .string()
-        .describe('A natural-language intent describing the desired web task. Must include all relevant background, design rationale, URLs, and specific requirements. Do not assume the agent knows anything about the project context.'),
+        .describe(TOOL_COPY.browser.params.intent),
     },
 
     async execute(args, context) {
@@ -23,15 +25,8 @@ export function createBrowserTool(ctx: PluginInput): ToolDefinition {
         context,
         ctx.directory,
       );
-
-      return runSubagent(client, {
-        agent: 'browser',
-        title: 'Browser',
-        parts: [{ type: 'text', text: args.intent }],
-        directory,
-        sessionID,
-        abortSignal,
-      });
+      const adapter = createEngineAdapter(client, { directory, sessionID, abortSignal });
+      return adapter.promptSubagent({ role: browserRole, prompt: args.intent, title: 'Browser' });
     },
   });
 }

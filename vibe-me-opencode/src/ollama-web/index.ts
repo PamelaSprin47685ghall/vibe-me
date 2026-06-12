@@ -7,34 +7,23 @@ import {
   ollamaPost,
   validateFetchUrl,
 } from 'engine/ollama';
+import { TOOL_COPY } from 'engine/tool-copy';
 
 const validateUrl = validateFetchUrl;
 
 export function createOllamaWebSearchTool(): ToolDefinition {
   return tool({
-    description: [
-      'Search the web for any topic and get clean, ready-to-use content.',
-      '',
-      'Best for: Finding current information, news, facts, people, companies,',
-      'or answering questions about any topic.',
-      'Returns: Clean text content from top search results.',
-      '',
-      'Query tips:',
-      'describe the ideal page, not keywords. "blog post comparing React and Vue performance" not "React vs Vue".',
-      'Use category:people / category:company to search through Linkedin profiles / companies respectively.',
-    ].join('\n'),
+    description: TOOL_COPY.websearch.description,
     args: {
       query: tool.schema
         .string()
-        .describe(
-          'Natural language search query. Should be a semantically rich description of the ideal page, not just keywords.',
-        ),
+        .describe(TOOL_COPY.websearch.params.query),
       numResults: tool.schema
         .number()
         .int()
         .positive()
         .optional()
-        .describe('Number of search results to return (default: 10)'),
+        .describe(TOOL_COPY.websearch.params.numResults),
     },
     execute: async (
       args: { query: string; numResults?: number },
@@ -65,32 +54,25 @@ export function createOllamaWebSearchTool(): ToolDefinition {
 
 export function createOllamaWebFetchTool(): ToolDefinition {
   return tool({
-    description:
-      'Fetch a URL with better extraction for static/docs pages. Supports llms.txt probing, content-focused HTML extraction, metadata, redirects, and an optional prompt processed by a cheap secondary model.',
+    description: TOOL_COPY.webfetch.description,
     args: {
-      url: tool.schema.string().describe('The URL to fetch'),
+      url: tool.schema.string().describe(TOOL_COPY.webfetch.params.url),
       extract_main: tool.schema
         .boolean()
         .optional()
-        .describe(
-          'Extract main content from the page, removing navigation, ads, etc. (default: true)',
-        ),
+        .describe(TOOL_COPY.webfetch.params.extract_main),
       prefer_llms_txt: tool.schema
         .enum(['auto', 'always', 'never'])
         .optional()
-        .describe(
-          'Probe for llms.txt files before fetching full page (default: auto)',
-        ),
+        .describe(TOOL_COPY.webfetch.params.prefer_llms_txt),
       prompt: tool.schema
         .string()
         .optional()
-        .describe(
-          'Optional extraction task to run on the fetched content using a cheap secondary model',
-        ),
+        .describe(TOOL_COPY.webfetch.params.prompt),
       timeout: tool.schema
         .number()
         .optional()
-        .describe('Timeout in seconds (max 120)'),
+        .describe(TOOL_COPY.webfetch.params.timeout),
     },
     execute: async (
       args: {

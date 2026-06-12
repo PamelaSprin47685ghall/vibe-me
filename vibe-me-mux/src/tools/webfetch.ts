@@ -1,3 +1,4 @@
+import { TOOL_COPY } from "engine/tool-copy";
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
 import { requireString, optionalString, optionalBoolean, optionalNumber } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
@@ -8,26 +9,24 @@ const parameters: JsonSchema = {
   properties: {
     url: {
       type: "string",
-      description: "The URL to fetch",
+      description: TOOL_COPY.webfetch.params.url,
     },
     extract_main: {
       type: "boolean",
-      description:
-        "Extract main content from the page, removing navigation, ads, etc. (default: true)",
+      description: TOOL_COPY.webfetch.params.extract_main,
     },
     prefer_llms_txt: {
       type: "string",
       enum: ["auto", "always", "never"],
-      description: "Probe for llms.txt files before fetching full page (default: auto)",
+      description: TOOL_COPY.webfetch.params.prefer_llms_txt,
     },
     prompt: {
       type: "string",
-      description:
-        "Optional extraction task to run on the fetched content using a cheap secondary model",
+      description: TOOL_COPY.webfetch.params.prompt,
     },
     timeout: {
       type: "number",
-      description: "Timeout in seconds (max: 120)",
+      description: TOOL_COPY.webfetch.params.timeout,
     },
   },
   required: ["url"],
@@ -38,8 +37,7 @@ export function createWebfetchTool(_deps: HostDependencies): ToolDefinition {
 
   return {
     name: "webfetch",
-    description:
-      "Fetch a URL with better extraction for static/docs pages. Supports llms.txt probing, content-focused HTML extraction, metadata, redirects, and an optional prompt processed by a cheap secondary model.",
+    description: TOOL_COPY.webfetch.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
       const url = requireString(args, 'url');

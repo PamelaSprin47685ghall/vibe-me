@@ -23,7 +23,8 @@
     "./runner/read-commands": "./src/runner/read-commands.ts",
     "./agent-policy": "./src/agent-policy/index.ts",
     "./host": "./src/host/index.ts",
-    "./nudge-shell": "./src/nudge-shell/index.ts"
+    "./nudge-shell": "./src/nudge-shell/index.ts",
+    "./tool-copy": "./src/tool-copy/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

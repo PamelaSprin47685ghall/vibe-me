@@ -1,3 +1,4 @@
+import { TOOL_COPY } from "engine/tool-copy";
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
 import { optionalString, optionalBoolean, optionalNumber } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
@@ -8,34 +9,31 @@ const parameters: JsonSchema = {
   properties: {
     pattern: {
       type: "string",
-      description:
-        "Initial search pattern. Required on the first call. Supports literal text and regex-like patterns.",
+      description: TOOL_COPY.fuzzy_grep.params.pattern,
     },
     path: {
       type: "string",
-      description:
-        "Initial path constraint (repo-relative or absolute path outside workspace). Use 'src/' or '*.ts' to narrow the first call.",
+      description: TOOL_COPY.fuzzy_grep.params.path,
     },
     exclude: {
       type: "string",
-      description: "Initial exclude paths (e.g. 'test/,*.min.js')",
+      description: TOOL_COPY.fuzzy_grep.params.exclude,
     },
     caseSensitive: {
       type: "boolean",
-      description: "Initial case-sensitivity override (smart-case by default)",
+      description: TOOL_COPY.fuzzy_grep.params.caseSensitive,
     },
     context: {
       type: "number",
-      description: "Initial number of context lines before and after each match",
+      description: TOOL_COPY.fuzzy_grep.params.context,
     },
     limit: {
       type: "number",
-      description: "Maximum number of matches to return per call",
+      description: TOOL_COPY.fuzzy_grep.params.limit,
     },
     iterator: {
       type: "string",
-      description:
-        "Opaque single-use iterator from a previous fuzzy_grep result. On continuation, pass only this field.",
+      description: TOOL_COPY.fuzzy_grep.params.iterator,
     },
   },
   additionalProperties: false,
@@ -45,8 +43,7 @@ export function createFuzzyGrepTool(_deps: HostDependencies): ToolDefinition {
 
   return {
     name: "fuzzy_grep",
-    description:
-      "Search file contents using fuzzy-aware content search. Smart-case, git-aware, frecency-ranked. Supports automatic regex mode for regex-like patterns and automatic fuzzy fallback when no exact matches are found.\n\nFirst call: provide pattern and optional filters.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",
+    description: TOOL_COPY.fuzzy_grep.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
       const pattern = optionalString(args, 'pattern');
