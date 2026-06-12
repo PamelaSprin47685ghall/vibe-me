@@ -1,3 +1,4 @@
+import type { GrepCursor } from '@ff-labs/fff-node';
 import { createFinder } from './finder.js';
 import { getCachedFinder } from './finder-registry.js';
 import { buildQuery, resolveFuzzySearchPath } from './query.js';
@@ -14,7 +15,7 @@ export interface FuzzyFindState { query: string; pageSize: number; pageIndex: nu
 export interface FuzzyGrepState {
   query: string; mode: 'plain' | 'regex' | 'fuzzy'; smartCase: boolean;
   beforeContext: number; afterContext: number; pageSize: number;
-  externalBasePath: string | null; cursor: any | null;
+  externalBasePath: string | null; cursor: GrepCursor | null;
 }
 
 type FinderLike = Awaited<ReturnType<typeof createFinder>>;
