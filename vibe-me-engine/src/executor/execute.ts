@@ -31,17 +31,22 @@ function resolveProjectDir(language: ExecutorLanguage, sessionId: string): strin
   return undefined;
 }
 
+function assertString(value: unknown, name: string): asserts value is string {
+  if (typeof value !== 'string') throw new TypeError(`executor: ${name} must be a string`);
+}
+
 export async function execute(
   options: ExecuteOptions,
   sessionId: string,
   deps: ExecuteDeps = { runProgram: runExecutorProgram },
 ): Promise<ExecuteResult> {
+  assertString(sessionId, 'sessionId');
   const { language, timeoutType } = options;
   let { program } = options;
   if (language === 'shell') program = stripHeadTailPipes(program).script;
 
   const timeoutMs = EXECUTOR_TIMEOUT_MS[timeoutType];
-  const cwd = options.cwd ?? process.cwd();
+  const cwd = typeof options.cwd === 'string' ? options.cwd : process.cwd();
   const projectDir = resolveProjectDir(language, sessionId);
   const execOpts: InternalExecuteOptions = {
     program,
@@ -49,6 +54,7 @@ export async function execute(
     dependencies: options.dependencies,
     cwd,
     projectDir,
+    sessionId,
   };
 
   try {

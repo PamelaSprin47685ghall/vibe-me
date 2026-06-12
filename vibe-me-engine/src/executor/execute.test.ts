@@ -149,6 +149,50 @@ describe('execute', () => {
       ),
     ).rejects.toThrow("Error: 'npx' executable not found. Please ensure 'npx' is installed and available on your PATH.");
   });
+
+  it('rejects non-string sessionId', async () => {
+    await expect(
+      execute(
+        { program: 'echo hi', language: 'shell', timeoutType: 'short' },
+        123 as unknown as string,
+      ),
+    ).rejects.toThrow("executor: sessionId must be a string");
+  });
+
+  it('falls back to process.cwd when cwd is not a string', async () => {
+    const runProgram: RunProgram = async (options) => {
+      expect(options.cwd).toBe(process.cwd());
+      return { stdout: '', stderr: '', code: 0, timedOut: false };
+    };
+    await execute(
+      { program: 'echo hi', language: 'shell', timeoutType: 'short', cwd: 123 as unknown as string },
+      'session-invalid-cwd',
+      { runProgram },
+    );
+  });
+
+  it('passes sessionId for temp script path', async () => {
+    let receivedOptions: Parameters<RunProgram>[0] | undefined;
+    const runProgram: RunProgram = async (options) => {
+      receivedOptions = options;
+      return { stdout: '', stderr: '', code: 0, timedOut: false };
+    };
+    await execute(
+      { program: 'echo hi', language: 'shell', timeoutType: 'short' },
+      'session-script-path',
+      { runProgram },
+    );
+    expect(receivedOptions?.sessionId).toBe('session-script-path');
+  });
+
+  it('runs python with dependencies after warming up uvx cache', async () => {
+    const result = await execute(
+      { program: 'import six; print(six.__version__)', language: 'python', timeoutType: 'short', dependencies: ['six'] },
+      'session-python-warmup',
+    );
+    expect(result._tag).toBe('Completed');
+    expect(result.output).toMatch(/^\d+\.\d+/);
+  }, 30000);
 });
 
 describe('shouldSummarize', () => {

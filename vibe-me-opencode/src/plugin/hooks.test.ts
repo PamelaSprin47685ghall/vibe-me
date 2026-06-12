@@ -132,7 +132,14 @@ describe('createHooks', () => {
     const { nudgeHook, loopCommandManager, factories } = makeFakes();
     const hooks = createHooks(ctx, nudgeHook, loopCommandManager, factories);
 
-    const editorOutput = { args: { intents: ['a', 'b'] } };
+    const editorOutput = {
+      args: {
+        intents: [
+          ['a', ['f1.ts']],
+          ['b', ['f2.ts']],
+        ],
+      },
+    };
     await hooks['tool.execute.before'](
       { tool: 'editor', sessionID: 's1', callID: 'c1' },
       editorOutput,
@@ -152,6 +159,74 @@ describe('createHooks', () => {
       otherOutput,
     );
     expect(otherOutput.args._ui).toBeUndefined();
+  });
+
+  it('tool.execute.before rejects invalid _ui from LLM', async () => {
+    const { nudgeHook, loopCommandManager, factories } = makeFakes();
+    const hooks = createHooks(ctx, nudgeHook, loopCommandManager, factories);
+
+    await expect(
+      hooks['tool.execute.before'](
+        { tool: 'greper', sessionID: 's1', callID: 'c1' },
+        { args: { intents: ['x'], _ui: { foo: 'bar' } as unknown as string } },
+      ),
+    ).rejects.toThrow('Invalid LLM input for greper: _ui must be a string');
+
+    await expect(
+      hooks['tool.execute.before'](
+        { tool: 'editor', sessionID: 's1', callID: 'c2' },
+        { args: { intents: ['a'], _ui: ['x'] as unknown as string } },
+      ),
+    ).rejects.toThrow('Invalid LLM input for editor: _ui must be a string');
+  });
+
+  it('tool.execute.before rejects non-string greper intents', async () => {
+    const { nudgeHook, loopCommandManager, factories } = makeFakes();
+    const hooks = createHooks(ctx, nudgeHook, loopCommandManager, factories);
+
+    await expect(
+      hooks['tool.execute.before'](
+        { tool: 'greper', sessionID: 's1', callID: 'c1' },
+        { args: { intents: [{ foo: 'bar' }] as unknown as string[] } },
+      ),
+    ).rejects.toThrow(
+      'Invalid LLM input for greper: intents must be an array of strings',
+    );
+  });
+
+  it('tool.definition strips _ui from editor/greper parameters', async () => {
+    const { nudgeHook, loopCommandManager, factories } = makeFakes();
+    const hooks = createHooks(ctx, nudgeHook, loopCommandManager, factories);
+
+    const editorParams = {
+      type: 'object',
+      properties: {
+        intents: { type: 'array' },
+        _ui: { type: 'string' },
+      },
+      required: ['intents', '_ui'],
+    };
+    await hooks['tool.definition'](
+      { toolID: 'editor' },
+      { description: 'editor', parameters: editorParams },
+    );
+    expect(editorParams.properties).not.toHaveProperty('_ui');
+    expect(editorParams.required).toEqual(['intents']);
+
+    const greperParams = {
+      type: 'object',
+      properties: {
+        intents: { type: 'array' },
+        _ui: { type: 'string' },
+      },
+      required: ['intents', '_ui'],
+    };
+    await hooks['tool.definition'](
+      { toolID: 'greper' },
+      { description: 'greper', parameters: greperParams },
+    );
+    expect(greperParams.properties).not.toHaveProperty('_ui');
+    expect(greperParams.required).toEqual(['intents']);
   });
 
   it('tool.execute.after chains syntax and nudge', async () => {

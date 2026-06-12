@@ -49,6 +49,14 @@ type ChatMessageOutput = {
 
 type MessagesTransformOutput = { messages: unknown[] };
 
+type ToolDefinitionInput = {
+  toolID: string;
+};
+type ToolDefinitionOutput = {
+  description: string;
+  parameters: Record<string, unknown>;
+};
+
 type ToolExecuteBeforeInput = {
   tool: string;
   sessionID: string;
@@ -140,16 +148,53 @@ function createMessagesTransformHandler(
   };
 }
 
+function createToolDefinitionHandler() {
+  return async (
+    input: ToolDefinitionInput,
+    output: ToolDefinitionOutput,
+  ): Promise<void> => {
+    if (input.toolID !== 'editor' && input.toolID !== 'greper') return;
+
+    const properties = output.parameters?.properties;
+    if (!properties || typeof properties !== 'object') return;
+
+    const nextProperties = { ...properties } as Record<string, unknown>;
+    delete nextProperties._ui;
+    output.parameters.properties = nextProperties;
+
+    const required = output.parameters?.required;
+    if (Array.isArray(required)) {
+      output.parameters.required = required.filter((key) => key !== '_ui');
+    }
+  };
+}
+
 function createToolExecuteBeforeHandler() {
   return async (
     input: ToolExecuteBeforeInput,
     output: ToolExecuteBeforeOutput,
   ): Promise<void> => {
-    if (
-      (input.tool === 'editor' || input.tool === 'greper') &&
-      Array.isArray(output.args?.intents)
-    ) {
-      output.args._ui = (output.args.intents as string[]).join('; ');
+    const rawUi = output.args?._ui;
+    if (rawUi !== undefined && typeof rawUi !== 'string') {
+      throw new Error(
+        `Invalid LLM input for ${input.tool}: _ui must be a string, received ${typeof rawUi}`,
+      );
+    }
+
+    const intents = output.args?.intents;
+    if (!Array.isArray(intents)) return;
+
+    if (input.tool === 'editor') {
+      output.args._ui = intents
+        .map((intent) => (Array.isArray(intent) ? intent[0] : intent))
+        .join('; ');
+    } else if (input.tool === 'greper') {
+      if (!intents.every((intent) => typeof intent === 'string')) {
+        throw new Error(
+          `Invalid LLM input for greper: intents must be an array of strings`,
+        );
+      }
+      output.args._ui = (intents as string[]).join('; ');
     }
   };
 }
@@ -210,6 +255,7 @@ export function createHooks(
       toolOutputDeduper,
       nudgeHook,
     ),
+    'tool.definition': createToolDefinitionHandler(),
     'tool.execute.before': createToolExecuteBeforeHandler(),
     'tool.execute.after': createToolExecuteAfterHandler(
       syntaxCheckHook,

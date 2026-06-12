@@ -8,12 +8,20 @@ export function extractToolContext(
   sessionID: string | undefined;
   abortSignal: AbortSignal | undefined;
 } {
+  const safeFallback =
+    typeof fallbackDirectory === 'string' ? fallbackDirectory : process.cwd();
   const directory =
-    context && typeof context === 'object' && 'directory' in context
+    context &&
+    typeof context === 'object' &&
+    'directory' in context &&
+    typeof (context as { directory: unknown }).directory === 'string'
       ? (context as { directory: string }).directory
-      : fallbackDirectory;
+      : safeFallback;
   const sessionID =
-    context && typeof context === 'object' && 'sessionID' in context
+    context &&
+    typeof context === 'object' &&
+    'sessionID' in context &&
+    typeof (context as { sessionID: unknown }).sessionID === 'string'
       ? (context as { sessionID: string }).sessionID
       : undefined;
   const abortSignal = getAbortSignal(context);

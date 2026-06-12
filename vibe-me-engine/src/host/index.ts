@@ -34,6 +34,11 @@ export async function delegateIntents(
   return reports.join(SUBAGENT_REPORT_SEPARATOR);
 }
 
+export function formatEditorIntent(intent: string, affectedFiles: readonly string[]): string {
+  const fileList = affectedFiles.map((file) => `- ${file}`).join('\n');
+  return `Intent: ${intent}\n\nAffected files:\n${fileList}`;
+}
+
 export interface ReverieFileSection {
   readonly file: string;
   readonly content: string | undefined;

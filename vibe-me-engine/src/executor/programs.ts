@@ -10,6 +10,7 @@ export interface InternalExecuteOptions {
   dependencies: string[] | undefined;
   cwd: string;
   projectDir: string | undefined;
+  sessionId: string;
 }
 
 export interface Clock {
@@ -37,7 +38,7 @@ export interface SpawnedChildProcessLike extends BaseChildProcessLike {
 export async function runExecutorProgramWithDeps(
   childProcess: SpawnedChildProcessLike,
   kill: (child: SpawnedChildProcessLike) => void,
-  timeoutMs: number,
+  timeoutMs: number | undefined,
   clock: Clock,
 ): Promise<{ stdout: string; stderr: string; code: number | null; timedOut: boolean }> {
   let stdout = '';
@@ -55,17 +56,17 @@ export async function runExecutorProgramWithDeps(
       resolve({ stdout, stderr, code, timedOut });
     };
 
-    const timer = clock.setTimeout(() => {
+    const timer = timeoutMs === undefined ? null : clock.setTimeout(() => {
       kill(childProcess);
       settle(null, true);
     }, timeoutMs);
 
     childProcess.on('error', () => {
-      clock.clearTimeout(timer);
+      if (timer !== null) clock.clearTimeout(timer);
       settle(null, false);
     });
     childProcess.on('close', (code) => {
-      clock.clearTimeout(timer);
+      if (timer !== null) clock.clearTimeout(timer);
       settle(code, false);
     });
   });
@@ -75,7 +76,7 @@ export function spawnExecutorProgram(
   command: string,
   args: string[],
   cwd: string,
-  timeoutMs: number,
+  timeoutMs?: number,
 ): Promise<{ stdout: string; stderr: string; code: number | null; timedOut: boolean }> {
   const childProcess = spawn(command, args, {
     cwd,
@@ -90,7 +91,7 @@ export function spawnExecutorProgram(
 
 export async function executeShellProgram(options: InternalExecuteOptions, timeoutMs: number): ReturnType<typeof spawnExecutorProgram> {
   const extension = process.platform === 'win32' ? 'ps1' : 'sh';
-  const scriptPath = createTempScript(getTempScriptPath(options.cwd, extension), options.program);
+  const scriptPath = createTempScript(getTempScriptPath(options.sessionId, extension), options.program);
   return spawnExecutorProgram(
     process.platform === 'win32' ? 'powershell.exe' : 'bash',
     process.platform === 'win32' ? ['-ExecutionPolicy', 'Bypass', '-File', scriptPath] : [scriptPath],
@@ -100,11 +101,18 @@ export async function executeShellProgram(options: InternalExecuteOptions, timeo
 }
 
 export async function executePythonProgram(options: InternalExecuteOptions, timeoutMs: number): ReturnType<typeof spawnExecutorProgram> {
-  const scriptPath = createTempScript(getTempScriptPath(options.cwd, 'py'), options.program);
-  const args = ['--isolated'];
-  for (const dep of options.dependencies ?? []) args.push('--with', dep);
-  args.push('--from', 'python', 'python', scriptPath);
-  return spawnExecutorProgram('uvx', args, options.cwd, timeoutMs);
+  const scriptPath = createTempScript(getTempScriptPath(options.sessionId, 'py'), options.program);
+  const baseArgs = ['--isolated'];
+  for (const dep of options.dependencies ?? []) baseArgs.push('--with', dep);
+
+  // Warm up uvx's dependency cache outside the execution timeout so that
+  // package resolution/download time is not charged against the program run.
+  if (options.dependencies?.length) {
+    const warmup = await spawnExecutorProgram('uvx', [...baseArgs, '--from', 'python', 'python', '-c', 'pass'], options.cwd);
+    if (warmup.code !== 0) return warmup;
+  }
+
+  return spawnExecutorProgram('uvx', [...baseArgs, '--from', 'python', 'python', scriptPath], options.cwd, timeoutMs);
 }
 
 export async function executeJavascriptProgram(options: InternalExecuteOptions, timeoutMs: number): ReturnType<typeof spawnExecutorProgram> {

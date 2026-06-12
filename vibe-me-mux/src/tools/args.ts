@@ -38,3 +38,16 @@ export function requireStringArray(args: Record<string, unknown>, key: string): 
   }
   return value;
 }
+
+export function requireIntentTuples(args: Record<string, unknown>, key: string): [string, string[]][] {
+  const value = args[key];
+  if (!Array.isArray(value)) {
+    throw new Error(`${key} must be an array of [string, string[]] tuples`);
+  }
+  for (const item of value) {
+    if (!Array.isArray(item) || item.length !== 2 || typeof item[0] !== "string" || !Array.isArray(item[1]) || item[1].some((tag) => typeof tag !== "string")) {
+      throw new Error(`${key} must be an array of [string, string[]] tuples`);
+    }
+  }
+  return value as [string, string[]][];
+}

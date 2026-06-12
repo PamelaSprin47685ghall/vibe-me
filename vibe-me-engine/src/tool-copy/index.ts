@@ -5,9 +5,9 @@ export interface ToolCopy {
 
 export const TOOL_COPY = {
   "editor": {
-    "description": "Execute code changes from natural-language intents. Each intent in the array spawns its own editor subagent session and runs independently in parallel — pass as many as you can at once so they execute concurrently. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
+    "description": "Execute code changes from natural-language intents. Provide multiple independent change intents as [intent, affectFiles] tuples; each tuple spawns its own editor subagent session and runs independently in parallel — pass as many as you can at once so they execute concurrently. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
     "params": {
-      "intents": "Array of independent code-change intents, each run in parallel via its own editor subagent session. Include all relevant background, design rationale, file paths, and specific requirements."
+      "intents": "Array of [intent, affectFiles] tuples. Each tuple contains a natural-language code-change intent and the list of files it affects; each tuple runs in parallel via its own editor subagent session. Include all relevant background, design rationale, and specific requirements."
     }
   },
   "greper": {

@@ -1,6 +1,6 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { delegateIntents, editorRole } from 'engine';
+import { delegateIntents, editorRole, formatEditorIntent } from 'engine';
 import { EDITOR_SYSTEM_PROMPT } from 'engine/subagent';
 import { TOOL_COPY } from 'engine/tool-copy';
 import { createEngineAdapter } from '../utils/engine-adapter';
@@ -16,7 +16,12 @@ export function createEditorTool(ctx: PluginInput): ToolDefinition {
 
     args: {
       intents: tool.schema
-        .array(tool.schema.string())
+        .array(
+          tool.schema.tuple([
+            tool.schema.string(),
+            tool.schema.array(tool.schema.string()),
+          ]),
+        )
         .min(1)
         .describe(TOOL_COPY.editor.params.intents),
       _ui: tool.schema
@@ -35,7 +40,10 @@ export function createEditorTool(ctx: PluginInput): ToolDefinition {
         sessionID,
         abortSignal,
       });
-      return delegateIntents(adapter, editorRole, 'Editor', args.intents);
+      const prompts = args.intents.map(([intent, affectedFiles]) =>
+        formatEditorIntent(intent, affectedFiles),
+      );
+      return delegateIntents(adapter, editorRole, 'Editor', prompts);
     },
   });
 }
