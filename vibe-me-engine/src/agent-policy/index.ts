@@ -37,7 +37,7 @@ const ORCHESTRATOR_ENABLED = [
 ] as const satisfies readonly CanonicalToolName[];
 
 const EDITOR_ENABLED = [
-  'read', 'write', 'edit', 'glob',
+  'read', 'write', 'edit', 'glob', 'patch',
   'fuzzy_find', 'fuzzy_grep',
 ] as const satisfies readonly CanonicalToolName[];
 

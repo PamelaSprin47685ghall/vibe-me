@@ -106,13 +106,6 @@ function applyStealthBrowserRestrictions(
   tools['stealth-browser-mcp_*'] = false;
 }
 
-function applyOrchestratorRestrictions(
-  tools: Record<string, boolean>,
-  agent: string,
-): void {
-  if (agent === 'orchestrator') tools.patch = false;
-}
-
 function createChatMessageHandler(nudgeHook: NudgeCoordinator) {
   return async (
     input: ChatMessageInput,
@@ -128,7 +121,6 @@ function createChatMessageHandler(nudgeHook: NudgeCoordinator) {
     const defaults = getAgentToolDefaults(agent);
     const tools = mergeTools(output.message.tools, defaults);
     applyStealthBrowserRestrictions(tools, agent, output.message.tools);
-    applyOrchestratorRestrictions(tools, agent);
     output.message.tools = tools;
   };
 }

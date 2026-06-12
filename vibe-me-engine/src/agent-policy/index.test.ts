@@ -24,6 +24,13 @@ describe('agent runtime policies', () => {
     expect(tools.get('executor')).toBe(allow);
     expect(tools.get('write')).toBe(deny);
     expect(tools.get('edit')).toBe(deny);
+    expect(tools.get('patch')).toBe(deny);
+  });
+
+  it('lets editor use patch', () => {
+    const tools = getAgentTools(editorRole);
+
+    expect(tools.get('patch')).toBe(allow);
   });
 
   it('keeps browser runtime boundary narrow', () => {

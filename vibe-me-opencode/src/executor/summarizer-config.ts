@@ -21,7 +21,6 @@ export function getExecutorSummarizerConfig() {
           browser: false,
           executor: false,
           task: false,
-          patch: false,
         },
         permission: {
           edit: 'deny',

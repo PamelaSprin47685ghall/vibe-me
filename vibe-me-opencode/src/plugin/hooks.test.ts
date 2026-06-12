@@ -44,7 +44,7 @@ function makeFakes() {
 describe('createHooks', () => {
   const ctx = { directory: '/test-project' } as unknown as PluginInput;
 
-  it('chat.message sets agent defaults and disables stealth-browser tools for non-browser agents and patch for orchestrator', async () => {
+  it('chat.message sets agent defaults and disables stealth-browser tools for non-browser agents', async () => {
     const { nudgeHook, loopCommandManager, factories } = makeFakes();
     const hooks = createHooks(ctx, nudgeHook, loopCommandManager, factories);
     const output = {
@@ -78,7 +78,7 @@ describe('createHooks', () => {
 
     expect(output.message.tools['stealth-browser-mcp_foo']).toBe(true);
     expect(output.message.tools['stealth-browser-mcp_*']).toBeUndefined();
-    expect(output.message.tools.patch).toBeUndefined();
+    expect(output.message.tools.patch).toBe(false);
   });
 
   it('chat.message disables existing stealth-browser tools for non-browser agents', async () => {

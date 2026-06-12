@@ -9,7 +9,7 @@ const allToolKeys = [
   'read', 'write', 'edit', 'executor', 'glob', 'fuzzy_find', 'fuzzy_grep',
   'grep', 'editor', 'greper', 'reverie', 'submit_review',
   'submit_review_result', 'todowrite', 'webfetch', 'websearch', 'browser', 'task',
-  'stealth_browser_mcp_star',
+  'patch', 'stealth_browser_mcp_star',
 ] as const;
 
 function makeToolDefaults(
@@ -116,7 +116,7 @@ describe('getAgentToolDefaults', () => {
 
   test('editor', () => {
     expect(getAgentToolDefaults('editor')).toEqual(
-      makeToolDefaults(['read', 'write', 'edit', 'glob', 'fuzzy_find', 'fuzzy_grep']),
+      makeToolDefaults(['read', 'write', 'edit', 'glob', 'patch', 'fuzzy_find', 'fuzzy_grep']),
     );
   });
 

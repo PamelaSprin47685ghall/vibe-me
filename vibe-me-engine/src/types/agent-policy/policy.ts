@@ -35,6 +35,7 @@ export const CANONICAL_TOOL_NAMES = [
   'websearch',
   'browser',
   'task',
+  'patch',
   'stealth_browser_mcp_star',
 ] as const;
 
