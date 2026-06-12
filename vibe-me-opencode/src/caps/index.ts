@@ -1,4 +1,5 @@
 import { findCapsFiles, type CapsFileInfo } from 'engine/caps';
+import { createHash } from 'node:crypto';
 
 const CAPS_USER_PREFIX = 'caps-synth-user-';
 const CAPS_ASSISTANT_PREFIX = 'caps-synth-assistant-';
@@ -7,6 +8,17 @@ function formatReadOutput(filePath: string, content: string): string {
   const lines = content.split('\n');
   const numbered = lines.map((line, i) => `${i + 1}: ${line}`).join('\n');
   return `<path>${filePath}</path>\n<type>file</type>\n<content>\n${numbered}\n\n(End of file - total ${lines.length} lines)\n</content>`;
+}
+
+function stableFingerprint(capsFiles: CapsFileInfo[]): string {
+  const hash = createHash('sha256');
+  for (const cap of capsFiles) {
+    hash.update(cap.filePath);
+    hash.update('\0');
+    hash.update(cap.content);
+    hash.update('\0');
+  }
+  return hash.digest('hex').slice(0, 16);
 }
 
 function hasExistingCapsMessages(messages: Array<{ info: Record<string, unknown> }>): boolean {
@@ -47,18 +59,16 @@ export function createCapsMessagesInjector(
 
       const firstInfo = messages[0].info;
       const sessionID = firstInfo.sessionID as string | undefined;
-      const timestamp = Date.now();
-      const created = timestamp;
-      const completed = timestamp + 1;
+      const fp = stableFingerprint(capsFiles);
 
-      const userId = `${CAPS_USER_PREFIX}${timestamp}`;
-      const assistantId = `${CAPS_ASSISTANT_PREFIX}${timestamp}`;
+      const userId = `${CAPS_USER_PREFIX}${fp}`;
+      const assistantId = `${CAPS_ASSISTANT_PREFIX}${fp}`;
 
       const toolParts = capsFiles.map((cap, index) => ({
         type: 'tool',
         tool: 'read',
-        callID: `caps-call-${timestamp}-${index}`,
-        id: `caps-tool-${timestamp}-${index}`,
+        callID: `caps-call-${fp}-${index}`,
+        id: `caps-tool-${fp}-${index}`,
         sessionID,
         messageID: assistantId,
         state: {
@@ -67,7 +77,7 @@ export function createCapsMessagesInjector(
           output: formatReadOutput(cap.filePath, cap.content),
           title: `Read ${cap.filePath}`,
           metadata: {},
-          time: { start: timestamp, end: timestamp + 1 },
+          time: { start: 0, end: 1 },
         },
       }));
 
@@ -76,7 +86,7 @@ export function createCapsMessagesInjector(
           id: userId,
           sessionID,
           role: 'user',
-          time: { created },
+          time: { created: 0 },
           agent: 'orchestrator',
           model: { providerID: '', modelID: '' },
         },
@@ -88,7 +98,7 @@ export function createCapsMessagesInjector(
           id: assistantId,
           sessionID,
           role: 'assistant',
-          time: { created, completed },
+          time: { created: 0, completed: 1 },
           parentID: userId,
           modelID: '',
           providerID: '',
