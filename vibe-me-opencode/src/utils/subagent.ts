@@ -1,6 +1,6 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { registerChildAgent, resolveSubsessionParentID } from './child-agent';
 import { isAbortError, promptWithAbort } from './abort-signal';
+import { registerChildAgent, resolveSubsessionParentID } from './child-agent';
 import { extractSessionText } from './session-messages';
 
 export interface SubagentParams {

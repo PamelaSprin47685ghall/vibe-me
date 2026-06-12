@@ -1,23 +1,33 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT, defaultCoordinator, TERMINAL_TODO_STATUSES, type NudgeInputContext } from 'engine/todo';
-import type { ReviewStore } from 'engine/review';
-import { asMessageArray } from '../utils/session-messages';
-import { lookupChildAgent } from '../utils/child-agent';
-import { isAbortEventError, isSessionBusyError, createPromptBody } from 'engine/util';
 import type { NudgeShellState } from 'engine/nudge-shell';
 import {
-  hasStoppedSession,
-  hasRetryPendingSession,
-  hasNudgedSession,
   addNudgedSession,
-  deleteNudgedSession,
-  rememberAgent,
-  getDeliveredCount,
-  setDeliveredCount,
-  getAgent,
-  stopSession,
   addRetryPendingSession,
+  deleteNudgedSession,
+  getAgent,
+  getDeliveredCount,
+  hasNudgedSession,
+  hasRetryPendingSession,
+  hasStoppedSession,
+  rememberAgent,
+  setDeliveredCount,
+  stopSession,
 } from 'engine/nudge-shell';
+import type { ReviewStore } from 'engine/review';
+import {
+  defaultCoordinator,
+  LOOP_NUDGE_PROMPT,
+  type NudgeInputContext,
+  TERMINAL_TODO_STATUSES,
+  TODO_NUDGE_PROMPT,
+} from 'engine/todo';
+import {
+  createPromptBody,
+  isAbortEventError,
+  isSessionBusyError,
+} from 'engine/util';
+import { lookupChildAgent } from '../utils/child-agent';
+import { asMessageArray } from '../utils/session-messages';
 
 export type SessionSnapshot = {
   todos: string[];
@@ -33,7 +43,9 @@ export async function collectSessionSnapshot(
   let todos: string[];
   try {
     const result = await ctx.client.session.todo({ path: { id: sessionID } });
-    todos = (result.data ?? []).map((t: { status: string }) => t.status).filter(s => !TERMINAL_TODO_STATUSES.has(s));
+    todos = (result.data ?? [])
+      .map((t: { status: string }) => t.status)
+      .filter((s) => !TERMINAL_TODO_STATUSES.has(s));
   } catch {
     return null;
   }
@@ -42,10 +54,14 @@ export async function collectSessionSnapshot(
   let messageCount: number | undefined;
   let agentFromMessage: unknown;
   try {
-    const msgResult = await ctx.client.session.messages({ path: { id: sessionID } });
+    const msgResult = await ctx.client.session.messages({
+      path: { id: sessionID },
+    });
     const messages = asMessageArray(msgResult.data);
     messageCount = messages.length;
-    const lastAssistant = [...messages].reverse().find((m) => m.info?.role === 'assistant');
+    const lastAssistant = [...messages]
+      .reverse()
+      .find((m) => m.info?.role === 'assistant');
     if (lastAssistant) {
       agentFromMessage = (lastAssistant.info as { agent?: unknown }).agent;
       lastAssistantMessage = (lastAssistant.parts ?? [])
@@ -53,7 +69,9 @@ export async function collectSessionSnapshot(
         .map((p) => p.text ?? '')
         .join('\n');
     }
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   return { todos, lastAssistantMessage, messageCount, agentFromMessage };
 }
@@ -81,7 +99,10 @@ export async function nudgeIfNeeded(
   state = rememberAgent(state, sessionID, snapshot.agentFromMessage);
 
   const { todos, lastAssistantMessage, messageCount } = snapshot;
-  if (messageCount !== undefined && getDeliveredCount(state, sessionID) === messageCount) {
+  if (
+    messageCount !== undefined &&
+    getDeliveredCount(state, sessionID) === messageCount
+  ) {
     return deleteNudgedSession(state, sessionID);
   }
 

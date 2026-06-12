@@ -12,6 +12,12 @@ import { EXTENDED_SHELL_READ_COMMANDS } from './read-commands.js';
 
 const READ_ONLY_WARNING = '// 绝对禁止使用 executor 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！';
 
+export type RunProgram = (options: InternalExecuteOptions, timeoutMs: number) => ReturnType<typeof runExecutorProgram>;
+
+export interface ExecuteDeps {
+  runProgram: RunProgram;
+}
+
 export function formatExecutorSafetyWarning(output: string, program: string, language: ExecutorLanguage): string {
   if (language !== 'shell') return output;
   const firstWord = program.trim().split(/\s+/)[0]?.split('/').pop();
@@ -25,7 +31,11 @@ function resolveProjectDir(language: ExecutorLanguage, sessionId: string): strin
   return undefined;
 }
 
-export async function execute(options: ExecuteOptions, sessionId: string): Promise<ExecuteResult> {
+export async function execute(
+  options: ExecuteOptions,
+  sessionId: string,
+  deps: ExecuteDeps = { runProgram: runExecutorProgram },
+): Promise<ExecuteResult> {
   const { language, timeoutType } = options;
   let { program } = options;
   if (language === 'shell') program = stripHeadTailPipes(program).script;
@@ -42,7 +52,7 @@ export async function execute(options: ExecuteOptions, sessionId: string): Promi
   };
 
   try {
-    const { stdout, stderr, code, timedOut } = await runExecutorProgram(execOpts, timeoutMs);
+    const { stdout, stderr, code, timedOut } = await deps.runProgram(execOpts, timeoutMs);
     const output = formatExecutorSafetyWarning(`${stdout}${stderr}`.trim(), options.program, language);
     if (timedOut) {
       const partial = output || '(no output before timeout)';

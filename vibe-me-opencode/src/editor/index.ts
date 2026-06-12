@@ -1,10 +1,10 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
+import { delegateIntents, editorRole } from 'engine';
 import { EDITOR_SYSTEM_PROMPT } from 'engine/subagent';
-import { editorRole, delegateIntents } from 'engine';
 import { TOOL_COPY } from 'engine/tool-copy';
-import { extractToolContext } from '../utils/session';
 import { createEngineAdapter } from '../utils/engine-adapter';
+import { extractToolContext } from '../utils/session';
 
 export { EDITOR_SYSTEM_PROMPT };
 
@@ -30,7 +30,11 @@ export function createEditorTool(ctx: PluginInput): ToolDefinition {
         context,
         ctx.directory,
       );
-      const adapter = createEngineAdapter(client, { directory, sessionID, abortSignal });
+      const adapter = createEngineAdapter(client, {
+        directory,
+        sessionID,
+        abortSignal,
+      });
       return delegateIntents(adapter, editorRole, 'Editor', args.intents);
     },
   });

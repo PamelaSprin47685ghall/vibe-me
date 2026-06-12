@@ -1,61 +1,164 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { REVERIE_NUDGE } from 'engine/todo';
-import type { ReviewStore } from 'engine/review';
-import { emptyNudgeShellState, resumeSession, rememberAgent } from 'engine/nudge-shell';
 import type { NudgeShellState } from 'engine/nudge-shell';
-import { getPartsText, isNudgePrompt, getSessionID, getEventAgent } from 'engine/util';
+import {
+  emptyNudgeShellState,
+  rememberAgent,
+  resumeSession,
+} from 'engine/nudge-shell';
+import type { ReviewStore } from 'engine/review';
+import { REVERIE_NUDGE } from 'engine/todo';
+import {
+  getEventAgent,
+  getPartsText,
+  getSessionID,
+  isNudgePrompt,
+} from 'engine/util';
 import { createEventHandlers, matchCompositeHandler } from './event-handlers';
 
-export function createNudgeCoordinatorHook(ctx: PluginInput, reviewStore: ReviewStore) {
+type ToolExecuteAfterInput = {
+  tool: string;
+  sessionID?: string;
+  callID: string;
+};
+type ToolExecuteAfterOutput = {
+  output?: unknown;
+  title?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type ChatMessageInput = {
+  sessionID: string;
+  agent?: string;
+  parts?: unknown[];
+};
+
+type CommandExecuteBeforeInput = {
+  command: string;
+  sessionID: string;
+  arguments: string;
+};
+
+type EventInput = {
+  event: { type: string; properties?: Record<string, unknown> };
+};
+
+type Deps = {
+  createEventHandlers: typeof createEventHandlers;
+  getPartsText: typeof getPartsText;
+  isNudgePrompt: typeof isNudgePrompt;
+  getSessionID: typeof getSessionID;
+  getEventAgent: typeof getEventAgent;
+  rememberAgent: typeof rememberAgent;
+  resumeSession: typeof resumeSession;
+  REVERIE_NUDGE: string;
+};
+
+const defaultDeps: Deps = {
+  createEventHandlers,
+  getPartsText,
+  isNudgePrompt,
+  getSessionID,
+  getEventAgent,
+  rememberAgent,
+  resumeSession,
+  REVERIE_NUDGE,
+};
+
+function handleToolExecuteAfter(
+  input: ToolExecuteAfterInput,
+  output: ToolExecuteAfterOutput,
+  deps: Pick<Deps, 'REVERIE_NUDGE'>,
+): void {
+  if (input.tool !== 'todowrite' || typeof output.output !== 'string') return;
+  output.output += deps.REVERIE_NUDGE;
+}
+
+function handleMessagesTransform(_output: { messages: unknown[] }): void {}
+
+function handleChatMessage(
+  input: ChatMessageInput,
+  state: NudgeShellState,
+  deps: Pick<
+    Deps,
+    'getPartsText' | 'isNudgePrompt' | 'rememberAgent' | 'resumeSession'
+  >,
+): NudgeShellState {
+  const text = deps.getPartsText(input.parts);
+  if (deps.isNudgePrompt(text)) return state;
+  state = deps.rememberAgent(state, input.sessionID, input.agent);
+  return deps.resumeSession(state, input.sessionID);
+}
+
+function handleCommandExecuteBefore(
+  input: CommandExecuteBeforeInput,
+  state: NudgeShellState,
+  deps: Pick<Deps, 'resumeSession'>,
+): NudgeShellState {
+  return deps.resumeSession(state, input.sessionID);
+}
+
+async function handleEvent(
+  input: EventInput,
+  state: NudgeShellState,
+  deps: Pick<
+    Deps,
+    'getSessionID' | 'getEventAgent' | 'rememberAgent' | 'createEventHandlers'
+  >,
+  ctx: PluginInput,
+  reviewStore: ReviewStore,
+): Promise<NudgeShellState> {
+  const { event } = input;
+  const props = event.properties ?? {};
+  const sessionID = deps.getSessionID(event.type, props);
+  if (!sessionID) return state;
+  state = deps.rememberAgent(state, sessionID, deps.getEventAgent(props));
+  const handlers = deps.createEventHandlers(ctx, reviewStore);
+  const statusType = (props.status as { type?: string } | undefined)?.type;
+  const handler =
+    handlers[event.type] ?? matchCompositeHandler(event.type, statusType);
+  if (handler) state = await handler(state, props, sessionID, ctx, reviewStore);
+  return state;
+}
+
+export function createNudgeCoordinatorHook(
+  ctx: PluginInput,
+  reviewStore: ReviewStore,
+  partialDeps: Partial<Deps> = {},
+) {
+  const deps = { ...defaultDeps, ...partialDeps };
   let state: NudgeShellState = emptyNudgeShellState;
-  const handlers = createEventHandlers(ctx, reviewStore);
   let pending = Promise.resolve();
 
   return {
     tool: {},
 
     handleToolExecuteAfter: async (
-      input: { tool: string; sessionID?: string; callID: string },
-      output: { output?: unknown; title?: string; metadata?: Record<string, unknown> },
+      input: ToolExecuteAfterInput,
+      output: ToolExecuteAfterOutput,
     ): Promise<void> => {
-      if (input.tool !== 'todowrite' || typeof output.output !== 'string') return;
-      output.output += REVERIE_NUDGE;
+      handleToolExecuteAfter(input, output, deps);
     },
 
-    handleMessagesTransform: async (
-      _output: { messages: unknown[] },
-    ): Promise<void> => {},
+    handleMessagesTransform: async (_output: {
+      messages: unknown[];
+    }): Promise<void> => {
+      handleMessagesTransform(_output);
+    },
 
-    handleChatMessage: (input: {
-      sessionID: string;
-      agent?: string;
-      parts?: unknown[];
-    }): void => {
-      const text = getPartsText(input.parts);
-      if (isNudgePrompt(text)) return;
-      state = rememberAgent(state, input.sessionID, input.agent);
-      state = resumeSession(state, input.sessionID);
+    handleChatMessage: (input: ChatMessageInput): void => {
+      state = handleChatMessage(input, state, deps);
     },
 
     handleCommandExecuteBefore: async (
-      input: { command: string; sessionID: string; arguments: string },
+      input: CommandExecuteBeforeInput,
       _output: { parts: Array<{ type: string; text?: string }> },
     ): Promise<void> => {
-      state = resumeSession(state, input.sessionID);
+      state = handleCommandExecuteBefore(input, state, deps);
     },
 
-    handleEvent: async (input: {
-      event: { type: string; properties?: Record<string, unknown> };
-    }): Promise<void> => {
+    handleEvent: async (input: EventInput): Promise<void> => {
       const run = async (): Promise<void> => {
-        const { event } = input;
-        const props = event.properties ?? {};
-        const sessionID = getSessionID(event.type, props);
-        if (!sessionID) return;
-        state = rememberAgent(state, sessionID, getEventAgent(props));
-        const statusType = (props.status as { type?: string } | undefined)?.type;
-        const handler = handlers[event.type] ?? matchCompositeHandler(event.type, statusType);
-        if (handler) state = await handler(state, props, sessionID, ctx, reviewStore);
+        state = await handleEvent(input, state, deps, ctx, reviewStore);
       };
       pending = pending.then(run, run);
       await pending;

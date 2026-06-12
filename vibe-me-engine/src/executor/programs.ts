@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { killTree } from './process.js';
+import { killTree, type ChildProcessLike as BaseChildProcessLike } from './process.js';
 import { createTempScript, getTempScriptPath } from './script.js';
 import { createJavascriptPrelude, rewriteJavascriptModuleSpecifiers, ensureJavascriptProject } from './javascript.js';
 import type { ExecutorLanguage } from './types.js';
@@ -10,6 +10,65 @@ export interface InternalExecuteOptions {
   dependencies: string[] | undefined;
   cwd: string;
   projectDir: string | undefined;
+}
+
+export interface Clock {
+  setTimeout(callback: () => void, ms: number): unknown;
+  clearTimeout(id: unknown): void;
+}
+
+export const systemClock: Clock = {
+  setTimeout: (callback, ms) => global.setTimeout(callback, ms),
+  clearTimeout: (id) => global.clearTimeout(id as NodeJS.Timeout),
+};
+
+export interface EventEmitterLike {
+  on(event: 'data', listener: (chunk: Buffer) => void): void;
+  removeAllListeners(event?: string): void;
+}
+
+export interface SpawnedChildProcessLike extends BaseChildProcessLike {
+  stdout?: EventEmitterLike;
+  stderr?: EventEmitterLike;
+  on(event: 'error', listener: (error: Error) => void): void;
+  on(event: 'close', listener: (code: number | null, signal: NodeJS.Signals | null) => void): void;
+}
+
+export async function runExecutorProgramWithDeps(
+  childProcess: SpawnedChildProcessLike,
+  kill: (child: SpawnedChildProcessLike) => void,
+  timeoutMs: number,
+  clock: Clock,
+): Promise<{ stdout: string; stderr: string; code: number | null; timedOut: boolean }> {
+  let stdout = '';
+  let stderr = '';
+  childProcess.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
+  childProcess.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const settle = (code: number | null, timedOut: boolean) => {
+      if (settled) return;
+      settled = true;
+      childProcess.stdout?.removeAllListeners();
+      childProcess.stderr?.removeAllListeners();
+      resolve({ stdout, stderr, code, timedOut });
+    };
+
+    const timer = clock.setTimeout(() => {
+      kill(childProcess);
+      settle(null, true);
+    }, timeoutMs);
+
+    childProcess.on('error', () => {
+      clock.clearTimeout(timer);
+      settle(null, false);
+    });
+    childProcess.on('close', (code) => {
+      clock.clearTimeout(timer);
+      settle(code, false);
+    });
+  });
 }
 
 export function spawnExecutorProgram(
@@ -26,35 +85,7 @@ export function spawnExecutorProgram(
     windowsHide: true,
   });
 
-  let stdout = '';
-  let stderr = '';
-  childProcess.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
-  childProcess.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
-
-  return new Promise((resolve) => {
-    let settled = false;
-    const settle = (code: number | null, timedOut: boolean) => {
-      if (settled) return;
-      settled = true;
-      childProcess.stdout?.removeAllListeners();
-      childProcess.stderr?.removeAllListeners();
-      resolve({ stdout, stderr, code, timedOut });
-    };
-
-    const timer = setTimeout(() => {
-      killTree(childProcess);
-      settle(null, true);
-    }, timeoutMs);
-
-    childProcess.on('error', () => {
-      clearTimeout(timer);
-      settle(null, false);
-    });
-    childProcess.on('close', (code) => {
-      clearTimeout(timer);
-      settle(code, false);
-    });
-  });
+  return runExecutorProgramWithDeps(childProcess, killTree, timeoutMs, systemClock);
 }
 
 export async function executeShellProgram(options: InternalExecuteOptions, timeoutMs: number): ReturnType<typeof spawnExecutorProgram> {

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
-import { LOOP_NUDGE_PROMPT } from 'engine/todo';
 import { createReviewStore } from 'engine/review';
+import { LOOP_NUDGE_PROMPT } from 'engine/todo';
 import { createNudgeCoordinatorHook } from './index';
-import { createMockContext, cleanupAfterEach } from './test-utils';
+import { cleanupAfterEach, createMockContext } from './test-utils';
 
 afterEach(cleanupAfterEach);
 
@@ -30,7 +30,9 @@ describe('loop nudge state machine', () => {
     });
 
     expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
-    expect(ctx.client.session.prompt.mock.calls[0]?.[0].body.parts[0].text).toBe(LOOP_NUDGE_PROMPT);
+    expect(
+      ctx.client.session.prompt.mock.calls[0]?.[0].body.parts[0].text,
+    ).toBe(LOOP_NUDGE_PROMPT);
   });
 
   test('does not duplicate silent-finish loop nudge on later idle', async () => {
@@ -51,7 +53,9 @@ describe('loop nudge state machine', () => {
     });
 
     expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
-    expect(ctx.client.session.prompt.mock.calls[0]?.[0].body.parts[0].text).toBe(LOOP_NUDGE_PROMPT);
+    expect(
+      ctx.client.session.prompt.mock.calls[0]?.[0].body.parts[0].text,
+    ).toBe(LOOP_NUDGE_PROMPT);
   });
 
   test('retries silent-finish loop nudge on idle when session is still busy', async () => {
@@ -77,7 +81,9 @@ describe('loop nudge state machine', () => {
     });
 
     expect(ctx.client.session.prompt).toHaveBeenCalledTimes(2);
-    expect(ctx.client.session.prompt.mock.calls[1]?.[0].body.parts[0].text).toBe(LOOP_NUDGE_PROMPT);
+    expect(
+      ctx.client.session.prompt.mock.calls[1]?.[0].body.parts[0].text,
+    ).toBe(LOOP_NUDGE_PROMPT);
   });
 
   test('does not duplicate nudge when multiple events arrive concurrently', async () => {
@@ -114,6 +120,8 @@ describe('loop nudge state machine', () => {
     ]);
 
     expect(ctx.client.session.prompt).toHaveBeenCalledTimes(1);
-    expect(ctx.client.session.prompt.mock.calls[0]?.[0].body.parts[0].text).toBe(LOOP_NUDGE_PROMPT);
+    expect(
+      ctx.client.session.prompt.mock.calls[0]?.[0].body.parts[0].text,
+    ).toBe(LOOP_NUDGE_PROMPT);
   });
 });

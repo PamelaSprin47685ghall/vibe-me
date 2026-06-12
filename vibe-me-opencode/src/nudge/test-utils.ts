@@ -17,7 +17,16 @@ export function createMockContext() {
             },
           ],
         })),
-        todo: mock(() => ({ data: [{ id: 'todo-1', content: 'finish task', status: 'in_progress', priority: 'high' }] })),
+        todo: mock(() => ({
+          data: [
+            {
+              id: 'todo-1',
+              content: 'finish task',
+              status: 'in_progress',
+              priority: 'high',
+            },
+          ],
+        })),
       },
     },
   } as unknown as PluginInput;

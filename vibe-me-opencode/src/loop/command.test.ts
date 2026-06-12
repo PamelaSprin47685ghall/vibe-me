@@ -11,7 +11,10 @@ describe('createLoopCommandManager', () => {
   describe('registerCommand', () => {
     test('registers the /loop command', () => {
       const reviewStore = createReviewStore();
-      const manager = createLoopCommandManager(createMockContext(), reviewStore);
+      const manager = createLoopCommandManager(
+        createMockContext(),
+        reviewStore,
+      );
       const config: Record<string, unknown> = {};
 
       manager.registerCommand(config);
@@ -26,7 +29,10 @@ describe('createLoopCommandManager', () => {
 
     test('does not overwrite existing command', () => {
       const reviewStore = createReviewStore();
-      const manager = createLoopCommandManager(createMockContext(), reviewStore);
+      const manager = createLoopCommandManager(
+        createMockContext(),
+        reviewStore,
+      );
       const existing = { template: 'custom', description: 'custom' };
       const config: Record<string, unknown> = {
         command: { loop: existing },
@@ -41,7 +47,10 @@ describe('createLoopCommandManager', () => {
   describe('handleCommandExecuteBefore', () => {
     test('ignores non-loop commands', async () => {
       const reviewStore = createReviewStore();
-      const manager = createLoopCommandManager(createMockContext(), reviewStore);
+      const manager = createLoopCommandManager(
+        createMockContext(),
+        reviewStore,
+      );
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(
@@ -55,7 +64,10 @@ describe('createLoopCommandManager', () => {
 
     test('swallows command with empty arguments', async () => {
       const reviewStore = createReviewStore();
-      const manager = createLoopCommandManager(createMockContext(), reviewStore);
+      const manager = createLoopCommandManager(
+        createMockContext(),
+        reviewStore,
+      );
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(
@@ -69,7 +81,10 @@ describe('createLoopCommandManager', () => {
 
     test('rewrites task arguments into structured prompt', async () => {
       const reviewStore = createReviewStore();
-      const manager = createLoopCommandManager(createMockContext(), reviewStore);
+      const manager = createLoopCommandManager(
+        createMockContext(),
+        reviewStore,
+      );
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(
@@ -90,8 +105,11 @@ describe('createLoopCommandManager', () => {
 
     test('does not toggle already active is a no-op', async () => {
       const reviewStore = createReviewStore();
-    reviewStore.activateReview('ses-1', 'existing task', 0);
-      const manager = createLoopCommandManager(createMockContext(), reviewStore);
+      reviewStore.activateReview('ses-1', 'existing task', 0);
+      const manager = createLoopCommandManager(
+        createMockContext(),
+        reviewStore,
+      );
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(

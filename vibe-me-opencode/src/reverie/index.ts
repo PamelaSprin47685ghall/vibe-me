@@ -1,11 +1,11 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
+import { buildReveriePrompt, reverieRole } from 'engine';
 import { readReverieFiles } from 'engine/reverie-files';
 import { REVERIE_SYSTEM_PROMPT } from 'engine/subagent';
-import { reverieRole, buildReveriePrompt } from 'engine';
 import { TOOL_COPY } from 'engine/tool-copy';
-import { extractToolContext } from '../utils/session';
 import { createEngineAdapter } from '../utils/engine-adapter';
+import { extractToolContext } from '../utils/session';
 
 export { REVERIE_SYSTEM_PROMPT };
 
@@ -16,9 +16,7 @@ export function createReverieTool(ctx: PluginInput): ToolDefinition {
     description: TOOL_COPY.reverie.description,
 
     args: {
-      intent: tool.schema
-        .string()
-        .describe(TOOL_COPY.reverie.params.intent),
+      intent: tool.schema.string().describe(TOOL_COPY.reverie.params.intent),
       files: tool.schema
         .array(tool.schema.string())
         .describe(TOOL_COPY.reverie.params.files),
@@ -35,8 +33,16 @@ export function createReverieTool(ctx: PluginInput): ToolDefinition {
         content: readResults[i]?.content,
       }));
       const prompt = buildReveriePrompt(sections, args.intent);
-      const adapter = createEngineAdapter(client, { directory, sessionID, abortSignal });
-      return adapter.promptSubagent({ role: reverieRole, prompt, title: 'Reverie' });
+      const adapter = createEngineAdapter(client, {
+        directory,
+        sessionID,
+        abortSignal,
+      });
+      return adapter.promptSubagent({
+        role: reverieRole,
+        prompt,
+        title: 'Reverie',
+      });
     },
   });
 }

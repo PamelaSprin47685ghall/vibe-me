@@ -18,7 +18,10 @@ function makeExecutorDeps(execResult: ExecuteResult) {
   const execute = mock<(options: unknown, sessionId: string) => Promise<ExecuteResult>>(() =>
     Promise.resolve(execResult),
   );
-  return { execute, deps: { execute } satisfies ExecutorToolDeps };
+  const resolveAiSettings = mock<NonNullable<ExecutorToolDeps["resolveAiSettings"]>>(() =>
+    Promise.resolve({ modelString: "anthropic:claude-explore", thinkingLevel: "medium" }),
+  );
+  return { execute, resolveAiSettings, deps: { execute, resolveAiSettings } satisfies ExecutorToolDeps };
 }
 
 function createConfigFile(): ConfigFile {

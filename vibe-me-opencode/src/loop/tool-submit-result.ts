@@ -3,7 +3,9 @@ import { tool } from '@opencode-ai/plugin/tool';
 import type { ReviewStore } from 'engine/review';
 import { accepted, rejected } from 'engine/review';
 
-export function createSubmitReviewResultTool(reviewStore: ReviewStore): ToolDefinition {
+export function createSubmitReviewResultTool(
+  reviewStore: ReviewStore,
+): ToolDefinition {
   return tool({
     description:
       'Submit your review verdict.\n' +
@@ -28,7 +30,10 @@ export function createSubmitReviewResultTool(reviewStore: ReviewStore): ToolDefi
             : args.feedback;
 
       const result = feedback == null ? accepted : rejected(feedback);
-      const resolved = reviewStore.resolvePendingReview(context.sessionID, result);
+      const resolved = reviewStore.resolvePendingReview(
+        context.sessionID,
+        result,
+      );
       if (!resolved) {
         return 'Error: No pending review to resolve.';
       }

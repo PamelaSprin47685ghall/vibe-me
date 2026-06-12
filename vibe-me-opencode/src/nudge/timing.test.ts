@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { createReviewStore } from 'engine/review';
 import { createNudgeCoordinatorHook } from './index';
-import { createMockContext, cleanupAfterEach } from './test-utils';
+import { cleanupAfterEach, createMockContext } from './test-utils';
 
 afterEach(cleanupAfterEach);
 
@@ -55,7 +55,12 @@ describe('timing / cooldown', () => {
         type: 'session.status',
         properties: {
           sessionID: 'ses-1',
-          status: { type: 'retry', attempt: 1, message: 'quota exhausted', next: 1 },
+          status: {
+            type: 'retry',
+            attempt: 1,
+            message: 'quota exhausted',
+            next: 1,
+          },
         },
       },
     });

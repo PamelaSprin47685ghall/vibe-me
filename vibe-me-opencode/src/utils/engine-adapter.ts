@@ -1,6 +1,6 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { agentRoleToString } from 'engine/agent-policy';
 import type { HostAdapter } from 'engine';
+import { agentRoleToString } from 'engine/agent-policy';
 import { runSubagent } from './session';
 
 export function createEngineAdapter(

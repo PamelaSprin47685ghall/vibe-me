@@ -1,7 +1,7 @@
-export { createDeferred, type Deferred, type ReviewResult } from './types';
 export { createLoopCommandManager } from './command';
 export { runReviewerWithNudge } from './reviewer';
 export { createSubmitReviewResultTool, createSubmitReviewTool } from './tools';
+export { createDeferred, type Deferred, type ReviewResult } from './types';
 
 export function getReviewerConfig() {
   return {

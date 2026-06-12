@@ -5,5 +5,8 @@ import { createLoopOnlyCommand } from "./loop-simple.js";
 import { createLoopReviewCommand } from "./loop-review.js";
 
 export function createLoopCommand(deps: HostDependencies, reviewStore: ReviewStore): PluginSlashCommandDefinition[] {
-  return [createLoopOnlyCommand(reviewStore), createLoopReviewCommand(deps, reviewStore)];
+  return [
+    createLoopOnlyCommand(reviewStore),
+    createLoopReviewCommand({ hostDeps: deps }, reviewStore),
+  ];
 }

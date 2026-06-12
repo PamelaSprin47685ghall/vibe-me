@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { promptWithAbort } from './abort-signal';
 import {
   registerChildAgent,
   resolveSubsessionParentID,
   unregisterChildAgent,
 } from './child-agent';
-import { promptWithAbort } from './abort-signal';
 import { runSubagent } from './subagent';
 
 function createMockClient() {
@@ -86,7 +86,7 @@ describe('promptWithAbort', () => {
     await expect(promptPromise).rejects.toThrow(DOMException);
 
     rejectPromptRef?.(new Error('Late error'));
-    await new Promise((r) => setTimeout(r, 10));
+    await Promise.resolve();
   });
 
   test('propagates non-abort errors through Promise.race', async () => {

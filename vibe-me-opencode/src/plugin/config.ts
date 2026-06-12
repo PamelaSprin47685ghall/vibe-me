@@ -1,6 +1,6 @@
-import { getMcpConfig } from '../mcp/index.js';
 import { applyAgentConfig } from '../agent-config.js';
-import { createLoopCommandManager } from '../loop/index.js';
+import type { createLoopCommandManager } from '../loop/index.js';
+import { getMcpConfig } from '../mcp/index.js';
 
 type LoopCommandManager = ReturnType<typeof createLoopCommandManager>;
 

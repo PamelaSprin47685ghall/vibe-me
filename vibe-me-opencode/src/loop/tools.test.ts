@@ -1,11 +1,9 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
+import { createReviewStore } from 'engine/review';
 import {
-  createReviewStore,
-} from 'engine/review';
-import {
+  createDeferred,
   createSubmitReviewResultTool,
   createSubmitReviewTool,
-  createDeferred,
 } from './index';
 import { createMockContext } from './test-utils';
 

@@ -5,67 +5,149 @@ import {
   EXECUTOR_TIMEOUT_MS,
   type ExecutorTimeoutType,
 } from './types.js';
+import type { RunProgram } from './execute.js';
 import { rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
-const sessionSuffix = `executor-it-${Date.now()}`;
 
 afterAll(() => {
   rmSync(join(tmpdir(), 'omp-kunwei-executor'), { recursive: true, force: true });
 });
 
+function fakeRunProgram(result: {
+  stdout?: string;
+  stderr?: string;
+  code: number | null;
+  timedOut?: boolean;
+}): RunProgram {
+  return async () => ({
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+    code: result.code,
+    timedOut: result.timedOut ?? false,
+  });
+}
+
 describe('execute', () => {
-  it('runs fast shell with short timeout and returns Completed', async () => {
+  it('returns Completed with output', async () => {
     const result = await execute(
       { program: 'echo hi', language: 'shell', timeoutType: 'short' },
-      `${sessionSuffix}-short-shell`,
+      'session-completed',
+      { runProgram: fakeRunProgram({ stdout: 'hi\n', code: 0 }) },
     );
     expect(result._tag).toBe('Completed');
-    if (result._tag === 'Completed') expect(result.output).toContain('hi');
+    expect(result.output).toBe('hi');
   });
 
-  it('truncates a sleep that exceeds the short timeout', async () => {
+  it('returns Truncated with timeout suffix', async () => {
     const result = await execute(
-      { program: 'sleep 5', language: 'shell', timeoutType: 'short' },
-      `${sessionSuffix}-short-sleep`,
+      { program: 'slow', language: 'shell', timeoutType: 'short' },
+      'session-truncated',
+      { runProgram: fakeRunProgram({ stdout: 'partial', code: null, timedOut: true }) },
     );
     expect(result._tag).toBe('Truncated');
     if (result._tag === 'Truncated') {
       const expectedType: ExecutorTimeoutType = 'short';
       expect(result.timeoutType).toBe(expectedType);
-      expect(result.output).toMatch(/Timed out/);
+      expect(result.output).toContain('partial');
+      expect(result.output).toContain(
+        `[executor] Timed out after ${EXECUTOR_TIMEOUT_MS.short}ms (short). Partial output returned.`,
+      );
     }
   });
 
-  it('long timeout still aborts on a long sleep', async () => {
-    const result = await execute(
-      { program: 'sleep 30', language: 'shell', timeoutType: 'long' },
-      `${sessionSuffix}-long-sleep`,
-    );
-    expect(result._tag).toBe('Truncated');
-    expect(EXECUTOR_TIMEOUT_MS.long).toBe(10_000);
-  }, 15_000);
-
-  it('returns Failed for a non-zero exit code', async () => {
+  it('returns Failed for non-zero exit code', async () => {
     const result = await execute(
       { program: 'exit 7', language: 'shell', timeoutType: 'short' },
-      `${sessionSuffix}-fail`,
+      'session-fail-nonzero',
+      { runProgram: fakeRunProgram({ stderr: 'error message', code: 7 }) },
     );
     expect(result._tag).toBe('Failed');
+    expect(result.output).toContain('error message');
   });
 
-  it('strips head/tail pipes from the program (regex returns clean script)', async () => {
+  it('returns Completed fallback for zero exit code with no output', async () => {
     const result = await execute(
-      { program: 'echo a; echo b; echo c | head -n 1', language: 'shell', timeoutType: 'short' },
-      `${sessionSuffix}-pipe`,
+      { program: 'empty', language: 'shell', timeoutType: 'short' },
+      'session-completed-fallback',
+      { runProgram: fakeRunProgram({ code: 0 }) },
     );
     expect(result._tag).toBe('Completed');
-    if (result._tag === 'Completed') {
-      expect(result.output).toContain('a');
-      expect(result.output).toContain('b');
-      expect(result.output).toContain('c');
-    }
+    expect(result.output).toBe('(no output)');
+  });
+
+  it('strips head/tail pipes from shell program before running', async () => {
+    let receivedProgram: string | undefined;
+    const runProgram: RunProgram = async (options) => {
+      receivedProgram = options.program;
+      return { stdout: '', stderr: '', code: 0, timedOut: false };
+    };
+    const result = await execute(
+      { program: 'echo a; echo b; echo c | head -n 1', language: 'shell', timeoutType: 'short' },
+      'session-pipe',
+      { runProgram },
+    );
+    expect(receivedProgram).toBe('echo a; echo b; echo c');
+    expect(result._tag).toBe('Completed');
+    expect(result.output).toBe('(no output)');
+  });
+
+  it('prepends safety warning for shell read commands', async () => {
+    const result = await execute(
+      { program: 'cat file.txt', language: 'shell', timeoutType: 'short' },
+      'session-read-warning',
+      { runProgram: fakeRunProgram({ stdout: 'file content', code: 0 }) },
+    );
+    expect(result._tag).toBe('Completed');
+    expect(result.output).toStartWith(
+      '// 绝对禁止使用 executor 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！',
+    );
+    expect(result.output).toContain('file content');
+  });
+
+  it('throws formatted error for shell ENOENT', async () => {
+    const runProgram: RunProgram = async () => {
+      const error = new Error('spawn bash ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    };
+    await expect(
+      execute(
+        { program: 'echo hi', language: 'shell', timeoutType: 'short' },
+        'session-enoent-shell',
+        { runProgram },
+      ),
+    ).rejects.toThrow("Error: 'bash' executable not found. Please ensure 'bash' is installed and available on your PATH.");
+  });
+
+  it('throws formatted error for python ENOENT', async () => {
+    const runProgram: RunProgram = async () => {
+      const error = new Error('spawn uvx ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    };
+    await expect(
+      execute(
+        { program: 'print(1)', language: 'python', timeoutType: 'short' },
+        'session-enoent-python',
+        { runProgram },
+      ),
+    ).rejects.toThrow("Error: 'uvx' executable not found. Please ensure 'uvx' is installed and available on your PATH.");
+  });
+
+  it('throws formatted error for javascript ENOENT', async () => {
+    const runProgram: RunProgram = async () => {
+      const error = new Error('spawn npx ENOENT') as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    };
+    await expect(
+      execute(
+        { program: 'console.log(1)', language: 'javascript', timeoutType: 'short' },
+        'session-enoent-javascript',
+        { runProgram },
+      ),
+    ).rejects.toThrow("Error: 'npx' executable not found. Please ensure 'npx' is installed and available on your PATH.");
   });
 });
 

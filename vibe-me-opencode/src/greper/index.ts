@@ -1,10 +1,10 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
+import { delegateIntents, greperRole } from 'engine';
 import { GREPER_SYSTEM_PROMPT } from 'engine/subagent';
-import { greperRole, delegateIntents } from 'engine';
 import { TOOL_COPY } from 'engine/tool-copy';
-import { extractToolContext } from '../utils/session';
 import { createEngineAdapter } from '../utils/engine-adapter';
+import { extractToolContext } from '../utils/session';
 
 export { GREPER_SYSTEM_PROMPT };
 
@@ -30,7 +30,11 @@ export function createGreperTool(ctx: PluginInput): ToolDefinition {
         context,
         ctx.directory,
       );
-      const adapter = createEngineAdapter(client, { directory, sessionID, abortSignal });
+      const adapter = createEngineAdapter(client, {
+        directory,
+        sessionID,
+        abortSignal,
+      });
       return delegateIntents(adapter, greperRole, 'Greper', args.intents);
     },
   });
@@ -43,7 +47,17 @@ export function getGreperConfig() {
         prompt: GREPER_SYSTEM_PROMPT,
         mode: 'subagent' as const,
         mcps: [],
-        permission: { read: 'allow', glob: 'allow', bash: 'deny', edit: 'deny', write: 'deny', grep: 'deny', fuzzy_find: 'allow', fuzzy_grep: 'allow', task: 'deny' } as Record<string, unknown>,
+        permission: {
+          read: 'allow',
+          glob: 'allow',
+          bash: 'deny',
+          edit: 'deny',
+          write: 'deny',
+          grep: 'deny',
+          fuzzy_find: 'allow',
+          fuzzy_grep: 'allow',
+          task: 'deny',
+        } as Record<string, unknown>,
       },
     },
   };

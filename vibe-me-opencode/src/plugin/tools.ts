@@ -2,14 +2,24 @@ import type { PluginInput } from '@opencode-ai/plugin';
 import type { ReviewStore } from 'engine/review';
 import { createBrowserTool } from '../browser/index.js';
 import { createEditorTool } from '../editor/index.js';
+import { createExecutorTool } from '../executor/index.js';
 import { createFuzzyFindTool, createFuzzyGrepTool } from '../fuzzy/index.js';
 import { createGreperTool } from '../greper/index.js';
-import { createSubmitReviewResultTool, createSubmitReviewTool } from '../loop/index.js';
-import { createOllamaWebFetchTool, createOllamaWebSearchTool } from '../ollama-web/index.js';
+import {
+  createSubmitReviewResultTool,
+  createSubmitReviewTool,
+} from '../loop/index.js';
+import {
+  createOllamaWebFetchTool,
+  createOllamaWebSearchTool,
+} from '../ollama-web/index.js';
 import { createReverieTool } from '../reverie/index.js';
-import { createExecutorTool } from '../executor/index.js';
 
-export function createTools(ctx: PluginInput, reviewStore: ReviewStore, nudgeTool: Record<string, unknown>) {
+export function createTools(
+  ctx: PluginInput,
+  reviewStore: ReviewStore,
+  nudgeTool: Record<string, unknown>,
+) {
   return {
     ...nudgeTool,
     editor: createEditorTool(ctx),

@@ -1,10 +1,10 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { BROWSER_SYSTEM_PROMPT } from 'engine/subagent';
 import { browserRole } from 'engine';
+import { BROWSER_SYSTEM_PROMPT } from 'engine/subagent';
 import { TOOL_COPY } from 'engine/tool-copy';
-import { extractToolContext } from '../utils/session.js';
 import { createEngineAdapter } from '../utils/engine-adapter';
+import { extractToolContext } from '../utils/session.js';
 
 export { BROWSER_SYSTEM_PROMPT };
 
@@ -15,9 +15,7 @@ export function createBrowserTool(ctx: PluginInput): ToolDefinition {
     description: TOOL_COPY.browser.description,
 
     args: {
-      intent: tool.schema
-        .string()
-        .describe(TOOL_COPY.browser.params.intent),
+      intent: tool.schema.string().describe(TOOL_COPY.browser.params.intent),
     },
 
     async execute(args, context) {
@@ -25,8 +23,16 @@ export function createBrowserTool(ctx: PluginInput): ToolDefinition {
         context,
         ctx.directory,
       );
-      const adapter = createEngineAdapter(client, { directory, sessionID, abortSignal });
-      return adapter.promptSubagent({ role: browserRole, prompt: args.intent, title: 'Browser' });
+      const adapter = createEngineAdapter(client, {
+        directory,
+        sessionID,
+        abortSignal,
+      });
+      return adapter.promptSubagent({
+        role: browserRole,
+        prompt: args.intent,
+        title: 'Browser',
+      });
     },
   });
 }

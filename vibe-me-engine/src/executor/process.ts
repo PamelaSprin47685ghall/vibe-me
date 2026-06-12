@@ -1,7 +1,11 @@
 import { spawn } from 'node:child_process';
-import type { ChildProcess } from 'node:child_process';
 
-export function killTree(childProcess: ChildProcess | null): void {
+export interface ChildProcessLike {
+  pid?: number | undefined;
+  kill?(signal?: NodeJS.Signals | number): boolean;
+}
+
+export function killTree(childProcess: ChildProcessLike | null): void {
   const pid = childProcess?.pid;
   if (!pid) return;
 
@@ -13,7 +17,7 @@ export function killTree(childProcess: ChildProcess | null): void {
     }
   } catch {
     try {
-      childProcess?.kill('SIGKILL');
+      childProcess?.kill?.('SIGKILL');
     } catch {}
   }
 }

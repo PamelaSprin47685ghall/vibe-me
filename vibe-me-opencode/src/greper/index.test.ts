@@ -23,7 +23,6 @@ describe('getGreperConfig', () => {
     const cfg = getGreperConfig();
     expect(cfg.agents.greper.prompt).toContain('Do NOT use executor');
   });
-
 });
 
 describe('createGreperTool', () => {

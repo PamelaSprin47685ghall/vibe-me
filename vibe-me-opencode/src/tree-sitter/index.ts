@@ -42,7 +42,8 @@ export function createSyntaxCheckHook(ctx: PluginInput) {
         if (formatted) diagnostics.push(formatted);
       }
 
-      if (diagnostics.length > 0) output.output = `${current}\n\n${diagnostics.join('\n\n')}`;
+      if (diagnostics.length > 0)
+        output.output = `${current}\n\n${diagnostics.join('\n\n')}`;
     },
   };
 }
