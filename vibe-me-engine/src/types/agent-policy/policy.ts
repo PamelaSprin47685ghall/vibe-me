@@ -30,6 +30,8 @@ export const CANONICAL_TOOL_NAMES = [
   'reverie',
   'submit_review',
   'submit_review_result',
+  'todo_read',
+  'todo_write',
   'webfetch',
   'websearch',
   'browser',

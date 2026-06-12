@@ -27,6 +27,8 @@ const MUX_TOOL_PATTERNS_BY_POLICY_NAME: Record<string, readonly string[]> = {
   websearch: ["websearch", "web_search"],
   browser: ["browser"],
   task: ["task", "task_.*"],
+  todo_read: ["todo_read", "todoread"],
+  todo_write: ["todo_write", "todowrite"],
   runner_wait: ["runner_wait"],
   runner_abort: ["runner_abort"],
   stealth_browser_mcp_star: ["stealth_browser_mcp_.*"],

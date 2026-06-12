@@ -8,7 +8,7 @@ import {
 const allToolKeys = [
   'read', 'write', 'edit', 'runner', 'glob', 'fuzzy_find', 'fuzzy_grep',
   'grep', 'editor', 'greper', 'reverie', 'submit_review',
-  'submit_review_result', 'webfetch', 'websearch', 'browser', 'task',
+  'submit_review_result', 'todo_read', 'todo_write', 'webfetch', 'websearch', 'browser', 'task',
   'runner_wait', 'runner_abort', 'stealth_browser_mcp_star',
 ] as const;
 
@@ -46,6 +46,8 @@ describe('getAgentPermissionDefaults', () => {
       fuzzy_grep: 'allow',
       grep: 'deny',
       question: 'deny',
+      todo_read: 'deny',
+      todo_write: 'deny',
     });
   });
 
@@ -60,6 +62,8 @@ describe('getAgentPermissionDefaults', () => {
       fuzzy_grep: 'allow',
       grep: 'deny',
       question: 'deny',
+      todo_read: 'deny',
+      todo_write: 'deny',
     });
   });
 
@@ -74,6 +78,8 @@ describe('getAgentPermissionDefaults', () => {
       fuzzy_grep: 'deny',
       grep: 'deny',
       question: 'deny',
+      todo_read: 'deny',
+      todo_write: 'deny',
     });
   });
 
@@ -87,6 +93,8 @@ describe('getAgentPermissionDefaults', () => {
       fuzzy_grep: 'deny',
       grep: 'deny',
       question: 'deny',
+      todo_read: 'deny',
+      todo_write: 'deny',
     });
   });
 
@@ -102,6 +110,8 @@ describe('getAgentPermissionDefaults', () => {
       fuzzy_grep: 'deny',
       grep: 'deny',
       question: 'deny',
+      todo_read: 'deny',
+      todo_write: 'deny',
     });
   });
 
@@ -116,6 +126,8 @@ describe('getAgentPermissionDefaults', () => {
       fuzzy_grep: 'deny',
       grep: 'deny',
       question: 'deny',
+      todo_read: 'deny',
+      todo_write: 'deny',
     });
   });
 
@@ -129,7 +141,7 @@ describe('getAgentToolDefaults', () => {
     expect(getAgentToolDefaults('orchestrator')).toEqual(
       makeToolDefaults([
         'read', 'runner', 'glob', 'editor', 'greper', 'reverie',
-        'submit_review', 'webfetch', 'websearch', 'browser',
+        'submit_review', 'todo_read', 'todo_write', 'webfetch', 'websearch', 'browser',
       ]),
     );
   });
