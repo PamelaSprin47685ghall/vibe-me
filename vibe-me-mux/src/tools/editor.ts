@@ -1,10 +1,7 @@
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
-
-interface EditorToolArgs {
-  readonly intents: readonly string[];
-}
+import { requireStringArray } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
-import { EDITOR_TOOLS } from "engine";
+import { deniedToolsFor } from "./policy.js";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -29,7 +26,7 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
       "Execute code changes based on natural-language intents. Each intent in the array spawns its own editor subagent session. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const { intents } = args as unknown as EditorToolArgs;
+      const intents = requireStringArray(args, 'intents');
 
       if (intents.length === 0) {
         return "Error: `intents` must be a non-empty array.";
@@ -40,7 +37,7 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "editor" as const,
           toolPolicy: {
-            disabledTools: [...EDITOR_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
+            disabledTools: deniedToolsFor("editor"),
           },
         },
       };

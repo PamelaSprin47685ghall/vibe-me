@@ -8,9 +8,7 @@ export function createConfigHandler(loopCommandManager: LoopCommandManager) {
   const mcps = getMcpConfig();
 
   return async (opencodeConfig: Record<string, unknown>) => {
-    // biome-ignore lint/suspicious/noExplicitAny: config matches internal any structure
-    applyAgentConfig(opencodeConfig as any, mcps);
-    // biome-ignore lint/suspicious/noExplicitAny: commandManager matches any config
-    loopCommandManager.registerCommand(opencodeConfig as any);
+    applyAgentConfig(opencodeConfig, mcps);
+    loopCommandManager.registerCommand(opencodeConfig);
   };
 }

@@ -79,3 +79,234 @@ describe("getPluginToolPolicy", () => {
     expect(enabled.has("file_edit_replace_string")).toBe(false);
   });
 });
+
+describe("getPluginToolPolicy full remove lists per role", () => {
+  const orchestratorRemove = [
+    "bash",
+    "bash_.*",
+    "file_edit_.*",
+    "fuzzy_find",
+    "fuzzy_grep",
+    "glob",
+    "grep",
+    "runner_abort",
+    "runner_wait",
+    "stealth_browser_mcp_.*",
+    "submit_review_result",
+    "task",
+    "task_.*",
+    "write",
+  ].sort();
+
+  test("orchestrator remove list", () => {
+    const policy = getPluginToolPolicy("exec", "orchestrator");
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(orchestratorRemove);
+  });
+
+  test("undefined role equals orchestrator", () => {
+    const policy = getPluginToolPolicy("exec", undefined);
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(orchestratorRemove);
+  });
+
+  test("editor remove list", () => {
+    const expected = [
+      "ask_user_question",
+      "bash",
+      "bash_.*",
+      "browser",
+      "editor",
+      "grep",
+      "greper",
+      "reverie",
+      "runner",
+      "runner_abort",
+      "runner_wait",
+      "stealth_browser_mcp_.*",
+      "submit_review",
+      "submit_review_result",
+      "task",
+      "task_.*",
+      "web_fetch",
+      "web_search",
+      "webfetch",
+      "websearch",
+    ].sort();
+    const policy = getPluginToolPolicy("exec", "editor");
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(expected);
+  });
+
+  test("greper remove list", () => {
+    const expected = [
+      "ask_user_question",
+      "bash",
+      "bash_.*",
+      "browser",
+      "editor",
+      "file_edit_.*",
+      "grep",
+      "greper",
+      "reverie",
+      "runner_abort",
+      "runner_wait",
+      "stealth_browser_mcp_.*",
+      "submit_review",
+      "submit_review_result",
+      "task",
+      "task_.*",
+      "web_fetch",
+      "web_search",
+      "webfetch",
+      "websearch",
+      "write",
+    ].sort();
+    const policy = getPluginToolPolicy("exec", "greper");
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(expected);
+  });
+
+  test("browser remove list", () => {
+    const expected = [
+      "ask_user_question",
+      "bash",
+      "bash_.*",
+      "browser",
+      "editor",
+      "file_edit_.*",
+      "fuzzy_find",
+      "fuzzy_grep",
+      "glob",
+      "grep",
+      "greper",
+      "reverie",
+      "runner",
+      "runner_abort",
+      "runner_wait",
+      "submit_review",
+      "submit_review_result",
+      "task",
+      "task_.*",
+      "web_fetch",
+      "web_search",
+      "webfetch",
+      "websearch",
+      "write",
+    ].sort();
+    const policy = getPluginToolPolicy("exec", "browser");
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(expected);
+  });
+
+  test("runner remove list", () => {
+    const expected = [
+      "ask_user_question",
+      "bash",
+      "bash_.*",
+      "browser",
+      "editor",
+      "file_edit_.*",
+      "fuzzy_find",
+      "fuzzy_grep",
+      "glob",
+      "grep",
+      "greper",
+      "read",
+      "reverie",
+      "runner",
+      "stealth_browser_mcp_.*",
+      "submit_review",
+      "submit_review_result",
+      "task",
+      "task_.*",
+      "web_fetch",
+      "web_search",
+      "webfetch",
+      "websearch",
+      "write",
+    ].sort();
+    const policy = getPluginToolPolicy("exec", "runner");
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(expected);
+  });
+
+  test("reverie remove list", () => {
+    const expected = [
+      "ask_user_question",
+      "bash",
+      "bash_.*",
+      "browser",
+      "editor",
+      "file_edit_.*",
+      "fuzzy_find",
+      "fuzzy_grep",
+      "glob",
+      "grep",
+      "greper",
+      "read",
+      "reverie",
+      "runner",
+      "runner_abort",
+      "runner_wait",
+      "stealth_browser_mcp_.*",
+      "submit_review",
+      "submit_review_result",
+      "task",
+      "task_.*",
+      "web_fetch",
+      "web_search",
+      "webfetch",
+      "websearch",
+      "write",
+    ].sort();
+    const policy = getPluginToolPolicy("exec", "reverie");
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(expected);
+  });
+
+  test("reviewer remove list (keeps submit_review_result)", () => {
+    const expected = [
+      "ask_user_question",
+      "bash",
+      "bash_.*",
+      "browser",
+      "editor",
+      "file_edit_.*",
+      "fuzzy_find",
+      "fuzzy_grep",
+      "glob",
+      "grep",
+      "greper",
+      "reverie",
+      "runner",
+      "runner_abort",
+      "runner_wait",
+      "stealth_browser_mcp_.*",
+      "submit_review",
+      "task",
+      "task_.*",
+      "web_fetch",
+      "web_search",
+      "webfetch",
+      "websearch",
+      "write",
+    ].sort();
+    const policy = getPluginToolPolicy("exec", "reviewer");
+    expect(policy).toBeDefined();
+    expect(policy!.add).toEqual([]);
+    expect([...policy!.remove].sort()).toEqual(expected);
+  });
+
+  test("bogus role returns undefined", () => {
+    const policy = getPluginToolPolicy("exec", "bogus");
+    expect(policy).toBeUndefined();
+  });
+});

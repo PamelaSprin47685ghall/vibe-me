@@ -7,6 +7,7 @@ import {
   allow,
   deny,
   matchAgentRole,
+  matchToolPermission,
   denyAllRule,
   denyAllExceptRule,
   allowForRolesRule,
@@ -14,6 +15,7 @@ import {
   agentRoleFromString,
   agentRoleToString,
 } from '../types/agent-policy.js';
+import { type Result, ok, err, matchResult } from '../types/general.js';
 
 export type ToolMap = ReadonlyMap<CanonicalToolName, ToolPermission>;
 
@@ -97,6 +99,49 @@ export function computeDefaultPermissions(
   agent: AgentRole,
 ): ReadonlyMap<string, ToolPermission> {
   return computePermissions(agent, UNIVERSAL_PERMISSION_RULES);
+}
+
+export interface EffectivePolicy {
+  readonly role: AgentRole;
+  readonly tools: ToolMap;
+  readonly permissions: ReadonlyMap<string, ToolPermission>;
+  readonly allowedTools: readonly string[];
+  readonly deniedTools: readonly string[];
+  readonly deniedPermissions: readonly string[];
+}
+
+export function getEffectivePolicy(role: AgentRole): EffectivePolicy {
+  const tools = getAgentTools(role);
+  const permissions = computeDefaultPermissions(role);
+  const allowedTools: string[] = [];
+  const deniedTools: string[] = [];
+  for (const name of CANONICAL_TOOL_NAMES) {
+    const perm = tools.get(name);
+    if (perm === undefined) continue;
+    matchToolPermission(perm, {
+      Allow: () => { allowedTools.push(name); },
+      Deny: () => { deniedTools.push(name); },
+    });
+  }
+  const deniedPermissions: string[] = [];
+  for (const [name, perm] of permissions) {
+    if (perm._tag === 'Deny') deniedPermissions.push(name);
+  }
+  return {
+    role,
+    tools,
+    permissions,
+    allowedTools,
+    deniedTools,
+    deniedPermissions,
+  };
+}
+
+export function getEffectivePolicyFromString(value: string): Result<EffectivePolicy, string> {
+  return matchResult<AgentRole, string, Result<EffectivePolicy, string>>(agentRoleFromString(value), {
+    Ok: (role) => ok(getEffectivePolicy(role)),
+    Err: (error) => err(error),
+  });
 }
 
 export { agentRoleFromString, agentRoleToString, matchAgentRole };

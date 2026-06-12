@@ -21,7 +21,8 @@
     "./mcp": "./src/mcp/index.ts",
     "./reverie-files": "./src/reverie-files.ts",
     "./runner/read-commands": "./src/runner/read-commands.ts",
-    "./agent-policy": "./src/agent-policy/index.ts"
+    "./agent-policy": "./src/agent-policy/index.ts",
+    "./host": "./src/host/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

@@ -1,8 +1,5 @@
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
-
-interface RunnerAbortToolArgs {
-  readonly jobId: string;
-}
+import { requireString } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
 import { abort } from "engine/runner";
 
@@ -26,7 +23,7 @@ export function createRunnerAbortTool(_deps: HostDependencies): ToolDefinition {
       "Forcefully terminate a running background runner task.",
     parameters,
     execute: async (_config, args: Record<string, unknown>) => {
-      const { jobId } = args as unknown as RunnerAbortToolArgs;
+      const jobId = requireString(args, 'jobId');
       return abort(jobId);
     },
   };

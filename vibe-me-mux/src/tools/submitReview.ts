@@ -2,8 +2,9 @@ import type { JsonSchema, ToolDefinition } from "../types/contract.js";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
 import { REVIEW_INSTRUCTIONS } from "engine/review";
-import { REVIEWER_TOOLS } from "engine/agent-policy";
+import { deniedToolsFor } from "./policy.js";
 import type { DelegateOptions } from "./delegate.js";
+import { requireString, requireStringArray } from "./args.js";
 
 export const FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME =
   "ForegroundWaitBackgroundedError";
@@ -104,7 +105,8 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
       "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and returns PASS or actionable feedback. Only works when session is in active loop mode.",
     parameters,
     execute: async (config, args) => {
-      const a = args as unknown as { report: string; affectedFiles: readonly string[] };
+      const report = requireString(args, 'report');
+      const affectedFiles = requireStringArray(args, 'affectedFiles');
       const workspaceId = config.workspaceId;
       if (!workspaceId) throw new Error("submitReview requires workspaceId");
 
@@ -117,8 +119,8 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
       try {
         const originalTask = reviewDeps.getReviewTask(workspaceId);
         const reviewPrompt = buildReviewPrompt(
-          a.report,
-          a.affectedFiles,
+          report,
+          affectedFiles,
           originalTask,
         );
         const reviewReport = await reviewDeps.delegateToSubAgent(
@@ -132,7 +134,7 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
             experiments: {
               subagentRole: "reviewer",
               toolPolicy: {
-                disabledTools: [...REVIEWER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
+                disabledTools: deniedToolsFor("reviewer"),
               },
             },
           },

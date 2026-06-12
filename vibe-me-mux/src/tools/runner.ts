@@ -4,7 +4,7 @@ import { requireWorkspaceId } from "../types/contract.js";
 import { isForegroundWaitBackgroundedError } from "./submitReview.js";
 import type { HostDependencies } from "../types/deps.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
-import { RUNNER_TOOLS } from "engine";
+import { deniedToolsFor } from "./policy.js";
 import type { JobEntry } from "engine/runner";
 import { buildMuxRunnerPrompt } from "./runner-prompt.js";
 
@@ -87,7 +87,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
         experiments: {
           subagentRole: "runner",
           toolPolicy: {
-             disabledTools: [...RUNNER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
+             disabledTools: deniedToolsFor("runner"),
           },
         },
       });

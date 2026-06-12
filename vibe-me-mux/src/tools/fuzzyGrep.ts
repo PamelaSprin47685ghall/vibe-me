@@ -1,14 +1,5 @@
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
-
-interface FuzzyGrepToolArgs {
-  readonly pattern?: string;
-  readonly path?: string;
-  readonly exclude?: string;
-  readonly caseSensitive?: boolean;
-  readonly context?: number;
-  readonly limit?: number;
-  readonly iterator?: string;
-}
+import { optionalString, optionalBoolean, optionalNumber } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
 import { fuzzyGrep } from "engine/fuzzy";
 
@@ -58,16 +49,22 @@ export function createFuzzyGrepTool(_deps: HostDependencies): ToolDefinition {
       "Search file contents using fuzzy-aware content search. Smart-case, git-aware, frecency-ranked. Supports automatic regex mode for regex-like patterns and automatic fuzzy fallback when no exact matches are found.\n\nFirst call: provide pattern and optional filters.\nLater calls: provide only iterator.\nEvery result ends with iterator=\"...\"; iteration is finished when it becomes iterator=\"\".",
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const a = args as unknown as FuzzyGrepToolArgs;
+      const pattern = optionalString(args, 'pattern');
+      const path = optionalString(args, 'path');
+      const exclude = optionalString(args, 'exclude');
+      const caseSensitive = optionalBoolean(args, 'caseSensitive');
+      const context = optionalNumber(args, 'context');
+      const limit = optionalNumber(args, 'limit');
+      const iterator = optionalString(args, 'iterator');
       const result = await fuzzyGrep(
         {
-          pattern: a.pattern ?? undefined,
-          path: a.path ?? undefined,
-          exclude: a.exclude ?? undefined,
-          caseSensitive: a.caseSensitive ?? undefined,
-          context: a.context ?? undefined,
-          limit: a.limit ?? undefined,
-          iterator: a.iterator ?? undefined,
+          pattern,
+          path,
+          exclude,
+          caseSensitive,
+          context,
+          limit,
+          iterator,
         },
         { cwd: config.cwd, scopeId: config.workspaceId ?? "global" }
       );

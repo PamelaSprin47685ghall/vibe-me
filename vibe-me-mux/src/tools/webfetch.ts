@@ -1,12 +1,5 @@
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
-
-interface WebfetchToolArgs {
-  readonly url: string;
-  readonly extract_main?: boolean;
-  readonly prefer_llms_txt?: "auto" | "always" | "never";
-  readonly prompt?: string;
-  readonly timeout?: number;
-}
+import { requireString, optionalString, optionalBoolean, optionalNumber } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
 import { ollamaPost, formatFetchResponse, validateFetchUrl } from "engine/ollama";
 
@@ -49,16 +42,20 @@ export function createWebfetchTool(_deps: HostDependencies): ToolDefinition {
       "Fetch a URL with better extraction for static/docs pages. Supports llms.txt probing, content-focused HTML extraction, metadata, redirects, and an optional prompt processed by a cheap secondary model.",
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const a = args as unknown as WebfetchToolArgs;
-      const urlError = await validateFetchUrl(a.url);
+      const url = requireString(args, 'url');
+      const extract_main = optionalBoolean(args, 'extract_main');
+      const prefer_llms_txt = optionalString(args, 'prefer_llms_txt');
+      const prompt = optionalString(args, 'prompt');
+      const timeout = optionalNumber(args, 'timeout');
+      const urlError = await validateFetchUrl(url);
       if (urlError) return JSON.stringify({ success: false, error: urlError });
 
-      const fetchBody: Record<string, unknown> = { url: a.url };
-      if (a.extract_main != null) fetchBody.extract_main = a.extract_main;
-      if (a.prefer_llms_txt != null)
-        fetchBody.prefer_llms_txt = a.prefer_llms_txt;
-      if (a.prompt != null) fetchBody.prompt = a.prompt;
-      if (a.timeout != null) fetchBody.timeout = a.timeout;
+      const fetchBody: Record<string, unknown> = { url };
+      if (extract_main != null) fetchBody.extract_main = extract_main;
+      if (prefer_llms_txt != null)
+        fetchBody.prefer_llms_txt = prefer_llms_txt;
+      if (prompt != null) fetchBody.prompt = prompt;
+      if (timeout != null) fetchBody.timeout = timeout;
 
       try {
         const data = await ollamaPost("web_fetch", fetchBody, config.abortSignal);

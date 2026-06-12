@@ -18,7 +18,8 @@ export {
 } from './runner/state.js';
 
 // Kernel state machines — selective re-exports to avoid naming conflicts with kernel ADTs
-export { getAgentTools, computeDefaultPermissions, UNIVERSAL_PERMISSION_RULES, ORCHESTRATOR_TOOLS, EDITOR_TOOLS, REVIEWER_TOOLS, GREPER_TOOLS, BROWSER_TOOLS, RUNNER_TOOLS, REVERIE_TOOLS, agentRoleFromString, agentRoleToString, matchAgentRole, type AgentRole, type CanonicalToolName, type ToolMap } from './agent-policy/index.js';
+export { getAgentTools, computeDefaultPermissions, getEffectivePolicy, getEffectivePolicyFromString, type EffectivePolicy, UNIVERSAL_PERMISSION_RULES, ORCHESTRATOR_TOOLS, EDITOR_TOOLS, REVIEWER_TOOLS, GREPER_TOOLS, BROWSER_TOOLS, RUNNER_TOOLS, REVERIE_TOOLS, agentRoleFromString, agentRoleToString, matchAgentRole, type AgentRole, type CanonicalToolName, type ToolMap } from './agent-policy/index.js';
+export * from './host/index.js';
 export * from './todo/index.js';
 export * from './review/index.js';
 

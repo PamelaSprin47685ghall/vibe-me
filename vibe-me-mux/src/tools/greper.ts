@@ -1,10 +1,7 @@
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
-
-interface GreperToolArgs {
-  readonly intents: readonly string[];
-}
+import { requireStringArray } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
-import { GREPER_TOOLS } from "engine/agent-policy";
+import { deniedToolsFor } from "./policy.js";
 import { delegateToSubAgent } from "./delegate.js";
 
 const parameters: JsonSchema = {
@@ -29,7 +26,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
       "Search the codebase based on natural-language intents. Each intent in the array spawns its own search subagent session. IMPORTANT: Do NOT assume the search agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const { intents } = args as unknown as GreperToolArgs;
+      const intents = requireStringArray(args, 'intents');
 
       if (intents.length === 0) {
         return "Error: `intents` must be a non-empty array.";
@@ -40,7 +37,7 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
         experiments: {
           subagentRole: "greper" as const,
           toolPolicy: {
-            disabledTools: [...GREPER_TOOLS.entries()].filter(([, p]) => p._tag === 'Deny').map(([n]) => n),
+            disabledTools: deniedToolsFor("greper"),
           },
         },
       };

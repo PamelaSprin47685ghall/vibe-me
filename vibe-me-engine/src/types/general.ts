@@ -42,18 +42,6 @@ export function matchResult<T, E, R>(
   return patterns.Err(result.error);
 }
 
-/** Unwrap a value or throw — only for use after exhaustive checks in tests. */
-export function unsafeUnwrapOk<T>(result: Result<T, unknown>): T {
-  if (result._tag === 'Err') throw new Error('Called unsafeUnwrapOk on Err');
-  return result.value;
-}
-
-/** Unwrap a value from `Some` or throw. */
-export function unsafeUnwrapSome<T>(value: Maybe<T>): T {
-  if (value._tag === 'None') throw new Error('Called unsafeUnwrapSome on None');
-  return value.value;
-}
-
 /** Compile-time exhaustiveness check for ADT match functions. */
 export function assertNever(_: never): never {
   throw new Error('Unreachable state');

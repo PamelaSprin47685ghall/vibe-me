@@ -1,9 +1,5 @@
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
-
-interface WebsearchToolArgs {
-  readonly query: string;
-  readonly numResults?: number;
-}
+import { requireString, optionalNumber } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
 import { ollamaPost, formatSearchResults } from "engine/ollama";
 
@@ -37,7 +33,8 @@ export function createWebsearchTool(_deps: HostDependencies): ToolDefinition {
       "Search the web for any topic and get clean, ready-to-use content.\n\nBest for: Finding current information, news, facts, people, companies, or answering questions about any topic.\nReturns: Clean text content from top search results.\n\nQuery tips:\ndescribe the ideal page, not keywords. \"blog post comparing React and Vue performance\" not \"React vs Vue\".\nUse category:people / category:company to search through Linkedin profiles / companies respectively.",
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const { query, numResults } = args as unknown as WebsearchToolArgs;
+      const query = requireString(args, 'query');
+      const numResults = optionalNumber(args, 'numResults');
       try {
         const data = (await ollamaPost("web_search", {
           query,
