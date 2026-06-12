@@ -95,6 +95,25 @@ describe('createExecutorTool', () => {
     expect(deps.createSummarizerSession).not.toHaveBeenCalled();
   });
 
+  test('defaults invalid or missing language to shell before calling execute', async () => {
+    for (const badLanguage of [undefined, 'bogus' as any]) {
+      const { client } = createFakeClient();
+      const ctx = createPluginInput(client);
+      const { deps, executeMock } = createFakeDeps();
+      const executorTool = createExecutorTool(ctx, deps);
+
+      const result = await (executorTool as any).execute(
+        { program: 'echo hello', language: badLanguage, timeout_type: 'short' },
+        { directory: '/tmp', sessionID: 'session-1' },
+      );
+
+      expect(result).toBe('small output');
+      expect(executeMock).toHaveBeenCalledTimes(1);
+      const [options] = executeMock.mock.calls[0] as [ExecuteOptions, string];
+      expect(options.language).toBe('shell');
+    }
+  });
+
   test('creates summarizer session and returns report for large output', async () => {
     const { client, abortMock } = createFakeClient();
     const ctx = createPluginInput(client);

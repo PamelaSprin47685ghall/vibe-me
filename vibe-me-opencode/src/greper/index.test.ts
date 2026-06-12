@@ -39,7 +39,7 @@ describe('createGreperTool', () => {
                 parts: [
                   {
                     type: 'text',
-                    text: 'Found isEven in src/utils.ts:42 — exported function that checks parity.',
+                    text: 'Found isEven in src/utils.ts:42 — exported function that checks parity.\nrelatedFiles: [src/utils.ts]',
                   },
                 ],
               },

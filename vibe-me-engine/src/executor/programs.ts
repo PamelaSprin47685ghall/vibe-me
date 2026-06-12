@@ -131,5 +131,6 @@ export async function executeJavascriptProgram(options: InternalExecuteOptions, 
 export async function runExecutorProgram(options: InternalExecuteOptions, timeoutMs: number): ReturnType<typeof spawnExecutorProgram> {
   if (options.language === 'shell') return executeShellProgram(options, timeoutMs);
   if (options.language === 'python') return executePythonProgram(options, timeoutMs);
-  return executeJavascriptProgram(options, timeoutMs);
+  if (options.language === 'javascript') return executeJavascriptProgram(options, timeoutMs);
+  throw new TypeError(`Unsupported executor language: ${options.language}`);
 }

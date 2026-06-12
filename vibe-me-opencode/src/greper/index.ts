@@ -16,7 +16,14 @@ export function createGreperTool(ctx: PluginInput): ToolDefinition {
 
     args: {
       intents: tool.schema
-        .array(tool.schema.string())
+        .array(
+          tool.schema
+            .string()
+            .min(1)
+            .describe(
+              'Natural-language code-search intent. Must be a non-empty string and include all background, design rationale, file paths, and specific requirements for the search subagent.',
+            ),
+        )
         .min(1)
         .describe(TOOL_COPY.greper.params.intents),
       _ui: tool.schema

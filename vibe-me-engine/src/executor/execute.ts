@@ -41,7 +41,7 @@ export async function execute(
   deps: ExecuteDeps = { runProgram: runExecutorProgram },
 ): Promise<ExecuteResult> {
   assertString(sessionId, 'sessionId');
-  const { language, timeoutType } = options;
+  const { timeoutType, language } = options;
   let { program } = options;
   if (language === 'shell') program = stripHeadTailPipes(program).script;
 

@@ -18,8 +18,18 @@ export function createEditorTool(ctx: PluginInput): ToolDefinition {
       intents: tool.schema
         .array(
           tool.schema.tuple([
-            tool.schema.string(),
-            tool.schema.array(tool.schema.string()),
+            tool.schema
+              .string()
+              .min(1)
+              .describe(
+                'Natural-language code-change intent. Must be a non-empty string and include all background, design rationale, and specific requirements for the editor subagent.',
+              ),
+            tool.schema
+              .array(tool.schema.string().min(1))
+              .min(1)
+              .describe(
+                'Concrete list of file paths this intent modifies. Must be a non-empty array of non-empty strings.',
+              ),
           ]),
         )
         .min(1)

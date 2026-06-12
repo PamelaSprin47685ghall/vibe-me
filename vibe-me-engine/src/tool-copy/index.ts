@@ -5,15 +5,15 @@ export interface ToolCopy {
 
 export const TOOL_COPY = {
   "editor": {
-    "description": "Execute code changes from natural-language intents. Provide multiple independent change intents as [intent, affectFiles] tuples; each tuple spawns its own editor subagent session and runs independently in parallel — pass as many as you can at once so they execute concurrently. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
+    "description": "Execute code changes from natural-language intents. Provide multiple independent change intents as [intent, affectFiles] tuples; each tuple spawns its own editor subagent session and runs independently in parallel — pass as many as you can at once so they execute concurrently. IMPORTANT: Do NOT assume the editor agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.\n\nExample JSON shape for `intents`: `[\n  [\"Add a dark mode toggle to the settings page\", [\"src/settings.tsx\", \"src/theme.ts\"]]\n]`",
     "params": {
-      "intents": "Array of [intent, affectFiles] tuples. Each tuple contains a natural-language code-change intent and the list of files it affects; each tuple runs in parallel via its own editor subagent session. Include all relevant background, design rationale, and specific requirements."
+      "intents": "Array of [intent, affectFiles] tuples. Each tuple contains a natural-language code-change intent and the list of files it affects; each tuple runs in parallel via its own editor subagent session. Include all relevant background, design rationale, and specific requirements.\n\nExample: `[\n  [\"Update the auth middleware to check roles\", [\"src/auth/middleware.ts\", \"src/auth/types.ts\"]]\n]`"
     }
   },
   "greper": {
-    "description": "Search the codebase from natural-language intents. Each intent in the array spawns its own search subagent session and runs independently in parallel — pass as many as you can at once so they execute concurrently. IMPORTANT: Do NOT assume the search agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion.",
+    "description": "Search the codebase from natural-language intents. Each intent in the array spawns its own search subagent session and runs independently in parallel — pass as many as you can at once so they execute concurrently. IMPORTANT: Do NOT assume the search agent knows the project background, design documents, or any specific domain knowledge. You must provide all necessary context explicitly in each intent. Failure to do so will cause severe confusion. The agent must include a `relatedFiles: [...]` field in its returned report as direct evidence of files discovered during the search, which the caller (e.g. orchestrator) can extract and pass to downstream tools like `editor`.",
     "params": {
-      "intents": "Array of independent code-search intents, each run in parallel via its own search subagent session. Include all relevant background, design rationale, file paths, and specific requirements."
+      "intents": "Array of independent code-search intents, each run in parallel via its own search subagent session. Include all relevant background, design rationale, file paths, and specific requirements.\n\nExample: `[\n  \"Find where the auth middleware is defined\",\n  \"List all usages of the User type\"\n]`"
     }
   },
   "reverie": {

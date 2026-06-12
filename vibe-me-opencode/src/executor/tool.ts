@@ -3,6 +3,7 @@ import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
 import {
   buildExecutorSummaryPrompt,
+  EXECUTOR_LANGUAGES,
   EXECUTOR_SUMMARIZER_SYSTEM_PROMPT,
   type ExecuteOptions,
   type ExecuteResult,
@@ -87,6 +88,13 @@ export function createExecutorTool(
     description: TOOL_COPY.executor.description,
     args: executorToolArgs,
     async execute(args, context) {
+      const language: ExecutorLanguage = EXECUTOR_LANGUAGES.includes(
+        args.language,
+      )
+        ? args.language
+        : 'shell';
+      const validatedArgs = { ...args, language };
+
       const { directory, sessionID, abortSignal } = deps.extractToolContext(
         context,
         ctx.directory,
@@ -95,12 +103,23 @@ export function createExecutorTool(
       const sessionId = `${parentID ?? 'orphan'}/${randomUUID()}`;
 
       try {
-        const execResult = await runExecution(deps, args, directory, sessionId);
-        return await summarizeIfNeeded(deps, client, args, execResult, {
-          sessionID,
+        const execResult = await runExecution(
+          deps,
+          validatedArgs,
           directory,
-          abortSignal,
-        });
+          sessionId,
+        );
+        return await summarizeIfNeeded(
+          deps,
+          client,
+          validatedArgs,
+          execResult,
+          {
+            sessionID,
+            directory,
+            abortSignal,
+          },
+        );
       } catch (err) {
         return handleExecutionError(err, deps.isAbortError);
       }
