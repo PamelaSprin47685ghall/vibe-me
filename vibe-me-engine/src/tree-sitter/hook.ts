@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
 import { checkSyntax } from './checker.js';
 import type { SyntaxCheckResult } from '../util/types.js';
 
@@ -66,6 +69,19 @@ export async function appendSyntaxDiagnostics(
 ): Promise<string | null> {
   const result = await checkSyntax(content, filePath);
   return formatSyntaxDiagnostics(filePath, result, options);
+}
+
+export async function readAndCheckSyntax(
+  filePath: string,
+  cwd: string,
+  options?: { includeOk?: boolean },
+): Promise<string | null> {
+  try {
+    const content = await fs.readFile(path.resolve(cwd, filePath), 'utf-8');
+    return await appendSyntaxDiagnostics(filePath, content, options);
+  } catch {
+    return null;
+  }
 }
 
 export function appendSyntaxDiagnosticsToOutput(

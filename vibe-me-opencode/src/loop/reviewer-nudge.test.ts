@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it, mock } from 'bun:test';
+import { describe, expect, it, mock } from 'bun:test';
 import {
   accepted,
   REVIEWER_NUDGE_PROMPT,
@@ -6,7 +6,7 @@ import {
   type ReviewResult,
   type ReviewStore,
 } from 'engine/review';
-import * as realConstants from './constants';
+import { runReviewerWithNudge } from './reviewer';
 
 interface PromptCall {
   args: unknown;
@@ -65,28 +65,6 @@ async function mockPromptWithAbort(
   return controller.promise;
 }
 
-mock.module('../utils/abort-signal', () => ({
-  promptWithAbort: mockPromptWithAbort,
-}));
-
-mock.module('./constants', () => ({
-  ...realConstants,
-  REVIEWER_GRACE_MS: 1,
-}));
-
-let runReviewerWithNudge: (
-  client: unknown,
-  reviewStore: ReviewStore,
-  childID: string,
-  parts: Array<{ type: 'text'; text: string }>,
-  _directory?: string,
-  abortSignal?: AbortSignal,
-) => Promise<ReviewResult>;
-
-beforeAll(async () => {
-  const mod = await import('./reviewer');
-  runReviewerWithNudge = mod.runReviewerWithNudge;
-});
 
 function makeReviewStore() {
   const deactivateReview = mock(() => {});
@@ -142,6 +120,7 @@ describe('runReviewerWithNudge', () => {
       originalParts,
       undefined,
       abortController.signal,
+      { promptFn: mockPromptWithAbort, graceMs: 1 },
     );
 
     expect(result).toBe(terminated);
@@ -156,7 +135,7 @@ describe('runReviewerWithNudge', () => {
     const { store, deactivateReview } = makeReviewStore();
     queuePendingPrompt();
 
-    const runPromise = runReviewerWithNudge(client, store, childID, originalParts);
+    const runPromise = runReviewerWithNudge(client, store, childID, originalParts, undefined, undefined, { promptFn: mockPromptWithAbort, graceMs: 1 });
     await Promise.resolve();
     expect(pendingResolve).toBeDefined();
     pendingResolve!(accepted);
@@ -178,7 +157,7 @@ describe('runReviewerWithNudge', () => {
     const { store, deactivateReview } = makeReviewStore();
     queueRejectedPrompt(new Error('prompt failed'));
 
-    const result = await runReviewerWithNudge(client, store, childID, originalParts);
+    const result = await runReviewerWithNudge(client, store, childID, originalParts, undefined, undefined, { promptFn: mockPromptWithAbort, graceMs: 1 });
 
     expect(result).toBe(terminated);
     expect(deactivateReview).toHaveBeenCalledTimes(1);
@@ -191,7 +170,7 @@ describe('runReviewerWithNudge', () => {
     const { store, deactivateReview } = makeReviewStore();
     queueRejectedPrompt(new DOMException('Aborted', 'AbortError'));
 
-    const result = await runReviewerWithNudge(client, store, childID, originalParts);
+    const result = await runReviewerWithNudge(client, store, childID, originalParts, undefined, undefined, { promptFn: mockPromptWithAbort, graceMs: 1 });
 
     expect(result).toBe(terminated);
     expect(deactivateReview).toHaveBeenCalledTimes(1);
@@ -204,7 +183,7 @@ describe('runReviewerWithNudge', () => {
     const { store, deactivateReview } = makeReviewStore();
     queueResolvedPrompt();
 
-    const runPromise = runReviewerWithNudge(client, store, childID, originalParts);
+    const runPromise = runReviewerWithNudge(client, store, childID, originalParts, undefined, undefined, { promptFn: mockPromptWithAbort, graceMs: 1 });
     await Promise.resolve();
     expect(pendingResolve).toBeDefined();
     pendingResolve!(accepted);
@@ -224,7 +203,7 @@ describe('runReviewerWithNudge', () => {
     queueResolvedPrompt();
     queueResolvedPrompt();
 
-    const result = await runReviewerWithNudge(client, store, childID, originalParts);
+    const result = await runReviewerWithNudge(client, store, childID, originalParts, undefined, undefined, { promptFn: mockPromptWithAbort, graceMs: 1 });
 
     expect(result).toBe(terminated);
     expect(deactivateReview).toHaveBeenCalledTimes(1);
@@ -239,7 +218,7 @@ describe('runReviewerWithNudge', () => {
     queueResolvedPrompt();
     queueResolvedPrompt();
 
-    await runReviewerWithNudge(client, store, childID, originalParts);
+    await runReviewerWithNudge(client, store, childID, originalParts, undefined, undefined, { promptFn: mockPromptWithAbort, graceMs: 1 });
 
     expect(promptCalls.length).toBe(3);
     expect(promptCalls[0].args).toMatchObject({

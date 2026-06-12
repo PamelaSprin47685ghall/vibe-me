@@ -34,7 +34,7 @@ export async function createChildSession(
 export async function executeRunnerCommand(
   args: {
     program: string;
-    language?: string;
+    language: 'shell' | 'python' | 'javascript';
     dependencies?: string[];
   },
   childID: string,
@@ -42,7 +42,7 @@ export async function executeRunnerCommand(
   directory: string,
   jobs: JobRegistry,
 ): Promise<ExecuteResult> {
-  const language = (args.language ?? 'shell') as 'shell' | 'python' | 'javascript';
+  const language = args.language;
   return executeCommand({
     jobs,
     sessionId: childID,
@@ -57,13 +57,13 @@ export async function executeRunnerCommand(
 export function buildRunnerPromptText(
   args: {
     program: string;
-    language?: string;
+    language: 'shell' | 'python' | 'javascript';
     dependencies?: string[];
     what_to_summarize: string;
   },
   execResult: ExecuteResult,
 ): string {
-  const language = args.language ?? 'shell';
+  const language = args.language;
   return buildRunnerPrompt(
     language,
     args.program,
@@ -77,10 +77,10 @@ export function buildRunnerPromptText(
 
 export async function extractRunnerSummary(
   client: PluginInput['client'],
-  args: { program: string; language?: string },
+  args: { program: string; language: 'shell' | 'python' | 'javascript' },
   childID: string,
   directory: string,
 ): Promise<string> {
   const summary = await extractSessionText(client, childID, directory);
-  return formatRunnerSafetyWarning(summary || '(no output)', args.program, args.language ?? 'shell');
+  return formatRunnerSafetyWarning(summary || '(no output)', args.program, args.language);
 }

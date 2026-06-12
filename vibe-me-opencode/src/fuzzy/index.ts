@@ -6,7 +6,6 @@ export { resolveExternalBasePath, resolveExternalPath };
 
 const z = tool.schema;
 
-// -- Fuzzy find tool --
 
 export function createFuzzyFindTool(): ToolDefinition {
   return tool({
@@ -48,7 +47,6 @@ export function createFuzzyFindTool(): ToolDefinition {
   });
 }
 
-// -- Fuzzy grep tool --
 
 export function createFuzzyGrepTool(): ToolDefinition {
   return tool({

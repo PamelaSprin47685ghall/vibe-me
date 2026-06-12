@@ -7,11 +7,7 @@ export type JsonSchema = {
   readonly additionalProperties?: boolean;
 };
 
-// ── Tool argument types ──
-
 export type PluginToolArgs = Record<string, unknown>;
-
-// ── Tool definition ──
 
 export interface ToolDefinition {
   readonly name: string;
@@ -38,8 +34,6 @@ export interface ToolWrapper {
   readonly targetTool: string;
   readonly wrapper: (tool: ToolLike, config: PluginToolConfiguration) => ToolLike;
 }
-
-// ── Shared helpers ──
 
 export function requireWorkspaceId(
   config: PluginToolConfiguration,

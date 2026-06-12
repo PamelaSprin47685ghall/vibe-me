@@ -3,10 +3,6 @@ import { isAbortError } from 'engine/util';
 
 export { isAbortError };
 
-/**
- * Returns the abort signal if `context` is an object with an `abort` property
- * that looks like an AbortSignal (has `addEventListener`, `removeEventListener`, `aborted`).
- */
 export function getAbortSignal(context: unknown): AbortSignal | undefined {
   if (typeof context !== 'object' || context === null) return undefined;
   const maybeSignal = (context as Record<string, unknown>).abort;

@@ -30,7 +30,7 @@ function createToolMap(enabled: readonly CanonicalToolName[]): ToolMap {
 const ORCHESTRATOR_ENABLED = [
   'read', 'editor', 'greper', 'reverie', 'submit_review',
   'webfetch', 'websearch', 'runner', 'browser', 'glob',
-  'todo_read', 'todo_write',
+  'todowrite',
 ] as const satisfies readonly CanonicalToolName[];
 
 const EDITOR_ENABLED = [
@@ -94,8 +94,7 @@ export const UNIVERSAL_PERMISSION_RULES: readonly UniversalPermissionRule[] = [
   denyAllExceptRule('fuzzy_grep', SEARCH_ROLES),
   denyAllRule('grep'),
   denyAllExceptRule('question', [{ _tag: 'Orchestrator' }]),
-  denyAllExceptRule('todo_read', [{ _tag: 'Orchestrator' }]),
-  denyAllExceptRule('todo_write', [{ _tag: 'Orchestrator' }]),
+  denyAllExceptRule('todowrite', [{ _tag: 'Orchestrator' }]),
 ];
 
 export function computeDefaultPermissions(

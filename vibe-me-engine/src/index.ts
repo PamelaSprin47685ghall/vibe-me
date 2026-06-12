@@ -1,4 +1,3 @@
-// Kernel — ADT types & pure functions
 export * from './types/general.js';
 export * from './types/runner.js';
 export * from './types/agent-policy.js';
@@ -23,7 +22,6 @@ export * from './host/index.js';
 export * from './todo/index.js';
 export * from './review/index.js';
 
-// Shell — I/O modules
 export * from './fuzzy/index.js';
 export * from './caps/index.js';
 export * from './tree-sitter/index.js';

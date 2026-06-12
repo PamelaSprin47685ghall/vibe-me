@@ -1,9 +1,3 @@
-// ---------------------------------------------------------------------------
-// Pure nudge decision functions.
-// No I/O, no node:*, no mutation — every function is pure.
-// Import types from ../types/nudge.js only.
-// ---------------------------------------------------------------------------
-
 import {
   type NudgeAction,
   type NudgeContext,
@@ -17,10 +11,6 @@ import {
   timestampKeyForAction,
 } from '../types/nudge.js';
 import { some, matchMaybe } from '../types/general.js';
-
-// =========================================================================
-// 1. CONSTANTS
-// =========================================================================
 
 export const SKIP_TODO_RE = /<skip-todo-check\s*\/?>/i;
 export const SKIP_LOOP_RE = /<skip-loop-check\s*\/?>/i;
@@ -38,10 +28,6 @@ export const LOOP_NUDGE_PROMPT =
   'You are in loop mode. You must call the submit_review tool to\n' +
   'submit your detailed report and list of modified files for review\n' +
   'before finishing. Do not end the conversation without calling submit_review.';
-
-// =========================================================================
-// 2. PURE DECISION FUNCTIONS
-// =========================================================================
 
 /**
  * Pure function that decides which nudge action to take based solely on the
@@ -80,12 +66,10 @@ export function shouldSuppressNudge(
   context: NudgeContext,
   previousAction: NudgeAction | null,
 ): boolean {
-  // Blanket suppression: don't interrupt questions or explicit skip tags.
   const text = context.lastAssistantMessage.trim();
   if (QUESTION_RE.test(text)) return true;
   if (SKIP_TODO_RE.test(text) || SKIP_LOOP_RE.test(text)) return true;
 
-  // Avoid repeating the same nudge if the context hasn't changed.
   if (previousAction !== null && previousAction._tag !== 'NudgeNone') {
     const nextAction = decideNudge(context);
     if (nextAction._tag === previousAction._tag) return true;
@@ -94,11 +78,6 @@ export function shouldSuppressNudge(
   return false;
 }
 
-// =========================================================================
-// 3. IMMUTABLE STATE MANAGEMENT
-// =========================================================================
-
-/** Factory: create an empty `NudgeCoordinatorState`. */
 export function createNudgeCoordinatorState(): NudgeCoordinatorState {
   return { sessions: new Map() };
 }

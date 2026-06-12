@@ -3,7 +3,7 @@ import path from "node:path";
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
 import { requireString } from "./args.js";
 import type { HostDependencies } from "../types/deps.js";
-import { checkSyntax, formatSyntaxDiagnostics } from "engine/tree-sitter";
+import { appendSyntaxDiagnostics } from "engine/tree-sitter";
 
 
 const parameters: JsonSchema = {
@@ -37,8 +37,7 @@ export function createWriteTool(_deps: HostDependencies): ToolDefinition {
       await fs.mkdir(path.dirname(resolved), { recursive: true });
       await fs.writeFile(resolved, content, "utf-8");
 
-      const result = await checkSyntax(content, resolved);
-      const diagnostics = formatSyntaxDiagnostics(resolved, result);
+      const diagnostics = await appendSyntaxDiagnostics(resolved, content);
 
       let msg = `Successfully wrote to ${resolved}`;
       if (diagnostics) {

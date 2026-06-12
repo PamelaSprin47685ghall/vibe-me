@@ -1,13 +1,9 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-
 import type { PluginInput } from '@opencode-ai/plugin';
 import {
-  checkSyntax,
   extractFilePaths,
-  formatSyntaxDiagnostics,
   hasSyntaxCheckMarker,
   isFileEditTool,
+  readAndCheckSyntax,
 } from 'engine/tree-sitter';
 
 interface ToolExecuteAfterInput {
@@ -42,15 +38,8 @@ export function createSyntaxCheckHook(ctx: PluginInput) {
       const diagnostics: string[] = [];
 
       for (const filePath of filePaths) {
-        let content: string;
-        try {
-          content = await fs.readFile(path.resolve(ctx.directory, filePath), 'utf-8');
-        } catch { continue; }
-
-        try {
-          const formatted = formatSyntaxDiagnostics(filePath, await checkSyntax(content, filePath));
-          if (formatted) diagnostics.push(formatted);
-        } catch { continue; }
+        const formatted = await readAndCheckSyntax(filePath, ctx.directory);
+        if (formatted) diagnostics.push(formatted);
       }
 
       if (diagnostics.length > 0) output.output = `${current}\n\n${diagnostics.join('\n\n')}`;

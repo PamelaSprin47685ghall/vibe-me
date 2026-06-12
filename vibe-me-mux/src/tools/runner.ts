@@ -62,13 +62,13 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
         sessionId: jobId,
         parentSessionId: workspaceId,
         program: a.program,
-        language: a.language ?? "shell",
+        language: a.language,
         dependencies: a.dependencies,
         cwd: config.cwd,
       });
 
       const prompt = buildMuxRunnerPrompt(
-        { language: a.language ?? "shell", program: a.program, dependencies: a.dependencies, whatToSummarize: a.what_to_summarize },
+        { language: a.language, program: a.program, dependencies: a.dependencies, whatToSummarize: a.what_to_summarize },
         execResult,
       );
 
@@ -107,7 +107,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
           },
         );
         const report = result.reportMarkdown;
-        return formatRunnerSafetyWarning(report, a.program, a.language ?? "shell");
+        return formatRunnerSafetyWarning(report, a.program, a.language);
       } catch (error) {
         if (isForegroundWaitBackgroundedError(error)) {
           return `Runner task (${createResult.data.taskId}) moved to background. Use task tools to monitor it.`;

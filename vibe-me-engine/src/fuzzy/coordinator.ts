@@ -120,18 +120,16 @@ export async function fuzzyGrep(
     let result = grepResult.value;
     let fuzzyNotice: string | null = null;
     if (!result?.items?.length && !params.iterator && searchState.mode !== 'regex') {
-      try {
-        const fuzzy = finder.grep(searchState.query, {
-          mode: 'fuzzy', smartCase: searchState.smartCase,
-          maxMatchesPerFile: Math.min(searchState.pageSize, 50), pageSize: searchState.pageSize,
-          cursor: null, beforeContext: 0, afterContext: 0, classifyDefinitions: true,
-        });
-        if (fuzzy?.ok && fuzzy.value?.items?.length) {
-          fuzzyNotice = '0 exact matches. Maybe you meant this?';
-          result = fuzzy.value;
-          searchState = { ...searchState, mode: 'fuzzy', beforeContext: 0, afterContext: 0, cursor: null };
-        }
-      } catch {}
+      const fuzzy = finder.grep(searchState.query, {
+        mode: 'fuzzy', smartCase: searchState.smartCase,
+        maxMatchesPerFile: Math.min(searchState.pageSize, 50), pageSize: searchState.pageSize,
+        cursor: null, beforeContext: 0, afterContext: 0, classifyDefinitions: true,
+      });
+      if (fuzzy?.ok && fuzzy.value?.items?.length) {
+        fuzzyNotice = '0 exact matches. Maybe you meant this?';
+        result = fuzzy.value;
+        searchState = { ...searchState, mode: 'fuzzy', beforeContext: 0, afterContext: 0, cursor: null };
+      }
     }
 
     let output = formatGrepOutput(result);

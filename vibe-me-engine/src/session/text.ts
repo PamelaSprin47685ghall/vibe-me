@@ -54,7 +54,7 @@ export function getLatestTodoPhasesFromEntries(entries: Entry[]): unknown {
     }
     if (entry.type !== 'message') continue;
     const msg = entry.message;
-    if (msg?.role !== 'toolResult' || msg?.toolName !== 'todo_write' || msg?.isError) continue;
+    if (msg?.role !== 'toolResult' || msg?.toolName !== 'todowrite' || msg?.isError) continue;
     if (!Array.isArray(msg?.details?.phases)) continue;
     return clonePhases(msg.details.phases);
   }

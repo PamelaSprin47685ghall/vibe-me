@@ -1,6 +1,4 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { checkSyntax, extractFilePath, isFileEditTool, formatSyntaxDiagnostics } from "engine/tree-sitter";
+import { extractFilePath, isFileEditTool, readAndCheckSyntax } from "engine/tree-sitter";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { LoggerLike } from "../types/deps.js";
 import type { ToolLike, ToolWrapper } from "../types/contract.js";
@@ -47,10 +45,7 @@ async function appendSyntaxCheck(
   if (!filePath) return result;
 
   try {
-    const resolvedPath = path.resolve(config.cwd, filePath);
-    const content = await fs.readFile(resolvedPath, "utf-8");
-    const checkResult = await checkSyntax(content, filePath);
-    const formatted = formatSyntaxDiagnostics(filePath, checkResult);
+    const formatted = await readAndCheckSyntax(filePath, config.cwd);
     if (!formatted) return result;
 
     if (typeof result === "string") {
