@@ -1,16 +1,16 @@
 import { cleanupJob, truncateTail } from './jobs.js';
-import { globalJobRegistry, MAX_OUTPUT_BYTES } from './job.js';
+import { MAX_OUTPUT_BYTES } from './job.js';
 import type { WaitOptions, WaitResult } from './types.js';
 
 export async function wait(options: WaitOptions): Promise<WaitResult> {
-  const { sessionId, ms } = options;
-  const entry = globalJobRegistry.get(sessionId);
+  const { jobs, sessionId, ms } = options;
+  const entry = jobs.get(sessionId);
   if (!entry) return { output: '', completed: true, message: '[System] No active job — it has already finished or was cleaned up.' };
 
   const { record } = entry;
   if (record.status._tag === 'Completed' || record.status._tag === 'Aborted') {
     const newOutput = truncateTail(record.finalOutput.substring(record.bytesRead), MAX_OUTPUT_BYTES).trim();
-    cleanupJob(sessionId);
+    cleanupJob(jobs, sessionId);
     return {
       output: newOutput, completed: true,
       message: record.status._tag === 'Completed' ? '[System] Task has completed.' : '[System] Task was aborted.',
@@ -23,7 +23,7 @@ export async function wait(options: WaitOptions): Promise<WaitResult> {
   entry.record = { ...record, bytesRead: record.finalOutput.length };
 
   if (entry.record.status._tag !== 'Running') {
-    cleanupJob(sessionId);
+    cleanupJob(jobs, sessionId);
     return { output: newOutput || '(no new output)', completed: true, message: entry.record.status._tag === 'Completed' ? '[System] Task has completed.' : '[System] Task was aborted.' };
   }
 

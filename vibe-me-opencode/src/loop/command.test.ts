@@ -1,16 +1,17 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { activateReview, clearReviewSessions, isReviewActive } from 'engine/review';
+import { createReviewStore } from 'engine/review';
 import { createLoopCommandManager } from './index';
 import { createMockContext, createOutput } from './test-utils';
 
 afterEach(() => {
-  clearReviewSessions();
+  // Each test creates its own store
 });
 
 describe('createLoopCommandManager', () => {
   describe('registerCommand', () => {
     test('registers the /loop command', () => {
-      const manager = createLoopCommandManager(createMockContext());
+      const reviewStore = createReviewStore();
+      const manager = createLoopCommandManager(createMockContext(), reviewStore);
       const config: Record<string, unknown> = {};
 
       manager.registerCommand(config);
@@ -24,7 +25,8 @@ describe('createLoopCommandManager', () => {
     });
 
     test('does not overwrite existing command', () => {
-      const manager = createLoopCommandManager(createMockContext());
+      const reviewStore = createReviewStore();
+      const manager = createLoopCommandManager(createMockContext(), reviewStore);
       const existing = { template: 'custom', description: 'custom' };
       const config: Record<string, unknown> = {
         command: { loop: existing },
@@ -38,7 +40,8 @@ describe('createLoopCommandManager', () => {
 
   describe('handleCommandExecuteBefore', () => {
     test('ignores non-loop commands', async () => {
-      const manager = createLoopCommandManager(createMockContext());
+      const reviewStore = createReviewStore();
+      const manager = createLoopCommandManager(createMockContext(), reviewStore);
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(
@@ -51,7 +54,8 @@ describe('createLoopCommandManager', () => {
     });
 
     test('swallows command with empty arguments', async () => {
-      const manager = createLoopCommandManager(createMockContext());
+      const reviewStore = createReviewStore();
+      const manager = createLoopCommandManager(createMockContext(), reviewStore);
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(
@@ -59,12 +63,13 @@ describe('createLoopCommandManager', () => {
         output,
       );
 
-      expect(isReviewActive('ses-1')).toBe(false);
+      expect(reviewStore.isReviewActive('ses-1')).toBe(false);
       expect(output.parts[0]?.text).toContain('cancelled');
     });
 
     test('rewrites task arguments into structured prompt', async () => {
-      const manager = createLoopCommandManager(createMockContext());
+      const reviewStore = createReviewStore();
+      const manager = createLoopCommandManager(createMockContext(), reviewStore);
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(
@@ -76,7 +81,7 @@ describe('createLoopCommandManager', () => {
         output,
       );
 
-      expect(isReviewActive('ses-1')).toBe(true);
+      expect(reviewStore.isReviewActive('ses-1')).toBe(true);
       expect(output.parts[0]?.text).toContain('Refactor the auth module');
       expect(output.parts[0]?.text).toContain('loop mode is active');
       expect(output.parts[0]?.text).toContain('submit_review');
@@ -84,8 +89,9 @@ describe('createLoopCommandManager', () => {
     });
 
     test('does not toggle already active is a no-op', async () => {
-      activateReview('ses-1', 'existing task');
-      const manager = createLoopCommandManager(createMockContext());
+      const reviewStore = createReviewStore();
+      reviewStore.activateReview('ses-1', 'existing task');
+      const manager = createLoopCommandManager(createMockContext(), reviewStore);
       const output = createOutput();
 
       await manager.handleCommandExecuteBefore(
@@ -97,7 +103,7 @@ describe('createLoopCommandManager', () => {
         output,
       );
 
-      expect(isReviewActive('ses-1')).toBe(true);
+      expect(reviewStore.isReviewActive('ses-1')).toBe(true);
       expect(output.parts[0]?.text).toContain('already active');
     });
   });

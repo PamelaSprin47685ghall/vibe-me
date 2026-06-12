@@ -4,7 +4,9 @@ import { managedRunnerSessions } from './execute';
 import { createRunnerNudgeHook } from './nudge';
 import { createRunnerTool } from './tool';
 import { createRunnerWaitTool } from './wait';
-import { RUNNER_SYSTEM_PROMPT } from 'engine/runner';
+import { RUNNER_SYSTEM_PROMPT, createJobRegistry } from 'engine/runner';
+
+export const opencodeRunnerJobs = createJobRegistry();
 
 export {
   RUNNER_SYSTEM_PROMPT,

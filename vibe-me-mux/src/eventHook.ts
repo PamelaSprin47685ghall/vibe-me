@@ -1,5 +1,6 @@
 import type { JobRegistry } from "engine/runner";
 import type { NudgeInputContext } from "engine/todo";
+import type { ReviewStore } from "engine/review";
 import { getPartsText } from "engine/util";
 import type { PluginEvent, PluginEventHelpers, PluginEventHook } from "./types/tool.js";
 import {
@@ -11,8 +12,7 @@ import {
 export interface EventHookDeps {
   cleanupRegistry: (registry: JobRegistry, id: string) => void;
   globalJobRegistry: JobRegistry;
-  deactivateReview: (id: string) => void;
-  isReviewActive: (id: string) => boolean;
+  reviewStore: ReviewStore;
   clearIteratorScope: (id: string) => void;
   coordinator: {
     shouldNudge: (sessionId: string, context: NudgeInputContext) => string;
@@ -85,7 +85,7 @@ async function handleStreamEnd(
     todos,
     lastAssistantMessage,
     hasActiveRunner,
-    isLoopActive: deps.isReviewActive(workspaceId),
+    isLoopActive: deps.reviewStore.isReviewActive(workspaceId),
   });
   const promptText = selectNudgePrompt(action, prompts);
   if (!promptText) return;
@@ -113,7 +113,7 @@ export function createEventHook(deps: EventHookDeps): PluginEventHook {
         break;
       case "stream-abort":
         deps.cleanupRegistry(deps.globalJobRegistry, workspaceId);
-        deps.deactivateReview(workspaceId);
+        deps.reviewStore.deactivateReview(workspaceId);
         deps.clearIteratorScope(workspaceId);
         state.runnerNudgedWorkspaces.delete(workspaceId);
         state.stoppedWorkspaces.add(workspaceId);

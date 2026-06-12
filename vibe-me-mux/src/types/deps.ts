@@ -1,3 +1,5 @@
+import type { JobRegistry } from "engine/runner";
+
 export interface RuntimeHandle {
   readonly __brand: "RuntimeHandle";
 }
@@ -101,6 +103,7 @@ export interface TaskServiceLike {
 
 export interface HostDependencies {
   readonly log: LoggerLike;
+  readonly runnerJobs: JobRegistry;
   readonly taskService?: TaskServiceLike;
   readonly loadConfigOrDefault: () => ConfigFile;
   readonly readAgentDefinition: (

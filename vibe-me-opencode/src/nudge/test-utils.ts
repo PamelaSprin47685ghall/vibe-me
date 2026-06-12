@@ -1,5 +1,5 @@
 import { mock } from 'bun:test';
-import { clearReviewSessions } from 'engine/review';
+import type { PluginInput } from '@opencode-ai/plugin';
 import { defaultCoordinator } from 'engine/todo';
 
 export function createMockContext() {
@@ -17,22 +17,12 @@ export function createMockContext() {
             },
           ],
         })),
-        todo: mock(() => ({
-          data: [
-            {
-              id: 'todo-1',
-              content: 'finish task',
-              status: 'in_progress',
-              priority: 'high',
-            },
-          ],
-        })),
+        todo: mock(() => ({ data: [{ id: 'todo-1', content: 'finish task', status: 'in_progress', priority: 'high' }] })),
       },
     },
-  } as any;
+  } as unknown as PluginInput;
 }
 
 export function cleanupAfterEach() {
-  clearReviewSessions();
   defaultCoordinator.clear();
 }

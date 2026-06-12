@@ -1,14 +1,7 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import {
-  deactivateReview,
-  getReviewTask,
-  isReviewActive,
-  REVIEW_INSTRUCTIONS,
-  tryLockReview,
-  unlockReview,
-} from 'engine/review';
-import { addChild } from 'engine/review';
+import type { ReviewStore } from 'engine/review';
+import { REVIEW_INSTRUCTIONS } from 'engine/review';
 import {
   registerChildAgent,
   resolveSubsessionParentID,
@@ -16,7 +9,7 @@ import {
 import { extractToolContext } from '../utils/tool-context';
 import { runReviewerWithNudge } from './reviewer';
 
-export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
+export function createSubmitReviewTool(ctx: PluginInput, reviewStore: ReviewStore): ToolDefinition {
   const client = ctx.client;
 
   return tool({
@@ -39,16 +32,16 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
         ctx.directory,
       );
 
-      if (!sessionID || !isReviewActive(sessionID)) {
+      if (!sessionID || !reviewStore.isReviewActive(sessionID)) {
         return 'You do not need review. Just continue with your work.';
       }
 
-      if (!tryLockReview(sessionID)) {
+      if (!reviewStore.tryLockReview(sessionID)) {
         return 'A review is already in progress. Wait for it to finish.';
       }
 
       try {
-        const task = getReviewTask(sessionID);
+        const task = reviewStore.getReviewTask(sessionID);
         const sections = [
           REVIEW_INSTRUCTIONS,
           `=== Change Report ===\n\n${args.report}`,
@@ -71,11 +64,12 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
         if (!childID) {
           return 'Failed to create reviewer session';
         }
-        addChild(sessionID, childID);
+        reviewStore.addChild(sessionID, childID);
         registerChildAgent(childID, 'reviewer', parentID);
 
         const result = await runReviewerWithNudge(
           client,
+          reviewStore,
           childID,
           parts,
           directory,
@@ -83,18 +77,18 @@ export function createSubmitReviewTool(ctx: PluginInput): ToolDefinition {
         );
 
         if (result._tag === 'Accepted') {
-          deactivateReview(sessionID);
+          reviewStore.deactivateReview(sessionID);
           return 'Review passed. Your changes have been accepted. loop mode has ended.';
         }
 
         if (result._tag === 'Terminated') {
-          deactivateReview(sessionID);
+          reviewStore.deactivateReview(sessionID);
           return 'Review terminated.';
         }
 
         return `Review feedback:\n\n${result.feedback}\n\nAddress the feedback above. loop mode is still active — fix the issues and call submit_review again.`;
       } finally {
-        unlockReview(sessionID);
+        reviewStore.unlockReview(sessionID);
       }
     },
   });

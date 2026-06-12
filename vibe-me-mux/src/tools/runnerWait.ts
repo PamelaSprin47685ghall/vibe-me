@@ -19,7 +19,7 @@ const parameters: JsonSchema = {
   additionalProperties: false,
 };
 
-export function createRunnerWaitTool(_deps: HostDependencies): ToolDefinition {
+export function createRunnerWaitTool(deps: HostDependencies): ToolDefinition {
 
   return {
     name: "runner_wait",
@@ -30,6 +30,7 @@ export function createRunnerWaitTool(_deps: HostDependencies): ToolDefinition {
       const jobId = requireString(args, 'jobId');
       const ms = optionalNumber(args, 'ms');
       const result = await wait({
+        jobs: deps.runnerJobs,
         sessionId: jobId,
         ms: ms ?? 2000,
       });

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { createReviewStore } from 'engine/review';
 import { createNudgeCoordinatorHook } from './index';
 import { createMockContext, cleanupAfterEach } from './test-utils';
 
@@ -7,7 +8,8 @@ afterEach(cleanupAfterEach);
 describe('agent preservation', () => {
   test('preserves the active agent when nudging', async () => {
     const ctx = createMockContext();
-    const hook = createNudgeCoordinatorHook(ctx);
+    const reviewStore = createReviewStore();
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     hook.handleChatMessage({
       sessionID: 'ses-1',
@@ -33,7 +35,8 @@ describe('agent preservation', () => {
         },
       ],
     }));
-    const hook = createNudgeCoordinatorHook(ctx);
+    const reviewStore = createReviewStore();
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: { type: 'session.idle', properties: { sessionID: 'ses-1' } },

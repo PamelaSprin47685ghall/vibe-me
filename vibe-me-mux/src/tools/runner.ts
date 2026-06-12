@@ -6,7 +6,7 @@ import { isForegroundWaitBackgroundedError } from "./submitReview.js";
 import type { HostDependencies } from "../types/deps.js";
 import { createResolveDelegatedAgentAiSettings } from "./resolveDelegatedAgentAiSettings.js";
 import { deniedToolsFor } from "./policy.js";
-import type { JobEntry } from "engine/runner";
+import { formatRunnerSafetyWarning, type JobEntry } from "engine/runner";
 import { buildMuxRunnerPrompt } from "./runner-prompt.js";
 
 const parameters: JsonSchema = {
@@ -42,7 +42,6 @@ export interface RunnerToolDeps {
   execute: typeof import("engine/runner").execute;
   cleanupJob: (jobId: string) => void;
   globalJobRegistry: Map<string, JobEntry>;
-  extendedShellReadCommands: ReadonlySet<string>;
 }
 
 export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolDeps): ToolDefinition {
@@ -59,6 +58,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
       const taskService = config.taskService;
       if (!taskService) throw new Error("runner requires taskService");
       const execResult = await runnerDeps.execute({
+        jobs: runnerDeps.globalJobRegistry,
         sessionId: jobId,
         parentSessionId: workspaceId,
         program: a.program,
@@ -107,11 +107,7 @@ export function createRunnerTool(deps: HostDependencies, runnerDeps: RunnerToolD
           },
         );
         const report = result.reportMarkdown;
-        const effectiveLanguage = a.language ?? "shell";
-        if (effectiveLanguage !== "shell") return report;
-        const firstWord = a.program.trim().split(/\s+/)[0]?.split("/")?.pop();
-        if (!firstWord || !runnerDeps.extendedShellReadCommands.has(firstWord)) return report;
-        return `// 绝对禁止使用 runner 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！\n${report}`;
+        return formatRunnerSafetyWarning(report, a.program, a.language ?? "shell");
       } catch (error) {
         if (isForegroundWaitBackgroundedError(error)) {
           return `Runner task (${createResult.data.taskId}) moved to background. Use task tools to monitor it.`;

@@ -1,4 +1,4 @@
-import { globalJobRegistry } from './job.js';
+import type { JobRegistry } from './job.js';
 
 const RUNNER_NUDGE_PROMPT =
   'A runner task is still active in the background.\n' +
@@ -11,8 +11,7 @@ export function buildRunnerNudgePrompt(): string {
   return RUNNER_NUDGE_PROMPT;
 }
 
-export function hasActiveJob(sessionId: string): boolean {
-  const jobs = globalJobRegistry;
+export function hasActiveJob(jobs: JobRegistry, sessionId: string): boolean {
   const entry = jobs.get(sessionId);
   if (entry?.record.status._tag === 'Running') return true;
   for (const [, e] of jobs) {

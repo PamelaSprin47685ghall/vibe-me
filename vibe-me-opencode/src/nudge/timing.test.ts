@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
+import { createReviewStore } from 'engine/review';
 import { createNudgeCoordinatorHook } from './index';
 import { createMockContext, cleanupAfterEach } from './test-utils';
 
@@ -7,7 +8,8 @@ afterEach(cleanupAfterEach);
 describe('timing / cooldown', () => {
   test('waits out session errors before nudging again', async () => {
     const ctx = createMockContext();
-    const hook = createNudgeCoordinatorHook(ctx);
+    const reviewStore = createReviewStore();
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: {
@@ -45,7 +47,8 @@ describe('timing / cooldown', () => {
 
   test('waits out retry status before nudging again', async () => {
     const ctx = createMockContext();
-    const hook = createNudgeCoordinatorHook(ctx);
+    const reviewStore = createReviewStore();
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: {
@@ -83,7 +86,8 @@ describe('timing / cooldown', () => {
 
   test('does not nudge after aborting a retry until the next user prompt', async () => {
     const ctx = createMockContext();
-    const hook = createNudgeCoordinatorHook(ctx);
+    const reviewStore = createReviewStore();
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: {
@@ -131,7 +135,8 @@ describe('timing / cooldown', () => {
 
   test('handles legacy retry parts and abort messages without nudging', async () => {
     const ctx = createMockContext();
-    const hook = createNudgeCoordinatorHook(ctx);
+    const reviewStore = createReviewStore();
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: {

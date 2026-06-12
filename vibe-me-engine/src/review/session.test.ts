@@ -1,44 +1,39 @@
 import { describe, expect, it, beforeEach } from 'bun:test';
 import {
-  activateReview,
-  deactivateReview,
-  isReviewActive,
-  tryAcquireReviewLock,
-  unlockReview,
-  setPendingReview,
-  resolvePendingReview,
-  clearReviewSessions,
-  getReviewTask,
-  getReviewState,
+  createReviewStore,
   type ReviewResult,
   accepted,
   rejected,
 } from './session-runtime.js';
 
 describe('Review Runtime', () => {
-  beforeEach(clearReviewSessions);
+  let store: ReturnType<typeof createReviewStore>;
+
+  beforeEach(() => {
+    store = createReviewStore();
+  });
 
   describe('state transitions', () => {
     it('starts active after activation', () => {
-      activateReview('session-1', 'task-1');
-      expect(isReviewActive('session-1')).toBe(true);
+      store.activateReview('session-1', 'task-1');
+      expect(store.isReviewActive('session-1')).toBe(true);
     });
 
     it('allows lock acquisition from active', () => {
-      activateReview('session-1', 'task-1');
-      expect(tryAcquireReviewLock('session-1')).toBe(true);
-      expect(tryAcquireReviewLock('session-1')).toBe(false);
+      store.activateReview('session-1', 'task-1');
+      expect(store.tryLockReview('session-1')).toBe(true);
+      expect(store.tryLockReview('session-1')).toBe(false);
     });
 
     it('unlock returns to active', () => {
-      activateReview('session-1', 'task-1');
-      tryAcquireReviewLock('session-1');
-      unlockReview('session-1');
-      expect(getReviewState('session-1')?._tag).toBe('Active');
+      store.activateReview('session-1', 'task-1');
+      store.tryLockReview('session-1');
+      store.unlockReview('session-1');
+      expect(store.getReviewState('session-1')?._tag).toBe('Active');
     });
 
     it('rejects lock when not active', () => {
-      expect(tryAcquireReviewLock('nonexistent')).toBe(false);
+      expect(store.tryLockReview('nonexistent')).toBe(false);
     });
   });
 
@@ -46,9 +41,9 @@ describe('Review Runtime', () => {
     it('resolves pending review', () => {
       let resolved = false;
       let result: ReviewResult | undefined;
-      activateReview('session-1', 'task-1');
-      setPendingReview('session-1', (res) => { resolved = true; result = res; });
-      const success = resolvePendingReview('session-1', rejected('Approved'));
+      store.activateReview('session-1', 'task-1');
+      store.setPendingReview('session-1', (res) => { resolved = true; result = res; });
+      const success = store.resolvePendingReview('session-1', rejected('Approved'));
       expect(success).toBe(true);
       expect(resolved).toBe(true);
       expect(result?._tag).toBe('Rejected');
@@ -56,31 +51,31 @@ describe('Review Runtime', () => {
     });
 
     it('returns false when no pending review', () => {
-      const success = resolvePendingReview('nonexistent', rejected('test'));
+      const success = store.resolvePendingReview('nonexistent', rejected('test'));
       expect(success).toBe(false);
     });
   });
 
   describe('cleanup', () => {
     it('deactivates and removes session', () => {
-      activateReview('session-1', 'task-1');
-      deactivateReview('session-1');
-      expect(isReviewActive('session-1')).toBe(false);
+      store.activateReview('session-1', 'task-1');
+      store.deactivateReview('session-1');
+      expect(store.isReviewActive('session-1')).toBe(false);
     });
 
     it('clears all sessions', () => {
-      activateReview('session-1', 'task-1');
-      activateReview('session-2', 'task-2');
-      clearReviewSessions();
-      expect(isReviewActive('session-1')).toBe(false);
-      expect(isReviewActive('session-2')).toBe(false);
+      store.activateReview('session-1', 'task-1');
+      store.activateReview('session-2', 'task-2');
+      store.clearReviewSessions();
+      expect(store.isReviewActive('session-1')).toBe(false);
+      expect(store.isReviewActive('session-2')).toBe(false);
     });
   });
 
   describe('query', () => {
     it('stores original task', () => {
-      activateReview('session-1', 'Refactor auth');
-      expect(getReviewTask('session-1')).toBe('Refactor auth');
+      store.activateReview('session-1', 'Refactor auth');
+      expect(store.getReviewTask('session-1')).toBe('Refactor auth');
     });
   });
 });

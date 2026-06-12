@@ -30,7 +30,9 @@ describe("Runner Security & Multi-Pipe Stripping (Memory Stub)", () => {
 
   it("should strip tail pipes silently and stream back stdout", async () => {
     const { execute } = await import("./jobs.js");
+    const { createJobRegistry } = await import("./job-registry.js");
     const result = await execute({
+      jobs: createJobRegistry(),
       sessionId: "test-isolated-session",
       program: "cat log.txt | tail -n 10",
       language: "shell",

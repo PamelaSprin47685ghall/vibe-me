@@ -1,6 +1,6 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { cleanupJob } from 'engine/runner';
+import { cleanupJob, type JobRegistry } from 'engine/runner';
 import { TOOL_COPY } from 'engine/tool-copy';
 import { isAbortError, promptWithAbort } from '../utils/abort-signal';
 import { extractSessionText } from '../utils/session-messages';
@@ -14,7 +14,7 @@ import {
 } from './execute';
 import { runNudgeLoop } from './nudge-loop';
 
-export function createRunnerTool(ctx: PluginInput): ToolDefinition {
+export function createRunnerTool(ctx: PluginInput, jobs: JobRegistry): ToolDefinition {
   const client = ctx.client;
 
   return tool({
@@ -46,7 +46,7 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
       const { childID } = await createChildSession(client, sessionID, directory);
 
       try {
-        const execResult = await executeRunnerCommand(args, childID, sessionID, directory);
+        const execResult = await executeRunnerCommand(args, childID, sessionID, directory, jobs);
         const promptText = buildRunnerPromptText(args, execResult);
 
         await promptWithAbort(
@@ -59,7 +59,7 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
         );
 
         if (execResult.background) {
-          const nudgeResult = await runNudgeLoop(client, childID, abortSignal);
+          const nudgeResult = await runNudgeLoop(client, childID, abortSignal, jobs);
           if (nudgeResult) return nudgeResult;
         }
 
@@ -67,12 +67,12 @@ export function createRunnerTool(ctx: PluginInput): ToolDefinition {
       } catch (err) {
         if (isAbortError(err)) {
           try { client.session.abort({ path: { id: childID } }); } catch (_) {}
-          cleanupJob(childID);
+          cleanupJob(jobs, childID);
           unregisterChildAgent(childID);
           const text = await extractSessionText(client, childID, directory);
           return text ? `(aborted) ${text}` : '(aborted)';
         }
-        cleanupJob(childID);
+        cleanupJob(jobs, childID);
         unregisterChildAgent(childID);
         throw err;
       }

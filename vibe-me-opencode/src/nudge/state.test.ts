@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { LOOP_NUDGE_PROMPT } from 'engine/todo';
-import { activateReview } from 'engine/review';
+import { createReviewStore } from 'engine/review';
 import { createNudgeCoordinatorHook } from './index';
 import { createMockContext, cleanupAfterEach } from './test-utils';
 
@@ -10,8 +10,9 @@ describe('loop nudge state machine', () => {
   test('nudges loop when assistant completes without idle event', async () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({ data: [] }));
-    const hook = createNudgeCoordinatorHook(ctx);
-    activateReview('ses-1', 'task');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'task');
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: {
@@ -35,8 +36,9 @@ describe('loop nudge state machine', () => {
   test('does not duplicate silent-finish loop nudge on later idle', async () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({ data: [] }));
-    const hook = createNudgeCoordinatorHook(ctx);
-    activateReview('ses-1', 'task');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'task');
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: {
@@ -60,8 +62,9 @@ describe('loop nudge state machine', () => {
         throw { _tag: 'SessionBusyError' };
       }
     });
-    const hook = createNudgeCoordinatorHook(ctx);
-    activateReview('ses-1', 'task');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'task');
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await hook.handleEvent({
       event: {
@@ -80,8 +83,9 @@ describe('loop nudge state machine', () => {
   test('does not duplicate nudge when multiple events arrive concurrently', async () => {
     const ctx = createMockContext();
     ctx.client.session.todo = mock(() => ({ data: [] }));
-    const hook = createNudgeCoordinatorHook(ctx);
-    activateReview('ses-1', 'task');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'task');
+    const hook = createNudgeCoordinatorHook(ctx, reviewStore);
 
     await Promise.all([
       hook.handleEvent({

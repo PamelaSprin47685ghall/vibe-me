@@ -1,7 +1,4 @@
 import { type ReviewResult, matchReviewResult } from './session-node.js';
-
-export type { ReviewResult, Accepted, Rejected, Terminated } from './session-node.js';
-export { accepted, rejected, terminated, matchReviewResult } from './session-node.js';
 import {
   type SessionRegistry,
   type RegistryAction,
@@ -18,72 +15,71 @@ import {
   resolvePending,
   disposeSessionTree,
 } from './session-effects.js';
-import { lockCommand } from '../types/review.js';
+import { lockCommand, type ReviewState } from '../types/review.js';
 
-let registry: SessionRegistry = emptyRegistry();
-let effects: SessionEffects = emptyEffects();
+export type { ReviewResult, Accepted, Rejected, Terminated } from './session-node.js';
+export { accepted, rejected, terminated, matchReviewResult } from './session-node.js';
 
-export function activateReview(sessionID: string, task: string, createdAt: number = Date.now()): void {
-  registry = reduce(registry, { type: 'activate', id: sessionID, task, createdAt });
+export interface ReviewStore {
+  activateReview(sessionID: string, task: string, createdAt?: number): void;
+  deactivateReview(sessionID: string): void;
+  clearReviewSessions(): void;
+  tryLockReview(sessionID: string): boolean;
+  unlockReview(sessionID: string): void;
+  setPendingReview(sessionID: string, resolve: (result: ReviewResult) => void): void;
+  resolvePendingReview(sessionID: string, result: ReviewResult): boolean;
+  getReviewTask(sessionID: string): string | undefined;
+  getReviewState(sessionID: string): ReviewState | undefined;
+  isReviewActive(sessionID: string): boolean;
+  addChild(parentID: string, childID: string): void;
 }
 
-function allDescendantIds(sessionId: string): string[] {
-  const session = registry.get(sessionId);
-  if (!session) return [sessionId];
-  return [sessionId, ...session.childIds.flatMap(allDescendantIds)];
-}
+export function createReviewStore(): ReviewStore {
+  let registry: SessionRegistry = emptyRegistry();
+  const effects: SessionEffects = emptyEffects();
 
-export function deactivateReview(sessionID: string): void {
-  disposeSessionTree(effects, allDescendantIds(sessionID));
-  registry = reduce(registry, { type: 'deactivate', id: sessionID });
-}
+  const allDescendantIds = (sessionId: string): string[] => {
+    const session = registry.get(sessionId);
+    if (!session) return [sessionId];
+    return [sessionId, ...session.childIds.flatMap(allDescendantIds)];
+  };
 
-export function clearReviewSessions(): void {
-  const allIds = [...registry.values()].flatMap(s => [s.id, ...s.childIds]);
-  disposeSessionTree(effects, allIds);
-  registry = emptyRegistry();
-  effects = emptyEffects();
-}
-
-export function tryAcquireReviewLock(sessionID: string): boolean {
-  return canTransition(registry, sessionID, lockCommand(sessionID)) &&
-    (registry = reduce(registry, { type: 'lock', id: sessionID, reviewerId: sessionID }), true);
-}
-
-export function tryLockReview(sessionID: string): boolean {
-  return tryAcquireReviewLock(sessionID);
-}
-
-export function unlockReview(sessionID: string): void {
-  registry = reduce(registry, { type: 'unlock', id: sessionID });
-}
-
-export function setPendingReview(sessionID: string, resolve: (result: ReviewResult) => void): void {
-  effects.pendingResolutions.set(sessionID, resolve);
-}
-
-export function resolvePendingReview(sessionID: string, result: ReviewResult): boolean {
-  const action = matchReviewResult<RegistryAction>(result,
-    () => ({ type: 'accept', id: sessionID }),
-    (feedback) => ({ type: 'reject', id: sessionID, feedback }),
-    () => ({ type: 'deactivate', id: sessionID }),
-  );
-  registry = reduce(registry, action);
-  return resolvePending(effects, sessionID, result);
-}
-
-export function getReviewTask(sessionID: string): string | undefined {
-  return taskOf(registry, sessionID);
-}
-
-export function getReviewState(sessionID: string) {
-  return stateOf(registry, sessionID);
-}
-
-export function isReviewActive(sessionID: string): boolean {
-  return sessionIsActive(registry, sessionID);
-}
-
-export function addChild(parentID: string, childID: string): void {
-  registry = reduce(registry, { type: 'addChild', parentId: parentID, childId: childID });
+  return {
+    activateReview(sessionID, task, createdAt = Date.now()) {
+      registry = reduce(registry, { type: 'activate', id: sessionID, task, createdAt });
+    },
+    deactivateReview(sessionID) {
+      disposeSessionTree(effects, allDescendantIds(sessionID));
+      registry = reduce(registry, { type: 'deactivate', id: sessionID });
+    },
+    clearReviewSessions() {
+      disposeSessionTree(effects, [...effects.pendingResolutions.keys()]);
+      registry = emptyRegistry();
+    },
+    tryLockReview(sessionID) {
+      if (!canTransition(registry, sessionID, lockCommand(sessionID))) return false;
+      registry = reduce(registry, { type: 'lock', id: sessionID, reviewerId: sessionID });
+      return true;
+    },
+    unlockReview(sessionID) {
+      registry = reduce(registry, { type: 'unlock', id: sessionID });
+    },
+    setPendingReview(sessionID, resolve) {
+      effects.pendingResolutions.set(sessionID, resolve);
+    },
+    resolvePendingReview(sessionID, result) {
+      registry = reduce(registry, matchReviewResult<RegistryAction>(result,
+        () => ({ type: 'accept', id: sessionID }),
+        (feedback) => ({ type: 'reject', id: sessionID, feedback }),
+        () => ({ type: 'deactivate', id: sessionID }),
+      ));
+      return resolvePending(effects, sessionID, result);
+    },
+    getReviewTask(sessionID) { return taskOf(registry, sessionID); },
+    getReviewState(sessionID) { return stateOf(registry, sessionID); },
+    isReviewActive(sessionID) { return sessionIsActive(registry, sessionID); },
+    addChild(parentID, childID) {
+      registry = reduce(registry, { type: 'addChild', parentId: parentID, childId: childID });
+    },
+  };
 }

@@ -1,9 +1,9 @@
+import type { JobRegistry } from './job-registry.js';
 import { cleanupJob } from './jobs.js';
-import { globalJobRegistry } from './job-registry.js';
 
-export function abort(sessionId: string): string {
-  const job = globalJobRegistry.get(sessionId);
+export function abort(jobs: JobRegistry, sessionId: string): string {
+  const job = jobs.get(sessionId);
   if (!job) return 'No active task found to abort.';
-  cleanupJob(sessionId);
+  cleanupJob(jobs, sessionId);
   return '[System] Task has been forcefully terminated.';
 }

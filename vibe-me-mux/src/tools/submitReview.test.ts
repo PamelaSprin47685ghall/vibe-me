@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createSubmitReviewTool, isPassingReviewReport, type ReviewDeps } from "./submitReview.js";
+import type { ReviewStore } from "engine/review";
 
 function createMockReviewDeps() {
   const mockDeactivateReview = mock(() => undefined);
@@ -9,6 +10,20 @@ function createMockReviewDeps() {
   const mockUnlockReview = mock(() => undefined);
   const mockDelegateToSubAgent = mock(() => Promise.resolve("PASS"));
 
+  const reviewStore = {
+    tryLockReview: mockTryLockReview,
+    isReviewActive: mockIsReviewActive,
+    getReviewTask: mockGetReviewTask,
+    deactivateReview: mockDeactivateReview,
+    unlockReview: mockUnlockReview,
+    activateReview: mock(() => undefined),
+    clearReviewSessions: mock(() => undefined),
+    setPendingReview: mock(() => undefined),
+    resolvePendingReview: mock(() => false),
+    addChild: mock(() => undefined),
+    getReviewState: mock(() => undefined),
+  } satisfies ReviewStore;
+
   return {
     mockDeactivateReview,
     mockGetReviewTask,
@@ -17,11 +32,7 @@ function createMockReviewDeps() {
     mockUnlockReview,
     mockDelegateToSubAgent,
     reviewDeps: {
-      tryLockReview: mockTryLockReview,
-      isReviewActive: mockIsReviewActive,
-      getReviewTask: mockGetReviewTask,
-      deactivateReview: mockDeactivateReview,
-      unlockReview: mockUnlockReview,
+      reviewStore,
       delegateToSubAgent: mockDelegateToSubAgent,
     } satisfies ReviewDeps,
   };

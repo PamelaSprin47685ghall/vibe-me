@@ -4,6 +4,7 @@ import {
   buildRunnerNudgePrompt,
   cleanupJob,
   hasActiveJob,
+  type JobRegistry,
 } from 'engine/runner';
 import { promptWithAbort } from '../utils/abort-signal';
 import { managedRunnerSessions } from './execute';
@@ -14,11 +15,12 @@ export async function runNudgeLoop(
   client: PluginInput['client'],
   childID: string,
   abortSignal: AbortSignal | undefined,
+  jobs: JobRegistry,
 ): Promise<string | null> {
   managedRunnerSessions.add(childID);
   try {
     let nudgeCount = 0;
-    while (hasActiveJob(childID) && nudgeCount < MAX_RUNNER_NUDGES) {
+    while (hasActiveJob(jobs, childID) && nudgeCount < MAX_RUNNER_NUDGES) {
       await promptWithAbort(
         client,
         {
@@ -33,9 +35,9 @@ export async function runNudgeLoop(
       nudgeCount++;
     }
 
-    if (hasActiveJob(childID)) {
-      abort(childID);
-      cleanupJob(childID);
+    if (hasActiveJob(jobs, childID)) {
+      abort(jobs, childID);
+      cleanupJob(jobs, childID);
       return 'Runner did not respond after multiple attempts. The background task has been aborted.';
     }
     return null;

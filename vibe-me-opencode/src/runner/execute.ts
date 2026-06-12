@@ -3,8 +3,10 @@ import {
   buildRunnerPrompt,
   type ExecuteResult,
   execute as executeCommand,
+  formatRunnerSafetyWarning,
+  type JobRegistry,
 } from 'engine/runner';
-import { EXTENDED_SHELL_READ_COMMANDS } from 'engine/runner/read-commands';
+
 import {
   registerChildAgent,
   resolveSubsessionParentID,
@@ -38,9 +40,11 @@ export async function executeRunnerCommand(
   childID: string,
   sessionID: string | undefined,
   directory: string,
+  jobs: JobRegistry,
 ): Promise<ExecuteResult> {
   const language = (args.language ?? 'shell') as 'shell' | 'python' | 'javascript';
   return executeCommand({
+    jobs,
     sessionId: childID,
     parentSessionId: sessionID,
     program: args.program,
@@ -78,12 +82,5 @@ export async function extractRunnerSummary(
   directory: string,
 ): Promise<string> {
   const summary = await extractSessionText(client, childID, directory);
-  const language = args.language ?? 'shell';
-  if (language === 'shell') {
-    const firstWord = args.program.trim().split(/\s+/)[0];
-    if (firstWord && EXTENDED_SHELL_READ_COMMANDS.has(firstWord)) {
-      return `// 绝对禁止使用 runner 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！\n${summary || '(no output)'}`;
-    }
-  }
-  return summary || '(no output)';
+  return formatRunnerSafetyWarning(summary || '(no output)', args.program, args.language ?? 'shell');
 }

@@ -12,9 +12,8 @@ import { createFuzzyGrepTool } from "./tools/fuzzyGrep.js";
 import { createFuzzyFindTool } from "./tools/fuzzyFind.js";
 import { createWriteTool } from "./tools/write.js";
 import { createReadTool } from "./tools/read.js";
-import { execute, cleanupJob, globalJobRegistry } from "engine/runner";
-import { EXTENDED_SHELL_READ_COMMANDS } from "engine/runner/read-commands";
-import { tryLockReview, isReviewActive, getReviewTask, deactivateReview, unlockReview } from "engine/review";
+import { execute, cleanupJob } from "engine/runner";
+import { type ReviewStore } from "engine/review";
 import { delegateToSubAgent } from "./tools/delegate.js";
 import type { HostDependencies } from "./types/deps.js";
 import type { ToolDefinition } from "./types/contract.js";
@@ -24,55 +23,49 @@ export type ExecuteHostFileRead = (
   options?: { readonly abortSignal?: AbortSignal },
 ) => Promise<unknown>;
 
-type ToolFactory = (deps: HostDependencies) => ToolDefinition;
-
-const TOOL_FACTORIES = {
-  editor: createEditorTool,
-  greper: createGreperTool,
-  reverie: createReverieTool,
-  runner: (deps: HostDependencies) => createRunnerTool(deps, {
-    execute,
-    cleanupJob,
-    globalJobRegistry,
-    extendedShellReadCommands: EXTENDED_SHELL_READ_COMMANDS,
-  }),
-  runner_wait: createRunnerWaitTool,
-  runner_abort: createRunnerAbortTool,
-  browser: createBrowserTool,
-  submit_review: (deps: HostDependencies) =>
-    createSubmitReviewTool(deps, {
-      tryLockReview,
-      isReviewActive,
-      getReviewTask,
-      deactivateReview,
-      unlockReview,
-      delegateToSubAgent,
-    }),
-  websearch: createWebsearchTool,
-  webfetch: createWebfetchTool,
-  fuzzy_grep: createFuzzyGrepTool,
-  fuzzy_find: createFuzzyFindTool,
-  write: createWriteTool,
-} satisfies Record<string, ToolFactory>;
-
-type OrdinaryToolCatalog = {
-  readonly [ToolName in keyof typeof TOOL_FACTORIES]: ToolDefinition;
-};
-
-type ToolCatalog = OrdinaryToolCatalog & {
+type ToolCatalog = {
+  readonly editor: ToolDefinition;
+  readonly greper: ToolDefinition;
+  readonly reverie: ToolDefinition;
+  readonly runner: ToolDefinition;
+  readonly runner_wait: ToolDefinition;
+  readonly runner_abort: ToolDefinition;
+  readonly browser: ToolDefinition;
+  readonly submit_review: ToolDefinition;
+  readonly websearch: ToolDefinition;
+  readonly webfetch: ToolDefinition;
+  readonly fuzzy_grep: ToolDefinition;
+  readonly fuzzy_find: ToolDefinition;
+  readonly write: ToolDefinition;
   readonly read: ToolDefinition;
 };
 
 export function createToolCatalog(
   deps: HostDependencies,
   executeHostFileRead: ExecuteHostFileRead,
+  reviewStore: ReviewStore,
 ): ToolCatalog {
-  const ordinaryToolCatalog = Object.fromEntries(
-    Object.entries(TOOL_FACTORIES).map(([toolName, createTool]) => [toolName, createTool(deps)]),
-  ) as OrdinaryToolCatalog;
-
   return {
-    ...ordinaryToolCatalog,
+    editor: createEditorTool(deps),
+    greper: createGreperTool(deps),
+    reverie: createReverieTool(deps),
+    runner: createRunnerTool(deps, {
+      execute,
+      cleanupJob: (jobId) => cleanupJob(deps.runnerJobs, jobId),
+      globalJobRegistry: deps.runnerJobs,
+    }),
+    runner_wait: createRunnerWaitTool(deps),
+    runner_abort: createRunnerAbortTool(deps),
+    browser: createBrowserTool(deps),
+    submit_review: createSubmitReviewTool(deps, {
+      reviewStore,
+      delegateToSubAgent,
+    }),
+    websearch: createWebsearchTool(deps),
+    webfetch: createWebfetchTool(deps),
+    fuzzy_grep: createFuzzyGrepTool(deps),
+    fuzzy_find: createFuzzyFindTool(deps),
+    write: createWriteTool(deps),
     read: createReadTool(deps, executeHostFileRead),
   };
 }

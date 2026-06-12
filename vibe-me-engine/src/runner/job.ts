@@ -5,6 +5,6 @@ export type { JobHandles } from './job-effects.js';
 export { createHandles, releaseHandles, cleanupFiles } from './job-effects.js';
 
 export type { JobEntry, JobRegistry } from './job-registry.js';
-export { cleanupRegistry, globalJobRegistry } from './job-registry.js';
+export { cleanupRegistry, createJobRegistry } from './job-registry.js';
 
 export { createTempScript, getTempScriptPath } from './script.js';

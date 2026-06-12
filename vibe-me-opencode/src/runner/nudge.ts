@@ -3,9 +3,10 @@ import {
   buildRunnerNudgePrompt,
   cleanupJob,
   hasActiveJob,
+  type JobRegistry,
 } from 'engine/runner';
 
-export function createRunnerNudgeHook(ctx: PluginInput) {
+export function createRunnerNudgeHook(ctx: PluginInput, jobs: JobRegistry) {
   return {
     handleEvent: async (input: {
       event: { type: string; properties?: Record<string, unknown> };
@@ -20,12 +21,12 @@ export function createRunnerNudgeHook(ctx: PluginInput) {
         event.type === 'session.close' ||
         event.type === 'session.remove'
       ) {
-        cleanupJob(sessionID);
+        cleanupJob(jobs, sessionID);
         return;
       }
 
       if (event.type === 'session.idle') {
-        if (!hasActiveJob(sessionID)) return;
+        if (!hasActiveJob(jobs, sessionID)) return;
         try {
           await ctx.client.session.prompt({
             path: { id: sessionID },

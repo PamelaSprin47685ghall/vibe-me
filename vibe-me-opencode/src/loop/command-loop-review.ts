@@ -1,17 +1,13 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import {
-  activateReview,
-  addChild,
-  deactivateReview,
-  isReviewActive,
-  REVIEW_INSTRUCTIONS,
-} from 'engine/review';
+import type { ReviewStore } from 'engine/review';
+import { REVIEW_INSTRUCTIONS } from 'engine/review';
 import { registerChildAgent, resolveSubsessionParentID } from '../utils/child-agent';
 import { LOOP_REVIEW_COMMAND_NAME } from './constants';
 import { runReviewerWithNudge } from './reviewer';
 
 export async function handleLoopReview(
   ctx: PluginInput,
+  reviewStore: ReviewStore,
   input: { command: string; sessionID: string; arguments: string },
   output: { parts: Array<{ type: string; text?: string }> },
 ): Promise<void> {
@@ -21,14 +17,14 @@ export async function handleLoopReview(
 
   const task = input.arguments.trim();
   if (!task) {
-    deactivateReview(input.sessionID);
+    reviewStore.deactivateReview(input.sessionID);
     output.parts.push({ type: 'text', text: 'loop-review mode cancelled.' });
     return;
   }
 
   const sessionID = input.sessionID;
 
-  if (isReviewActive(sessionID)) {
+  if (reviewStore.isReviewActive(sessionID)) {
     output.parts.push({
       type: 'text',
       text: 'loop mode is already active. Submit your work via submit_review.',
@@ -46,7 +42,7 @@ export async function handleLoopReview(
     output.parts.push({ type: 'text', text: 'Failed to create pre-reviewer session' });
     return;
   }
-  addChild(sessionID, childID);
+  reviewStore.addChild(sessionID, childID);
   registerChildAgent(childID, 'reviewer', parentID);
 
   const parts: Array<{ type: 'text'; text: string }> = [
@@ -54,7 +50,7 @@ export async function handleLoopReview(
     { type: 'text', text: `=== Task ===\n\n${task}` },
   ];
 
-  const result = await runReviewerWithNudge(ctx.client, childID, parts, ctx.directory);
+  const result = await runReviewerWithNudge(ctx.client, reviewStore, childID, parts, ctx.directory);
 
   if (result._tag === 'Accepted') {
     output.parts.push({
@@ -72,7 +68,7 @@ export async function handleLoopReview(
     return;
   }
 
-  activateReview(sessionID, task);
+  reviewStore.activateReview(sessionID, task);
 
   output.parts.push({
     type: 'text',

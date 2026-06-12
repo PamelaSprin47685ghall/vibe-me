@@ -1,4 +1,4 @@
-import { activateReview, deactivateReview, isReviewActive } from "engine/review";
+import type { ReviewStore } from "engine/review";
 import type { PluginSlashCommandDefinition } from "../types/tool.js";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
@@ -9,7 +9,7 @@ import { buildLoopMessage } from "./loop-message.js";
 
 const PRE_REVIEW_TIMEOUT_MS = 5 * 60 * 1000;
 
-export function createLoopReviewCommand(deps: HostDependencies): PluginSlashCommandDefinition {
+export function createLoopReviewCommand(deps: HostDependencies, reviewStore: ReviewStore): PluginSlashCommandDefinition {
   return {
     key: "loop-review",
     description: "Pre-review task description with a reviewer sub-agent, then activate review loop mode.",
@@ -17,16 +17,16 @@ export function createLoopReviewCommand(deps: HostDependencies): PluginSlashComm
     async execute(workspaceId, args) {
       const task = args.trim();
       if (!task) {
-        deactivateReview(workspaceId);
+        reviewStore.deactivateReview(workspaceId);
         return "Loop mode cancelled.";
       }
 
-      if (isReviewActive(workspaceId)) {
+      if (reviewStore.isReviewActive(workspaceId)) {
         return "Loop mode is already active. Submit your work via submit_review.";
       }
 
       if (!deps.taskService) {
-        activateReview(workspaceId, task);
+        reviewStore.activateReview(workspaceId, task);
         return buildLoopMessage(task, "Loop mode is active (pre-review unavailable — no task service). Complete the task above, then call submit_review with:");
       }
 
@@ -65,7 +65,7 @@ export function createLoopReviewCommand(deps: HostDependencies): PluginSlashComm
         preReviewReport = "PASS";
       }
 
-      activateReview(workspaceId, task);
+      reviewStore.activateReview(workspaceId, task);
 
       if (isPassingReviewReport(preReviewReport)) {
         return buildLoopMessage(task, "Loop mode is active. Pre-review passed. Complete the task above, then call submit_review with:");

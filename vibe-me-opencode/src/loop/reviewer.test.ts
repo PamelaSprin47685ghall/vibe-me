@@ -1,37 +1,30 @@
-import { afterEach, describe, expect, test } from 'bun:test';
-import {
-  activateReview,
-  clearReviewSessions,
-  deactivateReview,
-  getReviewTask,
-  isReviewActive,
-  unlockReview,
-} from 'engine/review';
+import { describe, expect, test } from 'bun:test';
+import { createReviewStore } from 'engine/review';
 import { getReviewerConfig } from './index';
-
-afterEach(() => {
-  clearReviewSessions();
-});
 
 describe('reviewSessions state', () => {
   test('starts inactive', () => {
-    expect(isReviewActive('ses-1')).toBe(false);
+    const reviewStore = createReviewStore();
+    expect(reviewStore.isReviewActive('ses-1')).toBe(false);
   });
 
   test('can activate and deactivate', () => {
-    activateReview('ses-1', 'test task');
-    expect(isReviewActive('ses-1')).toBe(true);
-    deactivateReview('ses-1');
-    expect(isReviewActive('ses-1')).toBe(false);
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'test task');
+    expect(reviewStore.isReviewActive('ses-1')).toBe(true);
+    reviewStore.deactivateReview('ses-1');
+    expect(reviewStore.isReviewActive('ses-1')).toBe(false);
   });
 
   test('stores original task', () => {
-    activateReview('ses-1', 'Refactor the auth module');
-    expect(getReviewTask('ses-1')).toBe('Refactor the auth module');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'Refactor the auth module');
+    expect(reviewStore.getReviewTask('ses-1')).toBe('Refactor the auth module');
   });
 
   test('unlock on unknown session does not throw', () => {
-    expect(() => unlockReview('nonexistent')).not.toThrow();
+    const reviewStore = createReviewStore();
+    expect(() => reviewStore.unlockReview('nonexistent')).not.toThrow();
   });
 });
 

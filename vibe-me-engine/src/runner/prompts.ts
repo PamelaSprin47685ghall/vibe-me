@@ -1,3 +1,7 @@
+import { EXTENDED_SHELL_READ_COMMANDS } from './read-commands.js';
+
+export const RUNNER_READ_ONLY_WARNING = '// 绝对禁止使用 runner 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！';
+
 export const RUNNER_SYSTEM_PROMPT = `You are a command output summarizer.
 The command has already been started by the system.
 You only have runner_wait and runner_abort.
@@ -36,4 +40,11 @@ export function buildRunnerPrompt(
     output,
     message ?? null,
   ].filter(Boolean).join('\n');
+}
+
+export function formatRunnerSafetyWarning(output: string, program: string, language: string): string {
+  if (language !== 'shell') return output;
+  const firstWord = program.trim().split(/\s+/)[0]?.split('/').pop();
+  if (!firstWord || !EXTENDED_SHELL_READ_COMMANDS.has(firstWord)) return output;
+  return `${RUNNER_READ_ONLY_WARNING}\n${output}`;
 }

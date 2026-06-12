@@ -1,4 +1,5 @@
 import { mock } from "bun:test";
+import { createJobRegistry } from "engine/runner";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type {
   HostDependencies,
@@ -55,6 +56,7 @@ export function createMockDeps() {
 
   const deps: HostDependencies = {
     log: { debug: () => undefined },
+    runnerJobs: createJobRegistry(),
     loadConfigOrDefault: () => loadConfigOrDefault(),
     readAgentDefinition: (runtime, workspacePath, agentId) =>
       readAgentDefinition(runtime, workspacePath, agentId),

@@ -1,7 +1,8 @@
-import { activateReview, deactivateReview, isReviewActive } from 'engine/review';
+import type { ReviewStore } from 'engine/review';
 import { COMMAND_NAME } from './constants';
 
 export async function handleLoop(
+  reviewStore: ReviewStore,
   input: { command: string; sessionID: string; arguments: string },
   output: { parts: Array<{ type: string; text?: string }> },
 ): Promise<void> {
@@ -11,12 +12,12 @@ export async function handleLoop(
 
   const task = input.arguments.trim();
   if (!task) {
-    deactivateReview(input.sessionID);
+    reviewStore.deactivateReview(input.sessionID);
     output.parts.push({ type: 'text', text: 'loop mode cancelled.' });
     return;
   }
 
-  if (isReviewActive(input.sessionID)) {
+  if (reviewStore.isReviewActive(input.sessionID)) {
     output.parts.push({
       type: 'text',
       text: 'loop mode is already active. Submit your work via submit_review.',
@@ -24,7 +25,7 @@ export async function handleLoop(
     return;
   }
 
-  activateReview(input.sessionID, task);
+  reviewStore.activateReview(input.sessionID, task);
 
   output.parts.push({
     type: 'text',

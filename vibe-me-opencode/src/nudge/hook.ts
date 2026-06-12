@@ -1,13 +1,14 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { REVERIE_NUDGE } from 'engine/todo';
+import type { ReviewStore } from 'engine/review';
 import { emptyNudgeShellState, resumeSession, rememberAgent } from 'engine/nudge-shell';
 import type { NudgeShellState } from 'engine/nudge-shell';
 import { getPartsText, isNudgePrompt, getSessionID, getEventAgent } from 'engine/util';
 import { createEventHandlers, matchCompositeHandler } from './event-handlers';
 
-export function createNudgeCoordinatorHook(ctx: PluginInput) {
+export function createNudgeCoordinatorHook(ctx: PluginInput, reviewStore: ReviewStore) {
   let state: NudgeShellState = emptyNudgeShellState;
-  const handlers = createEventHandlers(ctx);
+  const handlers = createEventHandlers(ctx, reviewStore);
   let pending = Promise.resolve();
 
   return {
@@ -54,7 +55,7 @@ export function createNudgeCoordinatorHook(ctx: PluginInput) {
         state = rememberAgent(state, sessionID, getEventAgent(props));
         const statusType = (props.status as { type?: string } | undefined)?.type;
         const handler = handlers[event.type] ?? matchCompositeHandler(event.type, statusType);
-        if (handler) state = await handler(state, props, sessionID, ctx);
+        if (handler) state = await handler(state, props, sessionID, ctx, reviewStore);
       };
       pending = pending.then(run, run);
       await pending;

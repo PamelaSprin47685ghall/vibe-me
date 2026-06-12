@@ -1,29 +1,31 @@
 import { afterEach, beforeEach, describe, expect, it } from 'bun:test';
 import {
   cleanupJob,
+  createJobRegistry,
   type ExecuteResult,
   execute,
   getActiveJobs,
 } from 'engine/runner';
 import { stripHeadTailPipes } from './no-head-tail.js';
 
+const jobs = createJobRegistry();
+
 describe('head/tail pipe stripping', () => {
   beforeEach(() => {
-    const jobs = getActiveJobs();
-    for (const [sessionId] of jobs) {
-      cleanupJob(sessionId);
+    for (const [sessionId] of getActiveJobs(jobs)) {
+      cleanupJob(jobs, sessionId);
     }
   });
 
   afterEach(() => {
-    const jobs = getActiveJobs();
-    for (const [sessionId] of jobs) {
-      cleanupJob(sessionId);
+    for (const [sessionId] of getActiveJobs(jobs)) {
+      cleanupJob(jobs, sessionId);
     }
   });
 
   it('strips head -n from shell pipe', async () => {
     const result: ExecuteResult = await execute({
+      jobs,
       sessionId: 'test-head-pipe',
       program: 'echo hello | head -n 1',
       language: 'shell',
@@ -34,6 +36,7 @@ describe('head/tail pipe stripping', () => {
 
   it('strips tail -n from shell pipe', async () => {
     const result: ExecuteResult = await execute({
+      jobs,
       sessionId: 'test-tail-pipe',
       program: 'echo "line1\nline2\nline3" | tail -n 1',
       language: 'shell',
@@ -46,6 +49,7 @@ describe('head/tail pipe stripping', () => {
 
   it('strips both head and tail from multi-pipe', async () => {
     const result: ExecuteResult = await execute({
+      jobs,
       sessionId: 'test-multi-pipe',
       program: 'echo hello | head -n 10 | tail -n 5',
       language: 'shell',
@@ -56,6 +60,7 @@ describe('head/tail pipe stripping', () => {
 
   it('does not strip head/tail from python program', async () => {
     const result: ExecuteResult = await execute({
+      jobs,
       sessionId: 'test-python-no-strip',
       program: 'print("hello | head -n 1")',
       language: 'python',

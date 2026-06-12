@@ -28,8 +28,7 @@ export function createHooks(
   return {
     'chat.message': async (
       input: { agent?: string; sessionID: string },
-      // biome-ignore lint/suspicious/noExplicitAny: matches SDK Hooks type
-      output: { parts: unknown[]; message: any },
+      output: { parts: unknown[]; message: { tools?: Record<string, unknown> } },
     ) => {
       const agent = input.agent ?? lookupChildAgent(input.sessionID) ?? 'orchestrator';
       nudgeHook.handleChatMessage({ sessionID: input.sessionID, agent, parts: output.parts });
@@ -70,8 +69,7 @@ export function createHooks(
 
     'tool.execute.before': async (
       input: { tool: string; sessionID: string; callID: string },
-      // biome-ignore lint/suspicious/noExplicitAny: matches SDK Hooks type
-      output: { args: any },
+      output: { args: { intents?: unknown; _ui?: string } },
     ): Promise<void> => {
       if (
         (input.tool === 'editor' || input.tool === 'greper') &&

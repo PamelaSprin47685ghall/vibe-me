@@ -1,7 +1,7 @@
 import { createCapsInjector } from "./context/capsInjector.js";
 import { createEventHook } from "./eventHook.js";
-import { cleanupRegistry, globalJobRegistry, hasActiveJob, buildRunnerNudgePrompt } from "engine/runner";
-import { deactivateReview, isReviewActive } from "engine/review";
+import { cleanupRegistry, hasActiveJob, buildRunnerNudgePrompt } from "engine/runner";
+import { createReviewStore } from "engine/review";
 import { globalIteratorStore, clearIteratorScope } from "engine/util";
 import { defaultCoordinator, TODO_NUDGE_PROMPT, LOOP_NUDGE_PROMPT } from "engine/todo";
 import { createSyntaxCheckWrappers } from "./wrappers/syntaxCheck.js";
@@ -46,6 +46,8 @@ function createWebOverrideWrapper(
 export function createRegistration(
   deps: HostDependencies,
 ): PluginRegistration {
+  const reviewStore = createReviewStore();
+
   let hostFileReadExecute: ExecuteHostFileRead | undefined;
 
   const executeHostFileRead = (
@@ -59,7 +61,7 @@ export function createRegistration(
     return hostFileReadExecute(args, opts);
   };
 
-  const catalog = createToolCatalog(deps, executeHostFileRead);
+  const catalog = createToolCatalog(deps, executeHostFileRead, reviewStore);
   const tools = Object.values(catalog);
 
   return {
@@ -82,17 +84,16 @@ export function createRegistration(
     contextInjector: createCapsInjector(),
     eventHook: createEventHook({
       cleanupRegistry,
-      globalJobRegistry,
-      deactivateReview,
-      isReviewActive,
+      globalJobRegistry: deps.runnerJobs,
+      reviewStore,
       clearIteratorScope: (id: string) => clearIteratorScope(globalIteratorStore, id),
       coordinator: defaultCoordinator,
-      hasActiveJob,
+      hasActiveJob: (sessionId: string) => hasActiveJob(deps.runnerJobs, sessionId),
       buildRunnerNudgePrompt,
       TODO_NUDGE_PROMPT,
       LOOP_NUDGE_PROMPT,
     }),
-    slashCommands: createLoopCommand(deps),
+    slashCommands: createLoopCommand(deps, reviewStore),
     getToolPolicy: getPluginToolPolicy,
   };
 }

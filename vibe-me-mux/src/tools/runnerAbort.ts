@@ -15,7 +15,7 @@ const parameters: JsonSchema = {
   additionalProperties: false,
 };
 
-export function createRunnerAbortTool(_deps: HostDependencies): ToolDefinition {
+export function createRunnerAbortTool(deps: HostDependencies): ToolDefinition {
 
   return {
     name: "runner_abort",
@@ -24,7 +24,7 @@ export function createRunnerAbortTool(_deps: HostDependencies): ToolDefinition {
     parameters,
     execute: async (_config, args: Record<string, unknown>) => {
       const jobId = requireString(args, 'jobId');
-      return abort(jobId);
+      return abort(deps.runnerJobs, jobId);
     },
   };
 }

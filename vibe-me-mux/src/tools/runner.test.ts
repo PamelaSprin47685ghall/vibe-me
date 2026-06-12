@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { createRunnerTool, type RunnerToolDeps } from "./runner.js";
-import type { JobEntry } from "engine/runner";
+import { createJobRegistry, type JobEntry } from "engine/runner";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type {
   ConfigFile,
@@ -26,7 +26,6 @@ function createMockRunnerDeps() {
       execute: mockExecute,
       cleanupJob: mockCleanupJob,
       globalJobRegistry: mockGlobalJobRegistry,
-      extendedShellReadCommands: new Set<string>(),
     } satisfies RunnerToolDeps,
   };
 }
@@ -95,6 +94,7 @@ const mockResolveAgentFrontmatter = mock<
 
 const mockDeps: HostDependencies = {
   log: { debug: () => undefined },
+  runnerJobs: createJobRegistry(),
   loadConfigOrDefault: mockLoadConfigOrDefault,
   readAgentDefinition: mockReadAgentDefinition,
   resolveAgentFrontmatter: mockResolveAgentFrontmatter,

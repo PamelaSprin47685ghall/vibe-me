@@ -11,6 +11,10 @@ export interface JobEntry {
 
 export type JobRegistry = Map<string, JobEntry>;
 
+export function createJobRegistry(): JobRegistry {
+  return new Map();
+}
+
 function disposeEntry(entry: JobEntry): void {
   if (entry.record.status._tag === running._tag) {
     entry.record = markAborted(entry.record);
@@ -33,5 +37,3 @@ export function cleanupRegistry(registry: JobRegistry, sessionId: string): void 
     }
   }
 }
-
-export const globalJobRegistry: JobRegistry = new Map();

@@ -19,11 +19,7 @@ export function isForegroundWaitBackgroundedError(
 }
 
 export interface ReviewDeps {
-  readonly tryLockReview: (workspaceId: string) => boolean;
-  readonly isReviewActive: (workspaceId: string) => boolean;
-  readonly getReviewTask: (workspaceId: string) => string | undefined;
-  readonly deactivateReview: (workspaceId: string) => void;
-  readonly unlockReview: (workspaceId: string) => void;
+  readonly reviewStore: import('engine/review').ReviewStore;
   readonly delegateToSubAgent: (
     config: PluginToolConfiguration,
     deps: HostDependencies,
@@ -110,14 +106,14 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
       const workspaceId = config.workspaceId;
       if (!workspaceId) throw new Error("submitReview requires workspaceId");
 
-      if (!reviewDeps.tryLockReview(workspaceId)) {
-        return reviewDeps.isReviewActive(workspaceId)
+      if (!reviewDeps.reviewStore.tryLockReview(workspaceId)) {
+        return reviewDeps.reviewStore.isReviewActive(workspaceId)
           ? "A review is already in progress for this session."
           : "You do not need review. Just continue with your work.";
       }
 
       try {
-        const originalTask = reviewDeps.getReviewTask(workspaceId);
+        const originalTask = reviewDeps.reviewStore.getReviewTask(workspaceId);
         const reviewPrompt = buildReviewPrompt(
           report,
           affectedFiles,
@@ -141,13 +137,13 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
         );
 
         if (isPassingReviewReport(reviewReport)) {
-          reviewDeps.deactivateReview(workspaceId);
+          reviewDeps.reviewStore.deactivateReview(workspaceId);
           return "Review passed. Loop mode ended.";
         }
 
         return `Review feedback:\n\n${reviewReport}\n\nAddress the feedback above. loop mode is still active; fix the issues and call submit_review again.`;
       } finally {
-        reviewDeps.unlockReview(workspaceId);
+        reviewDeps.reviewStore.unlockReview(workspaceId);
       }
     },
   };

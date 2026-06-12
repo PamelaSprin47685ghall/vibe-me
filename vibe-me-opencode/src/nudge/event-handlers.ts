@@ -1,6 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
 import { defaultCoordinator } from 'engine/todo';
-import { cleanupRegistry, globalJobRegistry } from 'engine/runner';
+import { cleanupRegistry } from 'engine/runner';
+import type { ReviewStore } from 'engine/review';
 import {
   resumeSession,
   stopSession,
@@ -11,6 +12,7 @@ import {
 } from 'engine/nudge-shell';
 import type { NudgeShellState } from 'engine/nudge-shell';
 import { nudgeIfNeeded } from './timing';
+import { opencodeRunnerJobs } from '../runner/index.js';
 import {
   isAbortEventError,
   isNudgePrompt,
@@ -25,10 +27,11 @@ export type EventHandler = (
   props: Record<string, unknown>,
   sessionID: string,
   ctx: PluginInput,
+  reviewStore: ReviewStore,
 ) => NudgeShellState | Promise<NudgeShellState>;
 
 function handleSessionDelete(state: NudgeShellState, _props: Record<string, unknown>, sessionID: string): NudgeShellState {
-  cleanupRegistry(globalJobRegistry, sessionID);
+  cleanupRegistry(opencodeRunnerJobs, sessionID);
   defaultCoordinator.clearSession(sessionID);
   return clearSession(state, sessionID);
 }
@@ -43,10 +46,10 @@ function handleSessionNextRetried(state: NudgeShellState, _props: Record<string,
   return addRetryPendingSession(state, sessionID);
 }
 
-function handleMessageUpdated(state: NudgeShellState, props: Record<string, unknown>, sessionID: string, ctx: PluginInput): Promise<NudgeShellState> {
+function handleMessageUpdated(state: NudgeShellState, props: Record<string, unknown>, sessionID: string, ctx: PluginInput, reviewStore: ReviewStore): Promise<NudgeShellState> {
   const info = props.info as { error?: unknown } | undefined;
   if (isAbortEventError(info?.error)) return Promise.resolve(stopSession(state, sessionID));
-  if (isCompletedAssistantMessage(info)) return nudgeIfNeeded(state, ctx, sessionID);
+  if (isCompletedAssistantMessage(info)) return nudgeIfNeeded(state, ctx, sessionID, reviewStore);
   return Promise.resolve(state);
 }
 
@@ -68,14 +71,14 @@ function handleSessionNextToolFailed(state: NudgeShellState, props: Record<strin
   return deleteRetryPendingSession(state, sessionID);
 }
 
-async function handleSessionNextStepEnded(state: NudgeShellState, props: Record<string, unknown>, sessionID: string, ctx: PluginInput): Promise<NudgeShellState> {
+async function handleSessionNextStepEnded(state: NudgeShellState, props: Record<string, unknown>, sessionID: string, ctx: PluginInput, reviewStore: ReviewStore): Promise<NudgeShellState> {
   state = deleteRetryPendingSession(state, sessionID);
-  if (isTerminalAssistantFinish(props.finish)) state = await nudgeIfNeeded(state, ctx, sessionID);
+  if (isTerminalAssistantFinish(props.finish)) state = await nudgeIfNeeded(state, ctx, sessionID, reviewStore);
   return state;
 }
 
-async function handleSessionIdle(state: NudgeShellState, _props: Record<string, unknown>, sessionID: string, ctx: PluginInput): Promise<NudgeShellState> {
-  return nudgeIfNeeded(state, ctx, sessionID);
+async function handleSessionIdle(state: NudgeShellState, _props: Record<string, unknown>, sessionID: string, ctx: PluginInput, reviewStore: ReviewStore): Promise<NudgeShellState> {
+  return nudgeIfNeeded(state, ctx, sessionID, reviewStore);
 }
 
 function handleSessionBusy(state: NudgeShellState, _props: Record<string, unknown>, sessionID: string, _ctx: PluginInput): NudgeShellState {
@@ -97,21 +100,21 @@ function handleRetryProgress(state: NudgeShellState, _props: Record<string, unkn
   return deleteRetryPendingSession(state, sessionID);
 }
 
-export function createEventHandlers(ctx: PluginInput): Record<string, EventHandler> {
+export function createEventHandlers(ctx: PluginInput, reviewStore: ReviewStore): Record<string, EventHandler> {
   return {
-    'session.delete': handleSessionDelete,
-    'session.close': handleSessionDelete,
-    'session.remove': handleSessionDelete,
-    'session.deleted': handleSessionDelete,
-    'session.next.prompted': handleSessionNextPrompted,
-    'session.next.retried': handleSessionNextRetried,
+    'session.delete': handleSessionDelete as EventHandler,
+    'session.close': handleSessionDelete as EventHandler,
+    'session.remove': handleSessionDelete as EventHandler,
+    'session.deleted': handleSessionDelete as EventHandler,
+    'session.next.prompted': handleSessionNextPrompted as EventHandler,
+    'session.next.retried': handleSessionNextRetried as EventHandler,
     'message.updated': handleMessageUpdated,
-    'message.part.updated': handleMessagePartUpdated,
-    'session.next.step.failed': handleSessionNextStepFailed,
-    'session.next.tool.failed': handleSessionNextToolFailed,
+    'message.part.updated': handleMessagePartUpdated as EventHandler,
+    'session.next.step.failed': handleSessionNextStepFailed as EventHandler,
+    'session.next.tool.failed': handleSessionNextToolFailed as EventHandler,
     'session.next.step.ended': handleSessionNextStepEnded,
     'session.idle': handleSessionIdle,
-    'session.error': handleSessionError,
+    'session.error': handleSessionError as EventHandler,
   };
 }
 
@@ -119,9 +122,9 @@ export function matchCompositeHandler(
   eventType: string,
   statusType: string | undefined,
 ): EventHandler | null {
-  if (eventType === 'session.status' && statusType === 'retry') return handleSessionRetryStatus;
+  if (eventType === 'session.status' && statusType === 'retry') return handleSessionRetryStatus as EventHandler;
   if (eventType === 'session.status' && statusType === 'idle') return handleSessionIdle;
-  if (eventType === 'session.status' && statusType === 'busy') return handleSessionBusy;
-  if (isRetryProgressEvent(eventType)) return handleRetryProgress;
+  if (eventType === 'session.status' && statusType === 'busy') return handleSessionBusy as EventHandler;
+  if (isRetryProgressEvent(eventType)) return handleRetryProgress as EventHandler;
   return null;
 }

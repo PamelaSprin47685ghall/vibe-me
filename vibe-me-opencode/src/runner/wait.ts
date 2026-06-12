@@ -1,8 +1,8 @@
 import type { ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin/tool';
-import { wait } from 'engine/runner';
+import { wait, type JobRegistry } from 'engine/runner';
 
-export function createRunnerWaitTool(): ToolDefinition {
+export function createRunnerWaitTool(jobs: JobRegistry): ToolDefinition {
   return tool({
     description:
       'Wait for the background task to produce more output or finish.',
@@ -18,6 +18,7 @@ export function createRunnerWaitTool(): ToolDefinition {
     async execute(args, context) {
       try {
         const result = await wait({
+          jobs,
           sessionId: context.sessionID,
           ms: args.ms,
         });

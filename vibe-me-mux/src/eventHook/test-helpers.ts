@@ -1,5 +1,6 @@
 import { mock } from "bun:test";
 import type { JobRegistry } from "engine/runner";
+import type { ReviewStore } from "engine/review";
 import type { EventHookDeps } from "../eventHook.js";
 
 export function createMockDeps() {
@@ -11,6 +12,20 @@ export function createMockDeps() {
   const mockBuildRunnerNudgePrompt = mock(() => "runner-nudge");
   const mockIsReviewActive = mock(() => false);
   const mockClearIteratorScope = mock(() => undefined);
+
+  const mockReviewStore = {
+    activateReview: mock(() => undefined),
+    deactivateReview: mockDeactivateReview,
+    clearReviewSessions: mock(() => undefined),
+    tryLockReview: mock(() => false),
+    unlockReview: mock(() => undefined),
+    setPendingReview: mock(() => undefined),
+    resolvePendingReview: mock(() => false),
+    getReviewTask: mock(() => undefined),
+    getReviewState: mock(() => undefined),
+    isReviewActive: mockIsReviewActive,
+    addChild: mock(() => undefined),
+  } satisfies ReviewStore;
 
   return {
     mockCleanupRegistry,
@@ -24,8 +39,7 @@ export function createMockDeps() {
     deps: {
       cleanupRegistry: mockCleanupRegistry,
       globalJobRegistry: new Map<string, never>() as JobRegistry,
-      deactivateReview: mockDeactivateReview,
-      isReviewActive: mockIsReviewActive,
+      reviewStore: mockReviewStore,
       clearIteratorScope: mockClearIteratorScope,
       coordinator: { shouldNudge: mockShouldNudge, suppress: mockSuppress },
       hasActiveJob: mockHasActiveJob,

@@ -1,11 +1,7 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import {
-  deactivateReview,
-  REVIEWER_NUDGE_PROMPT,
-  setPendingReview,
-  terminated,
-  type ReviewResult,
-} from 'engine/review';
+import { REVIEWER_NUDGE_PROMPT } from 'engine/review';
+import type { ReviewResult, ReviewStore } from 'engine/review';
+import { terminated } from 'engine/review';
 import { isAbortError } from 'engine/util';
 import { promptWithAbort } from '../utils/abort-signal';
 import { GRACE_TIMEOUT, MAX_REVIEWER_NUDGES, REVIEWER_GRACE_MS } from './constants';
@@ -13,24 +9,25 @@ import { createDeferred } from './types';
 
 export async function runReviewerWithNudge(
   client: PluginInput['client'],
+  reviewStore: ReviewStore,
   childID: string,
   parts: Array<{ type: 'text'; text: string }>,
   _directory?: string,
   abortSignal?: AbortSignal,
 ): Promise<ReviewResult> {
   if (abortSignal?.aborted) {
-    deactivateReview(childID);
+    reviewStore.deactivateReview(childID);
     return terminated;
   }
 
   const deferred = createDeferred<ReviewResult>();
-  setPendingReview(childID, (result: ReviewResult) => deferred.resolve(result));
+  reviewStore.setPendingReview(childID, (result: ReviewResult) => deferred.resolve(result));
 
   let nudgeCount = 0;
 
   while (true) {
     if (abortSignal?.aborted) {
-      deactivateReview(childID);
+      reviewStore.deactivateReview(childID);
       return terminated;
     }
 
@@ -65,12 +62,12 @@ export async function runReviewerWithNudge(
     iterAbort.abort();
 
     if (result.type === 'result') {
-      deactivateReview(childID);
+      reviewStore.deactivateReview(childID);
       return result.result;
     }
 
     if (result.type === 'error') {
-      deactivateReview(childID);
+      reviewStore.deactivateReview(childID);
       if (isAbortError(result.error)) {
         return terminated;
       }
@@ -85,13 +82,13 @@ export async function runReviewerWithNudge(
     ]);
 
     if (graceResult !== GRACE_TIMEOUT) {
-      deactivateReview(childID);
+      reviewStore.deactivateReview(childID);
       return graceResult;
     }
 
     nudgeCount++;
     if (nudgeCount >= MAX_REVIEWER_NUDGES) {
-      deactivateReview(childID);
+      reviewStore.deactivateReview(childID);
       return terminated;
     }
   }

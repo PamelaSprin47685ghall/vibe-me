@@ -43,6 +43,6 @@ export * from './runner/process.js';
 export * from './runner/javascript.js';
 export * from './runner/jobs.js';
 export type { JobRecord, JobStatus, JobHandles, JobEntry, JobRegistry } from './runner/job.js';
-export { MAX_OUTPUT_BYTES, emptyJob, appendOutput, markCompleted, markAborted, createHandles, releaseHandles, cleanupFiles, cleanupRegistry, globalJobRegistry, createTempScript, getTempScriptPath } from './runner/job.js';
+export { MAX_OUTPUT_BYTES, emptyJob, appendOutput, markCompleted, markAborted, createHandles, releaseHandles, cleanupFiles, cleanupRegistry, createJobRegistry, createTempScript, getTempScriptPath } from './runner/job.js';
 export * from './runner/nudge.js';
 export * from './runner/prompts.js';

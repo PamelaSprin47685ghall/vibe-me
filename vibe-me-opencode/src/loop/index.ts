@@ -1,6 +1,5 @@
 export { createDeferred, type Deferred, type ReviewResult } from './types';
 export { createLoopCommandManager } from './command';
-export { createLoopNudgeHook } from './hook';
 export { runReviewerWithNudge } from './reviewer';
 export { createSubmitReviewResultTool, createSubmitReviewTool } from './tools';
 

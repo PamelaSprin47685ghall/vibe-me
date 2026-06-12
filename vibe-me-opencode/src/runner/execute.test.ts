@@ -7,10 +7,13 @@ import { join } from 'node:path';
 import {
   abort,
   cleanupJob,
+  createJobRegistry,
   type ExecuteResult,
   execute,
   getActiveJobs,
 } from 'engine/runner';
+
+const jobs = createJobRegistry();
 
 const hasNpx = (() => {
   try {
@@ -24,21 +27,20 @@ const itIfNpx = hasNpx ? it : it.skip;
 
 describe('execute', () => {
   beforeEach(() => {
-    const jobs = getActiveJobs();
-    for (const [sessionId] of jobs) {
-      cleanupJob(sessionId);
+    for (const [sessionId] of getActiveJobs(jobs)) {
+      cleanupJob(jobs, sessionId);
     }
   });
 
   afterEach(() => {
-    const jobs = getActiveJobs();
-    for (const [sessionId] of jobs) {
-      cleanupJob(sessionId);
+    for (const [sessionId] of getActiveJobs(jobs)) {
+      cleanupJob(jobs, sessionId);
     }
   });
 
   it('should execute fast shell command and return synchronously', async () => {
     const result: ExecuteResult = await execute({
+      jobs,
       sessionId: 'test-fast-shell',
       program: 'echo "hello"',
       language: 'shell',
@@ -50,6 +52,7 @@ describe('execute', () => {
 
   it('should execute fast Python code and return synchronously', async () => {
     const result: ExecuteResult = await execute({
+      jobs,
       sessionId: 'test-fast-python',
       program: 'print("hello from python")',
       language: 'python',
@@ -63,6 +66,7 @@ describe('execute', () => {
     'should background slow JavaScript code (no real-time wait)',
     async () => {
       const result: ExecuteResult = await execute({
+        jobs,
         sessionId: 'test-bg-js',
         program: 'setInterval(() => {}, 60000);',
         language: 'javascript',
@@ -71,7 +75,7 @@ describe('execute', () => {
 
       expect(result.background).toBe(true);
       expect(result.jobId).toBe('test-bg-js');
-      abort('test-bg-js');
+      abort(jobs, 'test-bg-js');
     },
   );
 
@@ -79,6 +83,7 @@ describe('execute', () => {
     'should background JavaScript with CJS require prelude (no real-time wait)',
     async () => {
       const result: ExecuteResult = await execute({
+        jobs,
         sessionId: 'test-bg-js-require',
         program: [
           'const path = require("node:path");',
@@ -89,7 +94,7 @@ describe('execute', () => {
       });
 
       expect(result.background).toBe(true);
-      abort('test-bg-js-require');
+      abort(jobs, 'test-bg-js-require');
     },
   );
 
@@ -107,6 +112,7 @@ describe('execute', () => {
       );
       try {
         const result: ExecuteResult = await execute({
+          jobs,
           sessionId: 'test-bg-js-relimport',
           program: [
             'import { value } from "./fixture-relimport.mjs";',
@@ -117,7 +123,7 @@ describe('execute', () => {
           cwd: tmpDir,
         });
         expect(result.background).toBe(true);
-        abort('test-bg-js-relimport');
+        abort(jobs, 'test-bg-js-relimport');
       } finally {
         rmSync(tmpDir, { recursive: true, force: true });
       }
@@ -126,6 +132,7 @@ describe('execute', () => {
 
   it('should background slow commands', async () => {
     const result: ExecuteResult = await execute({
+      jobs,
       sessionId: 'test-slow',
       program: 'sleep 10',
       language: 'shell',
@@ -138,6 +145,7 @@ describe('execute', () => {
 
   it('should block duplicate execution', async () => {
     await execute({
+      jobs,
       sessionId: 'test-duplicate',
       program: 'sleep 10',
       language: 'shell',
@@ -146,6 +154,7 @@ describe('execute', () => {
 
     try {
       await execute({
+        jobs,
         sessionId: 'test-duplicate',
         program: 'echo "should fail"',
         language: 'shell',

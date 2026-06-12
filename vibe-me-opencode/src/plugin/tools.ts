@@ -1,4 +1,5 @@
 import type { PluginInput } from '@opencode-ai/plugin';
+import type { ReviewStore } from 'engine/review';
 import { createBrowserTool } from '../browser/index.js';
 import { createEditorTool } from '../editor/index.js';
 import { createFuzzyFindTool, createFuzzyGrepTool } from '../fuzzy/index.js';
@@ -6,23 +7,23 @@ import { createGreperTool } from '../greper/index.js';
 import { createSubmitReviewResultTool, createSubmitReviewTool } from '../loop/index.js';
 import { createOllamaWebFetchTool, createOllamaWebSearchTool } from '../ollama-web/index.js';
 import { createReverieTool } from '../reverie/index.js';
-import { createRunnerAbortTool, createRunnerTool, createRunnerWaitTool } from '../runner/index.js';
+import { createRunnerAbortTool, createRunnerTool, createRunnerWaitTool, opencodeRunnerJobs } from '../runner/index.js';
 
-export function createTools(ctx: PluginInput, nudgeTool: Record<string, unknown>) {
+export function createTools(ctx: PluginInput, reviewStore: ReviewStore, nudgeTool: Record<string, unknown>) {
   return {
     ...nudgeTool,
     editor: createEditorTool(ctx),
     greper: createGreperTool(ctx),
     reverie: createReverieTool(ctx),
-    submit_review: createSubmitReviewTool(ctx),
-    submit_review_result: createSubmitReviewResultTool(),
+    submit_review: createSubmitReviewTool(ctx, reviewStore),
+    submit_review_result: createSubmitReviewResultTool(reviewStore),
     webfetch: createOllamaWebFetchTool(),
     websearch: createOllamaWebSearchTool(),
-    runner: createRunnerTool(ctx),
+    runner: createRunnerTool(ctx, opencodeRunnerJobs),
     browser: createBrowserTool(ctx),
     fuzzy_find: createFuzzyFindTool(),
     fuzzy_grep: createFuzzyGrepTool(),
-    runner_wait: createRunnerWaitTool(),
-    runner_abort: createRunnerAbortTool(),
+    runner_wait: createRunnerWaitTool(opencodeRunnerJobs),
+    runner_abort: createRunnerAbortTool(opencodeRunnerJobs),
   };
 }

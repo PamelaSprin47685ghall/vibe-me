@@ -1,10 +1,6 @@
 import { afterEach, describe, expect, mock, test } from 'bun:test';
 import {
-  activateReview,
-  clearReviewSessions,
-  isReviewActive,
-  setPendingReview,
-  tryLockReview,
+  createReviewStore,
 } from 'engine/review';
 import {
   createSubmitReviewResultTool,
@@ -13,16 +9,15 @@ import {
 } from './index';
 import { createMockContext } from './test-utils';
 
-afterEach(() => {
-  clearReviewSessions();
-});
-
 describe('createSubmitReviewResultTool', () => {
   test('resolves pending result with null feedback (accept)', async () => {
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('reviewer-1', 'task');
+    reviewStore.tryLockReview('reviewer-1');
     const d = createDeferred<any>();
-    setPendingReview('reviewer-1', (result) => d.resolve(result));
+    reviewStore.setPendingReview('reviewer-1', (result) => d.resolve(result));
 
-    const reviewTool = createSubmitReviewResultTool();
+    const reviewTool = createSubmitReviewResultTool(reviewStore);
     const result = await (reviewTool as any).execute(
       { feedback: null },
       { sessionID: 'reviewer-1' },
@@ -32,10 +27,13 @@ describe('createSubmitReviewResultTool', () => {
   });
 
   test('resolves pending result with feedback (reject)', async () => {
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('reviewer-1', 'task');
+    reviewStore.tryLockReview('reviewer-1');
     const d = createDeferred<any>();
-    setPendingReview('reviewer-1', (result) => d.resolve(result));
+    reviewStore.setPendingReview('reviewer-1', (result) => d.resolve(result));
 
-    const reviewTool = createSubmitReviewResultTool();
+    const reviewTool = createSubmitReviewResultTool(reviewStore);
     const result = await (reviewTool as any).execute(
       { feedback: 'Fix the error handling' },
       { sessionID: 'reviewer-1' },
@@ -45,7 +43,8 @@ describe('createSubmitReviewResultTool', () => {
   });
 
   test('returns error when no pending review', async () => {
-    const reviewTool = createSubmitReviewResultTool();
+    const reviewStore = createReviewStore();
+    const reviewTool = createSubmitReviewResultTool(reviewStore);
     const result = await (reviewTool as any).execute(
       { feedback: null },
       { sessionID: 'unknown-session' },
@@ -55,10 +54,13 @@ describe('createSubmitReviewResultTool', () => {
   });
 
   test('treats empty string as null (accept)', async () => {
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('reviewer-1', 'task');
+    reviewStore.tryLockReview('reviewer-1');
     const d = createDeferred<any>();
-    setPendingReview('reviewer-1', (result) => d.resolve(result));
+    reviewStore.setPendingReview('reviewer-1', (result) => d.resolve(result));
 
-    const reviewTool = createSubmitReviewResultTool();
+    const reviewTool = createSubmitReviewResultTool(reviewStore);
     const result = await (reviewTool as any).execute(
       { feedback: '   ' },
       { sessionID: 'reviewer-1' },
@@ -70,8 +72,9 @@ describe('createSubmitReviewResultTool', () => {
 
 describe('createSubmitReviewTool', () => {
   test('rejects when session is not in loop mode', async () => {
+    const reviewStore = createReviewStore();
     const ctx = createMockContext();
-    const tool = createSubmitReviewTool(ctx);
+    const tool = createSubmitReviewTool(ctx, reviewStore);
     const result = await (tool as any).execute(
       { report: 'did stuff', affectedFiles: ['a.ts'] },
       { sessionID: 'ses-1', directory: '/tmp' },
@@ -80,11 +83,12 @@ describe('createSubmitReviewTool', () => {
   });
 
   test('rejects concurrent review attempts', async () => {
-    activateReview('ses-1', 'task');
-    tryLockReview('ses-1');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'task');
+    reviewStore.tryLockReview('ses-1');
 
     const ctx = createMockContext();
-    const tool = createSubmitReviewTool(ctx);
+    const tool = createSubmitReviewTool(ctx, reviewStore);
     const result = await (tool as any).execute(
       { report: 'did stuff', affectedFiles: ['a.ts'] },
       { sessionID: 'ses-1', directory: '/tmp' },
@@ -93,31 +97,33 @@ describe('createSubmitReviewTool', () => {
   });
 
   test('releases lock when reviewer session creation fails', async () => {
-    activateReview('ses-1', 'task');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'task');
 
     const ctx = createMockContext();
     ctx.client.session.create = mock(async () => ({ data: { id: undefined } }));
 
-    const tool = createSubmitReviewTool(ctx);
+    const tool = createSubmitReviewTool(ctx, reviewStore);
     const result = await (tool as any).execute(
       { report: 'did stuff', affectedFiles: ['a.ts'] },
       { sessionID: 'ses-1', directory: '/tmp' },
     );
 
     expect(result).toContain('Failed to create reviewer session');
-    expect(isReviewActive('ses-1')).toBe(true);
-    expect(tryLockReview('ses-1')).toBe(true);
+    expect(reviewStore.isReviewActive('ses-1')).toBe(true);
+    expect(reviewStore.tryLockReview('ses-1')).toBe(true);
   });
 
   test('releases lock when client.session.create throws', async () => {
-    activateReview('ses-1', 'task');
+    const reviewStore = createReviewStore();
+    reviewStore.activateReview('ses-1', 'task');
 
     const ctx = createMockContext();
     ctx.client.session.create = mock(async () => {
       throw new Error('Session creation network error');
     });
 
-    const tool = createSubmitReviewTool(ctx);
+    const tool = createSubmitReviewTool(ctx, reviewStore);
     await expect(
       (tool as any).execute(
         { report: 'did stuff', affectedFiles: ['a.ts'] },
@@ -125,7 +131,7 @@ describe('createSubmitReviewTool', () => {
       ),
     ).rejects.toThrow('Session creation network error');
 
-    expect(isReviewActive('ses-1')).toBe(true);
-    expect(tryLockReview('ses-1')).toBe(true);
+    expect(reviewStore.isReviewActive('ses-1')).toBe(true);
+    expect(reviewStore.tryLockReview('ses-1')).toBe(true);
   });
 });
