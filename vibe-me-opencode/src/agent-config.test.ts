@@ -3,11 +3,9 @@ import { applyAgentConfig } from './agent-config.js';
 
 describe('applyAgentConfig', () => {
   it('merges built-in agents and adds an orchestrator entry', () => {
-    const opencodeConfig: Record<string, unknown> = {};
-    applyAgentConfig(opencodeConfig, { 'test-mcp': { type: 'local' } });
+    const result = applyAgentConfig({}, { 'test-mcp': { type: 'local' } });
 
-    const agents = opencodeConfig.agent as Record<string, unknown>;
-
+    const agents = result.agent as Record<string, unknown>;
     expect(agents).toBeDefined();
     expect(agents.editor).toBeDefined();
     expect(agents.summarizer).toBeDefined();
@@ -20,12 +18,12 @@ describe('applyAgentConfig', () => {
   });
 
   it('reapplies user entries onto built-in defaults', () => {
-    const opencodeConfig: Record<string, unknown> = {
-      agent: { editor: { someUserField: 'x' } },
-    };
-    applyAgentConfig(opencodeConfig, {});
+    const result = applyAgentConfig(
+      { agent: { editor: { someUserField: 'x' } } },
+      {},
+    );
 
-    const agents = opencodeConfig.agent as Record<string, unknown>;
+    const agents = result.agent as Record<string, unknown>;
     const editor = agents.editor as Record<string, unknown>;
 
     expect(editor.someUserField).toBe('x');
@@ -34,15 +32,14 @@ describe('applyAgentConfig', () => {
   });
 
   it('drops legacy basher/runner entries entirely', () => {
-    const opencodeConfig: Record<string, unknown> = {
-      agent: { basher: { customField: 'from-basher' } },
-    };
-    applyAgentConfig(opencodeConfig, {});
+    const result = applyAgentConfig(
+      { agent: { basher: { customField: 'from-basher' } } },
+      {},
+    );
 
-    const agents = opencodeConfig.agent as Record<string, unknown>;
+    const agents = result.agent as Record<string, unknown>;
     expect(agents.basher).toBeUndefined();
     expect(agents.runner).toBeUndefined();
-    // No agent inherits the legacy basher customization
     for (const name of Object.keys(agents)) {
       const entry = agents[name] as Record<string, unknown> | undefined;
       expect(entry?.customField).toBeUndefined();
@@ -50,32 +47,27 @@ describe('applyAgentConfig', () => {
   });
 
   it('injects mcps when opencodeConfig.mcp is absent', () => {
-    const opencodeConfig: Record<string, unknown> = {};
     const mcps = { 'test-mcp': { type: 'local' } };
-    applyAgentConfig(opencodeConfig, mcps);
+    const result = applyAgentConfig({}, mcps);
 
-    expect(opencodeConfig.mcp).toEqual(mcps);
-    expect((opencodeConfig.mcp as Record<string, unknown>)['test-mcp']).toEqual({ type: 'local' });
+    expect(result.mcp).toEqual(mcps);
+    expect((result.mcp as Record<string, unknown>)['test-mcp']).toEqual({ type: 'local' });
   });
 
   it('injects mcps into an existing opencodeConfig.mcp', () => {
-    const opencodeConfig: Record<string, unknown> = {
-      mcp: { existing: { command: 'x' } },
-    };
-    const mcps = { 'test-mcp': { type: 'local' } };
-    applyAgentConfig(opencodeConfig, mcps);
+    const result = applyAgentConfig(
+      { mcp: { existing: { command: 'x' } } },
+      { 'test-mcp': { type: 'local' } },
+    );
 
-    const mcp = opencodeConfig.mcp as Record<string, unknown>;
-
+    const mcp = result.mcp as Record<string, unknown>;
     expect(mcp.existing).toEqual({ command: 'x' });
     expect(mcp['test-mcp']).toEqual({ type: 'local' });
   });
 
   it('constructs orchestrator with tools, permission, and empty mcps', () => {
-    const opencodeConfig: Record<string, unknown> = {};
-    applyAgentConfig(opencodeConfig, {});
-
-    const orchestrator = (opencodeConfig.agent as Record<string, unknown>).orchestrator as Record<string, unknown>;
+    const result = applyAgentConfig({}, {});
+    const orchestrator = (result.agent as Record<string, unknown>).orchestrator as Record<string, unknown>;
 
     expect(orchestrator).toBeDefined();
     expect(typeof orchestrator.tools).toBe('object');
@@ -85,10 +77,8 @@ describe('applyAgentConfig', () => {
   });
 
   it('fills missing permission keys from role defaults', () => {
-    const opencodeConfig: Record<string, unknown> = {};
-    applyAgentConfig(opencodeConfig, {});
-
-    const editor = (opencodeConfig.agent as Record<string, unknown>).editor as Record<string, unknown>;
+    const result = applyAgentConfig({}, {});
+    const editor = (result.agent as Record<string, unknown>).editor as Record<string, unknown>;
     const permission = editor.permission as Record<string, string>;
 
     expect(typeof permission).toBe('object');
@@ -101,12 +91,12 @@ describe('applyAgentConfig', () => {
   });
 
   it('migrates stealth-browser-mcp_star to stealth-browser-mcp_*', () => {
-    const opencodeConfig: Record<string, unknown> = {
-      agent: { custom: { permission: { 'stealth-browser-mcp_star': 'allow' } } },
-    };
-    applyAgentConfig(opencodeConfig, {});
+    const result = applyAgentConfig(
+      { agent: { custom: { permission: { 'stealth-browser-mcp_star': 'allow' } } } },
+      {},
+    );
 
-    const custom = (opencodeConfig.agent as Record<string, unknown>).custom as Record<string, unknown>;
+    const custom = (result.agent as Record<string, unknown>).custom as Record<string, unknown>;
     const permission = custom.permission as Record<string, string>;
 
     expect(permission['stealth-browser-mcp_*']).toBe('allow');
@@ -114,12 +104,8 @@ describe('applyAgentConfig', () => {
   });
 
   it('uses Reverie role defaults for unknown agent names', () => {
-    const opencodeConfig: Record<string, unknown> = {
-      agent: { unknown: {} },
-    };
-    applyAgentConfig(opencodeConfig, {});
-
-    const unknown = (opencodeConfig.agent as Record<string, unknown>).unknown as Record<string, unknown>;
+    const result = applyAgentConfig({ agent: { unknown: {} } }, {});
+    const unknown = (result.agent as Record<string, unknown>).unknown as Record<string, unknown>;
     const permission = unknown.permission as Record<string, string>;
 
     expect(typeof permission).toBe('object');

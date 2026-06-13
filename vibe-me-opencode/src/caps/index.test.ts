@@ -53,6 +53,26 @@ describe('createCapsMessagesInjector', () => {
     expect(output.messages[2]).toBe(original);
   });
 
+  test('caps-only messages are preserved unchanged', async () => {
+    const findCapsFiles: FindCapsFiles = async () => [];
+    const injector = createCapsMessagesInjector('/root', [], findCapsFiles);
+    const userMessage = {
+      info: { id: 'caps-synth-user-only', agent: 'orchestrator' },
+      parts: [],
+    };
+    const assistantMessage = {
+      info: { id: 'caps-synth-assistant-only', agent: 'orchestrator' },
+      parts: [],
+    };
+    const output = {
+      messages: [userMessage, assistantMessage],
+    };
+    await injector.handleMessagesTransform(output);
+    expect(output.messages.length).toBe(2);
+    expect(output.messages[0]).toBe(userMessage);
+    expect(output.messages[1]).toBe(assistantMessage);
+  });
+
   test('excluded agent skips injection', async () => {
     const findCapsFiles: FindCapsFiles = async () => [
       { filePath: '/caps/a.md', content: 'hi' },

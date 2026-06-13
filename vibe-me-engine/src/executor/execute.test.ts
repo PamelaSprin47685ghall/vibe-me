@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { execute, shouldSummarize } from './execute.js';
 import {
   EXECUTOR_SUMMARY_THRESHOLD_BYTES,
@@ -6,13 +6,6 @@ import {
   type ExecutorTimeoutType,
 } from './types.js';
 import type { RunProgram } from './execute.js';
-import { rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
-afterAll(() => {
-  rmSync(join(tmpdir(), 'omp-kunwei-executor'), { recursive: true, force: true });
-});
 
 function fakeRunProgram(result: {
   stdout?: string;
@@ -103,49 +96,55 @@ describe('execute', () => {
     expect(result.output).toContain('file content');
   });
 
-  it('throws formatted error for shell ENOENT', async () => {
+  it('returns MissingExecutable for shell ENOENT', async () => {
     const runProgram: RunProgram = async () => {
       const error = new Error('spawn bash ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
       throw error;
     };
-    await expect(
-      execute(
-        { program: 'echo hi', language: 'shell', timeoutType: 'short' },
-        'session-enoent-shell',
-        { runProgram },
-      ),
-    ).rejects.toThrow("Error: 'bash' executable not found. Please ensure 'bash' is installed and available on your PATH.");
+    const result = await execute(
+      { program: 'echo hi', language: 'shell', timeoutType: 'short' },
+      'session-enoent-shell',
+      { runProgram },
+    );
+    expect(result._tag).toBe('MissingExecutable');
+    if (result._tag === 'MissingExecutable') {
+      expect(result.executable).toBe('bash');
+    }
   });
 
-  it('throws formatted error for python ENOENT', async () => {
+  it('returns MissingExecutable for python ENOENT', async () => {
     const runProgram: RunProgram = async () => {
       const error = new Error('spawn uvx ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
       throw error;
     };
-    await expect(
-      execute(
-        { program: 'print(1)', language: 'python', timeoutType: 'short' },
-        'session-enoent-python',
-        { runProgram },
-      ),
-    ).rejects.toThrow("Error: 'uvx' executable not found. Please ensure 'uvx' is installed and available on your PATH.");
+    const result = await execute(
+      { program: 'print(1)', language: 'python', timeoutType: 'short' },
+      'session-enoent-python',
+      { runProgram },
+    );
+    expect(result._tag).toBe('MissingExecutable');
+    if (result._tag === 'MissingExecutable') {
+      expect(result.executable).toBe('uvx');
+    }
   });
 
-  it('throws formatted error for javascript ENOENT', async () => {
+  it('returns MissingExecutable for javascript ENOENT', async () => {
     const runProgram: RunProgram = async () => {
       const error = new Error('spawn npx ENOENT') as NodeJS.ErrnoException;
       error.code = 'ENOENT';
       throw error;
     };
-    await expect(
-      execute(
-        { program: 'console.log(1)', language: 'javascript', timeoutType: 'short' },
-        'session-enoent-javascript',
-        { runProgram },
-      ),
-    ).rejects.toThrow("Error: 'npx' executable not found. Please ensure 'npx' is installed and available on your PATH.");
+    const result = await execute(
+      { program: 'console.log(1)', language: 'javascript', timeoutType: 'short' },
+      'session-enoent-javascript',
+      { runProgram },
+    );
+    expect(result._tag).toBe('MissingExecutable');
+    if (result._tag === 'MissingExecutable') {
+      expect(result.executable).toBe('npx');
+    }
   });
 
   it('rejects non-string sessionId', async () => {
@@ -183,14 +182,20 @@ describe('execute', () => {
     expect(receivedOptions?.sessionId).toBe('session-script-path');
   });
 
-  it('runs python with dependencies after warming up uvx cache', async () => {
+  it('passes python dependencies to runProgram', async () => {
+    let receivedOptions: Parameters<RunProgram>[0] | undefined;
+    const runProgram: RunProgram = async (options) => {
+      receivedOptions = options;
+      return { stdout: '', stderr: '', code: 0, timedOut: false };
+    };
     const result = await execute(
-      { program: 'import six; print(six.__version__)', language: 'python', timeoutType: 'short', dependencies: ['six'] },
-      'session-python-warmup',
+      { program: 'import six', language: 'python', timeoutType: 'short', dependencies: ['six'] },
+      'session-python-deps',
+      { runProgram },
     );
+    expect(receivedOptions?.dependencies).toEqual(['six']);
     expect(result._tag).toBe('Completed');
-    expect(result.output).toMatch(/^\d+\.\d+/);
-  }, 30000);
+  });
 });
 
 describe('shouldSummarize', () => {

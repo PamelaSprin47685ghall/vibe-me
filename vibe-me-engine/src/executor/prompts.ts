@@ -12,7 +12,7 @@ export function buildExecutorSummaryPrompt(
   result: ExecuteResult,
 ): string {
   const depInfo = options.dependencies?.length ? `Dependencies: ${options.dependencies.join(', ')}\n\n` : '';
-  const tagHeader = describeResultTag(result._tag, options.timeoutType);
+  const tagHeader = describeResultTag(result, options.timeoutType);
   return [
     tagHeader,
     '',
@@ -28,10 +28,11 @@ export function buildExecutorSummaryPrompt(
   ].filter(Boolean).join('\n');
 }
 
-function describeResultTag(tag: ExecuteResult['_tag'], timeoutType: ExecutorTimeoutType): string {
-  switch (tag) {
+function describeResultTag(result: ExecuteResult, timeoutType: ExecutorTimeoutType): string {
+  switch (result._tag) {
     case 'Completed': return 'The following program has been executed (synchronous).';
     case 'Truncated': return `The following program exceeded the ${timeoutType} timeout and was killed. Partial output is below.`;
     case 'Failed': return 'The following program exited with a non-zero status.';
+    case 'MissingExecutable': return `The following program could not start because '${result.executable}' was not found.`;
   }
 }

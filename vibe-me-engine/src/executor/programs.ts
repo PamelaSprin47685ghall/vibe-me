@@ -46,7 +46,7 @@ export async function runExecutorProgramWithDeps(
   childProcess.stdout?.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
   childProcess.stderr?.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     let settled = false;
     const settle = (code: number | null, timedOut: boolean) => {
       if (settled) return;
@@ -61,9 +61,9 @@ export async function runExecutorProgramWithDeps(
       settle(null, true);
     }, timeoutMs);
 
-    childProcess.on('error', () => {
+    childProcess.on('error', (error) => {
       if (timer !== null) clock.clearTimeout(timer);
-      settle(null, false);
+      reject(error);
     });
     childProcess.on('close', (code) => {
       if (timer !== null) clock.clearTimeout(timer);

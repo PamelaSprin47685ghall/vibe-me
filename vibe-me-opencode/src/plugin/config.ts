@@ -8,7 +8,8 @@ export function createConfigHandler(loopCommandManager: LoopCommandManager) {
   const mcps = getMcpConfig();
 
   return async (opencodeConfig: Record<string, unknown>) => {
-    applyAgentConfig(opencodeConfig, mcps);
+    const next = applyAgentConfig(opencodeConfig, mcps);
+    Object.assign(opencodeConfig, next);
     loopCommandManager.registerCommand(opencodeConfig);
   };
 }

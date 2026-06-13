@@ -59,7 +59,7 @@ describe('SessionRegistry pure reducer', () => {
     });
 
     it('evict removes stale sessions', () => {
-      const cutoff = Date.now() + 1;
+      const cutoff = 2000;
       let r = reduce(emptyRegistry(), { type: 'activate', id: 's1', task: 't', createdAt: 1000 });
       r = reduce(r, { type: 'evict', cutoff });
       expect(r.size).toBe(0);

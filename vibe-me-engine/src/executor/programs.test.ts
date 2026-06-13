@@ -126,7 +126,7 @@ describe('runExecutorProgramWithDeps', () => {
     expect(killed).toHaveLength(0);
   });
 
-  it('resolves with null code on error event', async () => {
+  it('rejects on error event', async () => {
     const child = createFakeChildProcess();
     const clock = createFakeClock();
     const { kill, killed } = createKillSpy();
@@ -135,10 +135,7 @@ describe('runExecutorProgramWithDeps', () => {
     child.stdoutEmitter.emit('data', Buffer.from('partial output'));
     child.emitError(new Error('spawn failed'));
 
-    const result = await promise;
-    expect(result.code).toBeNull();
-    expect(result.timedOut).toBe(false);
-    expect(result.stdout).toBe('partial output');
+    await expect(promise).rejects.toThrow('spawn failed');
     expect(killed).toHaveLength(0);
   });
 

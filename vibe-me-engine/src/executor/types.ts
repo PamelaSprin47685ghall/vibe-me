@@ -35,7 +35,13 @@ export interface ExecuteError {
   readonly output: string;
 }
 
-export type ExecuteResult = ExecuteSuccess | ExecuteTruncated | ExecuteError;
+export interface ExecuteMissingExecutable {
+  readonly _tag: 'MissingExecutable';
+  readonly executable: string;
+  readonly output: string;
+}
+
+export type ExecuteResult = ExecuteSuccess | ExecuteTruncated | ExecuteError | ExecuteMissingExecutable;
 
 export interface StrippedPipe {
   pipe: string;

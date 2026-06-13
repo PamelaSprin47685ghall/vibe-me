@@ -109,26 +109,28 @@ function addMissingBuiltins(
   added: Set<string>,
   builtins: AgentMap,
   userAgent: AgentMap,
-): void {
+): AgentMap {
+  const next: AgentMap = { ...finalAgents };
   for (const name of RENAMED_AGENTS) {
     if (added.has(name)) continue;
-    finalAgents[name] = buildBuiltinAgent(name, builtins, userAgent);
+    next[name] = buildBuiltinAgent(name, builtins, userAgent);
     added.add(name);
   }
+  return next;
 }
 
 function addMissingOrchestrator(
   finalAgents: AgentMap,
   added: Set<string>,
   userAgent: AgentMap,
-): void {
-  if (added.has('orchestrator')) return;
-  finalAgents.orchestrator = buildOrchestratorAgent(userAgent);
+): AgentMap {
+  if (added.has('orchestrator')) return finalAgents;
+  return { ...finalAgents, orchestrator: buildOrchestratorAgent(userAgent) };
 }
 
 function buildFinalAgents(userAgent: AgentMap): AgentMap {
   const builtins = collectBuiltinAgents();
-  const finalAgents: AgentMap = {};
+  let finalAgents: AgentMap = {};
   const added = new Set<string>();
 
   for (const [name, entry] of Object.entries(userAgent)) {
@@ -141,22 +143,32 @@ function buildFinalAgents(userAgent: AgentMap): AgentMap {
     added.add(name);
   }
 
-  addMissingBuiltins(finalAgents, added, builtins, userAgent);
-  addMissingOrchestrator(finalAgents, added, userAgent);
+  finalAgents = addMissingBuiltins(finalAgents, added, builtins, userAgent);
+  finalAgents = addMissingOrchestrator(finalAgents, added, userAgent);
 
   return finalAgents;
+}
+
+export function buildAgentConfig(
+  userAgent: AgentMap,
+  mcps: Record<string, unknown>,
+): { agent: AgentMap; mcp: Record<string, unknown> } {
+  return {
+    agent: buildFinalAgents(userAgent),
+    mcp: mcps,
+  };
 }
 
 export function applyAgentConfig(
   opencodeConfig: Record<string, unknown>,
   mcps: Record<string, unknown>,
-): void {
+): Record<string, unknown> {
   const userAgent = (opencodeConfig.agent as AgentMap) ?? {};
-  const finalAgents = buildFinalAgents(userAgent);
-
   const configMcp = opencodeConfig.mcp as Record<string, unknown> | undefined;
-  if (configMcp) Object.assign(configMcp, mcps);
-  else opencodeConfig.mcp = { ...mcps };
+  const mcp = configMcp ? { ...configMcp, ...mcps } : { ...mcps };
 
-  opencodeConfig.agent = finalAgents;
+  return {
+    ...opencodeConfig,
+    ...buildAgentConfig(userAgent, mcp),
+  };
 }

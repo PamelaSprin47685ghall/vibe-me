@@ -102,7 +102,7 @@ describe("loop-review", () => {
     const result = await command.execute("ws1", "task");
 
     expect(delegateToSubAgent).toHaveBeenCalled();
-    expect(result).toContain("Pre-review passed");
+    expect(result).toContain("Loop mode is active. Pre-review passed");
     expect(reviewStore.activateReview).toHaveBeenCalledWith(
       "ws1",
       "task",
@@ -154,12 +154,12 @@ describe("loop-review", () => {
     const result = await command.execute("ws1", "task");
 
     expect(delegateToSubAgent).toHaveBeenCalled();
-    expect(result).toContain("Pre-review passed");
+    expect(result).toContain("Loop mode is active (pre-review timed out)");
     expect(reviewStore.activateReview).toHaveBeenCalledWith("ws1", "task", 100);
     releaseDelegate("FAIL");
   });
 
-  test("pre-review error resolves to PASS", async () => {
+  test("pre-review error skips pre-review", async () => {
     const reviewStore = createFakeReviewStore();
     const delegateToSubAgent = vi.fn(() =>
       Promise.reject(new Error("subagent failed")),
@@ -174,7 +174,7 @@ describe("loop-review", () => {
 
     const result = await command.execute("ws1", "task");
 
-    expect(result).toContain("Pre-review passed");
+    expect(result).toContain("Loop mode is active (pre-review failed)");
     expect(reviewStore.activateReview).toHaveBeenCalledWith(
       "ws1",
       "task",

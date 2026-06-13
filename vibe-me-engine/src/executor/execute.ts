@@ -26,13 +26,16 @@ export function formatExecutorSafetyWarning(output: string, program: string, lan
 }
 
 function resolveProjectDir(language: ExecutorLanguage, sessionId: string): string | undefined {
-  if (language === 'javascript') return getExecutorProjectDir(sessionId);
-  if (language === 'python') return getExecutorProjectDir(sessionId);
+  if (language === 'javascript' || language === 'python') return getExecutorProjectDir(sessionId);
   return undefined;
 }
 
 function assertString(value: unknown, name: string): asserts value is string {
   if (typeof value !== 'string') throw new TypeError(`executor: ${name} must be a string`);
+}
+
+function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
+  return typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'ENOENT';
 }
 
 export async function execute(
@@ -70,10 +73,13 @@ export async function execute(
     }
     return { _tag: 'Completed', output: output || '(no output)' };
   } catch (error) {
-    const err = error as NodeJS.ErrnoException;
-    if (err?.code === 'ENOENT') {
+    if (isErrnoException(error)) {
       const executable = language === 'python' ? 'uvx' : language === 'javascript' ? 'npx' : process.platform === 'win32' ? 'powershell.exe' : 'bash';
-      throw new Error(`Error: '${executable}' executable not found. Please ensure '${executable}' is installed and available on your PATH.`);
+      return {
+        _tag: 'MissingExecutable',
+        executable,
+        output: `Error: '${executable}' executable not found. Please ensure '${executable}' is installed and available on your PATH.`,
+      };
     }
     throw error;
   }

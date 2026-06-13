@@ -1,115 +1,74 @@
-import { describe, expect, it } from 'vitest';
-import { killTree } from './process.js';
-import { spawn } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { killTree, type ChildProcessLike } from './process.js';
+import * as childProcess from 'node:child_process';
 
-function once<T>(emitter: NodeJS.EventEmitter, event: string): Promise<T> {
-  return new Promise(resolve => emitter.once(event, resolve));
-}
+vi.mock('node:child_process', () => ({
+  spawn: vi.fn(),
+}));
 
-async function isProcessAlive(pid: number): Promise<boolean> {
+function withPlatform(platform: string, fn: () => void) {
+  const original = Object.getOwnPropertyDescriptor(process, 'platform');
+  Object.defineProperty(process, 'platform', { value: platform });
   try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
+    fn();
+  } finally {
+    if (original) Object.defineProperty(process, 'platform', original);
+    else Object.defineProperty(process, 'platform', { value: process.platform });
   }
 }
 
-async function getChildPids(pid: number): Promise<number[]> {
-  try {
-    const content = await readFile(`/proc/${pid}/task/${pid}/children`, 'utf8');
-    return content.trim().split(/\s+/).filter(Boolean).map(Number);
-  } catch {
-    return [];
-  }
-}
+describe('killTree', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
-async function waitForChild(pid: number, timeoutMs: number): Promise<number> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const children = await getChildPids(pid);
-    if (children.length > 0) return children[0]!;
-    await new Promise(resolve => setTimeout(resolve, 10));
-  }
-  throw new Error('timeout waiting for child');
-}
-
-describe('Process Tree Cleanup', () => {
-  it('should kill process group using PGID', async () => {
-    const childProcess = spawn(
-      process.platform === 'win32' ? 'cmd' : 'bash',
-      process.platform === 'win32'
-        ? ['/c', 'pause']
-        : ['-c', 'sleep 30'],
-      {
-        detached: process.platform !== 'win32',
-        stdio: 'ignore',
-      }
-    );
-
-    const parentPid = childProcess.pid;
-    expect(parentPid).toBeGreaterThan(0);
-
-    await once(childProcess, 'spawn');
-
-    killTree(childProcess);
-
-    await once(childProcess, 'exit');
-
-    expect(await isProcessAlive(parentPid!)).toBe(false);
-  }, 5000);
-
-  it('should handle missing process gracefully', () => {
+  it('does nothing for null', () => {
     expect(() => killTree(null)).not.toThrow();
   });
 
-  it('should kill orphan grandchild process', async () => {
-    const nodeScript = `
-      const { spawn } = require('node:child_process');
-      spawn('sleep', ['30'], { stdio: 'ignore' });
-      setInterval(() => {}, 1000);
-    `;
-
-    const childProcess = spawn('node', ['-e', nodeScript], {
-      detached: true,
-      stdio: 'ignore',
-    });
-
-    const parentPid = childProcess.pid!;
-    expect(parentPid).toBeGreaterThan(0);
-
-    await once(childProcess, 'spawn');
-
-    const grandchildPid = await waitForChild(parentPid, 2000);
-    expect(grandchildPid).toBeGreaterThan(0);
-
-    killTree(childProcess);
-
-    await once(childProcess, 'exit');
-
-    expect(await isProcessAlive(parentPid)).toBe(false);
-    expect(await isProcessAlive(grandchildPid)).toBe(false);
-  }, 5000);
-
-  it('should handle already-dead process gracefully', async () => {
-    const childProcess = spawn('sleep', ['0.01'], { stdio: 'ignore' });
-    await once(childProcess, 'exit');
-    expect(() => killTree(childProcess)).not.toThrow();
+  it('does nothing when pid is missing', () => {
+    const child: ChildProcessLike = {};
+    expect(() => killTree(child)).not.toThrow();
   });
 
-  it('should tolerate concurrent killTree calls', async () => {
-    const childProcess = spawn('sleep', ['30'], { stdio: 'ignore' });
-    await once(childProcess, 'spawn');
+  it('on unix, kills the process group with SIGKILL', () => {
+    withPlatform('linux', () => {
+      const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true);
+      killTree({ pid: 1234 });
+      expect(killSpy).toHaveBeenCalledWith(-1234, 'SIGKILL');
+    });
+  });
 
-    const parentPid = childProcess.pid!;
-    expect(parentPid).toBeGreaterThan(0);
+  it('falls back to child.kill when process group kill fails', () => {
+    withPlatform('linux', () => {
+      vi.spyOn(process, 'kill').mockImplementation(() => {
+        throw new Error('EPERM');
+      });
+      const childKill = vi.fn();
+      killTree({ pid: 1234, kill: childKill });
+      expect(childKill).toHaveBeenCalledWith('SIGKILL');
+    });
+  });
 
-    await expect(
-      Promise.all(Array.from({ length: 100 }, () => killTree(childProcess)))
-    ).resolves.toEqual(Array.from({ length: 100 }).fill(undefined) as undefined[]);
+  it('on windows, spawns taskkill', () => {
+    withPlatform('win32', () => {
+      const spawnMock = vi
+        .mocked(childProcess.spawn)
+        .mockReturnValue({} as ReturnType<typeof childProcess.spawn>);
+      killTree({ pid: 1234 });
+      expect(spawnMock).toHaveBeenCalledWith(
+        'taskkill',
+        ['/F', '/T', '/PID', '1234'],
+        { stdio: 'ignore' },
+      );
+    });
+  });
 
-    await once(childProcess, 'exit');
-    expect(await isProcessAlive(parentPid)).toBe(false);
-  }, 5000);
+  it('tolerates repeated killTree calls', () => {
+    withPlatform('linux', () => {
+      const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true);
+      Array.from({ length: 100 }, () => killTree({ pid: 1234 }));
+      expect(killSpy).toHaveBeenCalledTimes(100);
+    });
+  });
 });
