@@ -161,35 +161,45 @@ describe('createHooks', () => {
     expect(otherOutput.args._ui).toBeUndefined();
   });
 
-  it('tool.execute.before rejects invalid _ui from LLM', async () => {
+  it('tool.execute.before returns invalid _ui errors in output.args._ui', async () => {
     const { nudgeHook, loopCommandManager, factories } = makeFakes();
     const hooks = createHooks(ctx, nudgeHook, loopCommandManager, factories);
 
-    await expect(
-      hooks['tool.execute.before'](
-        { tool: 'greper', sessionID: 's1', callID: 'c1' },
-        { args: { intents: ['x'], _ui: { foo: 'bar' } as unknown as string } },
-      ),
-    ).rejects.toThrow('Invalid LLM input for greper: _ui must be a string');
+    const greperOutput = {
+      args: { intents: ['x'], _ui: { foo: 'bar' } as unknown as string },
+    };
+    await hooks['tool.execute.before'](
+      { tool: 'greper', sessionID: 's1', callID: 'c1' },
+      greperOutput,
+    );
+    expect(greperOutput.args._ui).toBe(
+      'Invalid LLM input for greper: _ui must be a string, received object',
+    );
 
-    await expect(
-      hooks['tool.execute.before'](
-        { tool: 'editor', sessionID: 's1', callID: 'c2' },
-        { args: { intents: ['a'], _ui: ['x'] as unknown as string } },
-      ),
-    ).rejects.toThrow('Invalid LLM input for editor: _ui must be a string');
+    const editorOutput = {
+      args: { intents: ['a'], _ui: ['x'] as unknown as string },
+    };
+    await hooks['tool.execute.before'](
+      { tool: 'editor', sessionID: 's1', callID: 'c2' },
+      editorOutput,
+    );
+    expect(editorOutput.args._ui).toBe(
+      'Invalid LLM input for editor: _ui must be a string, received object',
+    );
   });
 
-  it('tool.execute.before rejects non-string greper intents', async () => {
+  it('tool.execute.before returns non-string greper intent errors in output.args._ui', async () => {
     const { nudgeHook, loopCommandManager, factories } = makeFakes();
     const hooks = createHooks(ctx, nudgeHook, loopCommandManager, factories);
 
-    await expect(
-      hooks['tool.execute.before'](
-        { tool: 'greper', sessionID: 's1', callID: 'c1' },
-        { args: { intents: [{ foo: 'bar' }] as unknown as string[] } },
-      ),
-    ).rejects.toThrow(
+    const greperOutput = {
+      args: { intents: [{ foo: 'bar' }] as unknown as string[] },
+    };
+    await hooks['tool.execute.before'](
+      { tool: 'greper', sessionID: 's1', callID: 'c1' },
+      greperOutput,
+    );
+    expect(greperOutput.args._ui).toBe(
       'Invalid LLM input for greper: intents must be an array of strings',
     );
   });

@@ -3,11 +3,8 @@ import { resolve, join } from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { init, parse } from 'es-module-lexer';
 
-let lexerInitPromise: Promise<void> | null = null;
-
-function ensureLexer(): Promise<void> {
-  lexerInitPromise ??= init;
-  return lexerInitPromise;
+async function ensureLexer(): Promise<void> {
+  await init;
 }
 
 export async function ensureJavascriptProject(projectDir: string, dependencies: string[] | undefined): Promise<void> {

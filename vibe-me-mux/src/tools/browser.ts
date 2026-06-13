@@ -24,9 +24,10 @@ export function createBrowserTool(deps: HostDependencies): ToolDefinition {
     description: TOOL_COPY.browser.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const intent = requireString(args, 'intent');
+      const intentResult = requireString(args, 'intent');
+      if (intentResult._tag === 'Err') return intentResult.error;
       const adapter = createEngineAdapter(config, deps);
-      return adapter.promptSubagent({ role: browserRole, prompt: intent, title: "Browser" });
+      return adapter.promptSubagent({ role: browserRole, prompt: intentResult.value, title: "Browser" });
     },
   };
 }

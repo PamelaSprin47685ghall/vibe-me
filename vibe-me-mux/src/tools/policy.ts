@@ -1,11 +1,8 @@
 import { getEffectivePolicyFromString } from "engine/agent-policy";
-import { matchResult } from "engine";
+import { ok, err, type Result } from "engine";
 
-export function deniedToolsFor(role: string): readonly string[] {
-  return matchResult(getEffectivePolicyFromString(role), {
-    Ok: (policy) => policy.deniedTools,
-    Err: (error) => {
-      throw new Error(error);
-    },
-  });
+export function deniedToolsFor(role: string): Result<readonly string[], string> {
+  const policyResult = getEffectivePolicyFromString(role);
+  if (policyResult._tag === 'Err') return err(policyResult.error);
+  return ok(policyResult.value.deniedTools);
 }

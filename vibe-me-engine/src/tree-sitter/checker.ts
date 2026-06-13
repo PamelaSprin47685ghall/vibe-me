@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module';
 
 import hljs from 'highlight.js';
+import { err, ok, type Result } from '../types/general.js';
 import type { SyntaxDiagnostic, SyntaxCheckResult } from '../util/types.js';
 
 // @ts-ignore TS1343
@@ -43,7 +44,7 @@ function syntaxCheckFailed(lang: string, reason: string): SyntaxCheckResult {
   return { ok: false, lang, reason };
 }
 
-function loadNativePack(): NativePack {
+async function loadNativePack(): Promise<Result<NativePack, string>> {
   const { platform, arch } = process;
   const suffix =
     platform === 'darwin' && arch === 'arm64' ? 'darwin-arm64' :
@@ -53,23 +54,24 @@ function loadNativePack(): NativePack {
     platform === 'win32' && arch === 'x64' ? 'win32-x64-msvc' :
     platform === 'win32' && arch === 'arm64' ? 'win32-arm64-msvc' :
     null;
-  if (!suffix) throw new Error(`Unsupported platform: ${platform}-${arch}`);
-  const nativePath = __require.resolve(
-    `@kreuzberg/tree-sitter-language-pack/ts-pack-core-node.${suffix}.node`,
-  );
-  return __require(nativePath) as NativePack;
+  if (!suffix) return err(`Unsupported platform: ${platform}-${arch}`);
+  try {
+    const nativePath = __require.resolve(
+      `@kreuzberg/tree-sitter-language-pack/ts-pack-core-node.${suffix}.node`,
+    );
+    return ok(__require(nativePath) as NativePack);
+  } catch (error) {
+    return err(errorMessage(error));
+  }
 }
 
-let packPromise: Promise<NativePack> | null = null;
+const packPromise: Promise<Result<NativePack, string>> = loadNativePack().then((result) => {
+  if (result._tag === 'Err') return result;
+  try { result.value.downloadAll(); } catch {}
+  return result;
+});
 
-function getPack(): Promise<NativePack> {
-  if (!packPromise) {
-    packPromise = (async () => {
-      const pack = loadNativePack();
-      try { pack.downloadAll(); } catch {}
-      return pack;
-    })();
-  }
+function getPack(): Promise<Result<NativePack, string>> {
   return packPromise;
 }
 
@@ -98,12 +100,11 @@ function findErrorNodes(node: NativeNode): NativeNode[] {
 }
 
 export async function checkSyntax(content: string, filePath: string): Promise<SyntaxCheckResult> {
-  let pack: NativePack;
-  try {
-    pack = await getPack();
-  } catch (error) {
-    return syntaxCheckFailed('', `native language pack load failed: ${errorMessage(error)}`);
+  const packResult = await getPack();
+  if (packResult._tag === 'Err') {
+    return syntaxCheckFailed('', `native language pack load failed: ${packResult.error}`);
   }
+  const pack = packResult.value;
 
   let lang: string;
   try {

@@ -15,6 +15,8 @@ export async function runPreReview(
     taskService: deps.taskService,
   };
   const reviewPrompt = buildReviewPrompt(task);
+  const deniedToolsResult = deniedToolsFor("reviewer");
+  if (deniedToolsResult._tag === 'Err') return { _tag: "Skipped", reason: "subAgentFailed" };
 
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(
@@ -29,7 +31,7 @@ export async function runPreReview(
         aiSettingsAgentId: "plan",
         experiments: {
           subagentRole: "reviewer",
-          toolPolicy: { disabledTools: deniedToolsFor("reviewer") },
+          toolPolicy: { disabledTools: deniedToolsResult.value },
         },
       }),
       timeout,

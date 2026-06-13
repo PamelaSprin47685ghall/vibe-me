@@ -17,7 +17,9 @@ export async function delegateToSubAgent(
   title: string,
   options?: DelegateOptions,
 ): Promise<string> {
-  const workspaceId = requireWorkspaceId(config, title.toLowerCase());
+  const workspaceIdResult = requireWorkspaceId(config, title.toLowerCase());
+  if (workspaceIdResult._tag === 'Err') return workspaceIdResult.error;
+  const workspaceId = workspaceIdResult.value;
   const taskService = config.taskService;
   if (!taskService) throw new Error(`No task service for ${title.toLowerCase()}`);
   const aiSettings = options?.aiSettingsAgentId

@@ -39,7 +39,7 @@ function createChatMessageHandler(nudgeHook: NudgeCoordinator) {
     output: ChatMessageOutput,
   ): Promise<void> => {
     const agent = resolveAgent(input);
-    nudgeHook.handleChatMessage({
+    await nudgeHook.handleChatMessage({
       sessionID: input.sessionID,
       agent,
       parts: output.parts,
@@ -86,7 +86,10 @@ function createToolExecuteBeforeHandler() {
     output: ToolExecuteBeforeOutput,
   ): Promise<void> => {
     const result = transformToolExecuteBefore(input, output.args);
-    if (result._tag === 'Err') throw new Error(result.error);
+    if (result._tag === 'Err') {
+      output.args._ui = result.error;
+      return;
+    }
     if (result.value._ui !== undefined) output.args._ui = result.value._ui;
   };
 }

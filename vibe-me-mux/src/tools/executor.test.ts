@@ -160,14 +160,13 @@ describe("executor tool", () => {
     expect(result).toContain("no taskService");
   });
 
-  test("rejects unknown timeout_type", async () => {
+  test("returns an error string for unknown timeout_type", async () => {
     const { deps } = makeExecutorDeps({ _tag: "Completed", output: SHORT_TEXT });
-    await expect(
-      createExecutorTool(mockDeps, deps).execute(createToolConfig(), {
-        language: "shell",
-        program: "echo x",
-        timeout_type: "medium",
-      } as never),
-    ).rejects.toThrow(/timeout_type/);
+    const result = await createExecutorTool(mockDeps, deps).execute(createToolConfig(), {
+      language: "shell",
+      program: "echo x",
+      timeout_type: "medium",
+    } as never);
+    expect(result).toMatch(/timeout_type/);
   });
 });

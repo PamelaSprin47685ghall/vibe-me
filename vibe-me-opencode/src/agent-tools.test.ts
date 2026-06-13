@@ -23,129 +23,159 @@ function makeToolDefaults(
 describe('getAgentPermissionDefaults', () => {
   test('orchestrator', () => {
     expect(getAgentPermissionDefaults('orchestrator')).toEqual({
-      bash: 'deny',
-      'stealth-browser-mcp_star': 'deny',
-      submit_review_result: 'deny',
-      glob: 'deny',
-      fuzzy_find: 'deny',
-      fuzzy_grep: 'deny',
-      grep: 'deny',
+      _tag: 'Ok',
+      value: {
+        bash: 'deny',
+        'stealth-browser-mcp_star': 'deny',
+        submit_review_result: 'deny',
+        glob: 'deny',
+        fuzzy_find: 'deny',
+        fuzzy_grep: 'deny',
+        grep: 'deny',
+      },
     });
   });
 
   test('editor', () => {
     expect(getAgentPermissionDefaults('editor')).toEqual({
-      bash: 'deny',
-      'stealth-browser-mcp_star': 'deny',
-      submit_review_result: 'deny',
-      fuzzy_find: 'allow',
-      fuzzy_grep: 'allow',
-      grep: 'deny',
-      question: 'deny',
-      todowrite: 'deny',
+      _tag: 'Ok',
+      value: {
+        bash: 'deny',
+        'stealth-browser-mcp_star': 'deny',
+        submit_review_result: 'deny',
+        fuzzy_find: 'allow',
+        fuzzy_grep: 'allow',
+        grep: 'deny',
+        question: 'deny',
+        todowrite: 'deny',
+      },
     });
   });
 
   test('greper', () => {
     expect(getAgentPermissionDefaults('greper')).toEqual({
-      bash: 'deny',
-      'stealth-browser-mcp_star': 'deny',
-      submit_review_result: 'deny',
-      fuzzy_find: 'allow',
-      fuzzy_grep: 'allow',
-      grep: 'deny',
-      question: 'deny',
-      todowrite: 'deny',
+      _tag: 'Ok',
+      value: {
+        bash: 'deny',
+        'stealth-browser-mcp_star': 'deny',
+        submit_review_result: 'deny',
+        fuzzy_find: 'allow',
+        fuzzy_grep: 'allow',
+        grep: 'deny',
+        question: 'deny',
+        todowrite: 'deny',
+      },
     });
   });
 
   test('browser', () => {
     expect(getAgentPermissionDefaults('browser')).toEqual({
-      bash: 'deny',
-      submit_review_result: 'deny',
-      glob: 'deny',
-      fuzzy_find: 'deny',
-      fuzzy_grep: 'deny',
-      grep: 'deny',
-      question: 'deny',
-      todowrite: 'deny',
+      _tag: 'Ok',
+      value: {
+        bash: 'deny',
+        submit_review_result: 'deny',
+        glob: 'deny',
+        fuzzy_find: 'deny',
+        fuzzy_grep: 'deny',
+        grep: 'deny',
+        question: 'deny',
+        todowrite: 'deny',
+      },
     });
   });
 
   test('reverie', () => {
     expect(getAgentPermissionDefaults('reverie')).toEqual({
-      bash: 'deny',
-      'stealth-browser-mcp_star': 'deny',
-      submit_review_result: 'deny',
-      glob: 'deny',
-      fuzzy_find: 'deny',
-      fuzzy_grep: 'deny',
-      grep: 'deny',
-      question: 'deny',
-      todowrite: 'deny',
+      _tag: 'Ok',
+      value: {
+        bash: 'deny',
+        'stealth-browser-mcp_star': 'deny',
+        submit_review_result: 'deny',
+        glob: 'deny',
+        fuzzy_find: 'deny',
+        fuzzy_grep: 'deny',
+        grep: 'deny',
+        question: 'deny',
+        todowrite: 'deny',
+      },
     });
   });
 
   test('reviewer', () => {
     expect(getAgentPermissionDefaults('reviewer')).toEqual({
-      bash: 'deny',
-      'stealth-browser-mcp_star': 'deny',
-      glob: 'deny',
-      fuzzy_find: 'deny',
-      fuzzy_grep: 'deny',
-      grep: 'deny',
-      question: 'deny',
-      todowrite: 'deny',
+      _tag: 'Ok',
+      value: {
+        bash: 'deny',
+        'stealth-browser-mcp_star': 'deny',
+        glob: 'deny',
+        fuzzy_find: 'deny',
+        fuzzy_grep: 'deny',
+        grep: 'deny',
+        question: 'deny',
+        todowrite: 'deny',
+      },
     });
   });
 
-  test('throws on bogus role', () => {
-    expect(() => getAgentPermissionDefaults('bogus')).toThrow();
+  test('returns Err on bogus role', () => {
+    expect(getAgentPermissionDefaults('bogus')).toEqual({
+      _tag: 'Err',
+      error: 'Invalid AgentRole: "bogus"',
+    });
   });
 });
 
 describe('getAgentToolDefaults', () => {
   test('orchestrator', () => {
-    expect(getAgentToolDefaults('orchestrator')).toEqual(
-      makeToolDefaults([
+    expect(getAgentToolDefaults('orchestrator')).toEqual({
+      _tag: 'Ok',
+      value: makeToolDefaults([
         'read', 'executor', 'glob', 'editor', 'greper', 'reverie',
         'submit_review', 'todowrite', 'webfetch', 'websearch', 'browser',
       ]),
-    );
+    });
   });
 
   test('editor', () => {
-    expect(getAgentToolDefaults('editor')).toEqual(
-      makeToolDefaults(['read', 'write', 'edit', 'glob', 'patch', 'fuzzy_find', 'fuzzy_grep']),
-    );
+    expect(getAgentToolDefaults('editor')).toEqual({
+      _tag: 'Ok',
+      value: makeToolDefaults(['read', 'write', 'edit', 'glob', 'patch', 'fuzzy_find', 'fuzzy_grep']),
+    });
   });
 
   test('greper', () => {
-    expect(getAgentToolDefaults('greper')).toEqual(
-      makeToolDefaults(['read', 'executor', 'glob', 'fuzzy_find', 'fuzzy_grep']),
-    );
+    expect(getAgentToolDefaults('greper')).toEqual({
+      _tag: 'Ok',
+      value: makeToolDefaults(['read', 'executor', 'glob', 'fuzzy_find', 'fuzzy_grep']),
+    });
   });
 
   test('browser', () => {
-    expect(getAgentToolDefaults('browser')).toEqual(
-      makeToolDefaults(['read', 'stealth_browser_mcp_star']),
-    );
+    expect(getAgentToolDefaults('browser')).toEqual({
+      _tag: 'Ok',
+      value: makeToolDefaults(['read', 'stealth_browser_mcp_star']),
+    });
   });
 
   test('reverie', () => {
-    expect(getAgentToolDefaults('reverie')).toEqual(
-      makeToolDefaults([]),
-    );
+    expect(getAgentToolDefaults('reverie')).toEqual({
+      _tag: 'Ok',
+      value: makeToolDefaults([]),
+    });
   });
 
   test('reviewer', () => {
-    expect(getAgentToolDefaults('reviewer')).toEqual(
-      makeToolDefaults(['read', 'submit_review_result']),
-    );
+    expect(getAgentToolDefaults('reviewer')).toEqual({
+      _tag: 'Ok',
+      value: makeToolDefaults(['read', 'submit_review_result']),
+    });
   });
 
-  test('throws on bogus role', () => {
-    expect(() => getAgentToolDefaults('bogus')).toThrow();
+  test('returns Err on bogus role', () => {
+    expect(getAgentToolDefaults('bogus')).toEqual({
+      _tag: 'Err',
+      error: 'Invalid AgentRole: "bogus"',
+    });
   });
 });
 

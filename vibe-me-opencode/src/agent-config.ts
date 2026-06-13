@@ -57,12 +57,15 @@ function withRoleDefaults(name: string, agent: AgentEntry): AgentEntry {
 
   if (roleResult._tag !== 'Ok') return { ...agent, permission };
 
+  const toolDefaults = getAgentToolDefaults(name);
+  if (toolDefaults._tag !== 'Ok') return { ...agent, permission };
+
   return {
     ...agent,
     permission,
     tools: mergeTools(
       agent.tools as AgentEntry | undefined,
-      getAgentToolDefaults(name),
+      toolDefaults.value,
     ),
   };
 }
@@ -90,14 +93,16 @@ function buildBuiltinAgent(
 }
 
 function buildOrchestratorAgent(userAgent: AgentMap): AgentEntry {
+  const toolDefaults = getAgentToolDefaults('orchestrator');
+  const permissionDefaults = getAgentPermissionDefaults('orchestrator');
   return withRoleDefaults('orchestrator', {
     ...userAgent.orchestrator,
     tools: mergeTools(
       userAgent.orchestrator?.tools as AgentEntry | undefined,
-      getAgentToolDefaults('orchestrator'),
+      toolDefaults._tag === 'Ok' ? toolDefaults.value : {},
     ),
     permission: {
-      ...getAgentPermissionDefaults('orchestrator'),
+      ...(permissionDefaults._tag === 'Ok' ? permissionDefaults.value : {}),
       ...(userAgent.orchestrator?.permission as AgentEntry | undefined),
     },
     mcps: [],

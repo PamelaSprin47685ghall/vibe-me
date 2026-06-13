@@ -29,8 +29,12 @@ export function createWriteTool(_deps: HostDependencies): ToolDefinition {
       "Write content to a file. Resolves relative paths against the current working directory, creates parent directories if they don't exist, and runs syntax checking on the written content.",
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const file_path = requireString(args, 'file_path');
-      const content = requireString(args, 'content');
+      const filePathResult = requireString(args, 'file_path');
+      if (filePathResult._tag === 'Err') return filePathResult.error;
+      const contentResult = requireString(args, 'content');
+      if (contentResult._tag === 'Err') return contentResult.error;
+      const file_path = filePathResult.value;
+      const content = contentResult.value;
       const resolved = path.resolve(config.cwd, file_path);
 
 

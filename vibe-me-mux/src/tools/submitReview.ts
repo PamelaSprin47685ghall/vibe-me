@@ -1,4 +1,5 @@
 import type { JsonSchema, ToolDefinition } from "../types/contract.js";
+import { requireWorkspaceId } from "../types/contract.js";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { HostDependencies } from "../types/deps.js";
 import { REVIEW_INSTRUCTIONS } from "engine/review";
@@ -101,10 +102,17 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
       "Submit completed work for review. Creates a reviewer sub-agent that examines the changes against evaluation criteria and returns PASS or actionable feedback. Only works when session is in active loop mode.",
     parameters,
     execute: async (config, args) => {
-      const report = requireString(args, 'report');
-      const affectedFiles = requireStringArray(args, 'affectedFiles');
-      const workspaceId = config.workspaceId;
-      if (!workspaceId) throw new Error("submitReview requires workspaceId");
+      const reportResult = requireString(args, 'report');
+      if (reportResult._tag === 'Err') return reportResult.error;
+      const affectedFilesResult = requireStringArray(args, 'affectedFiles');
+      if (affectedFilesResult._tag === 'Err') return affectedFilesResult.error;
+      const workspaceIdResult = requireWorkspaceId(config, 'submit_review');
+      if (workspaceIdResult._tag === 'Err') return workspaceIdResult.error;
+      const deniedToolsResult = deniedToolsFor("reviewer");
+      if (deniedToolsResult._tag === 'Err') return deniedToolsResult.error;
+      const report = reportResult.value;
+      const affectedFiles = affectedFilesResult.value;
+      const workspaceId = workspaceIdResult.value;
 
       if (!reviewDeps.reviewStore.tryLockReview(workspaceId)) {
         return reviewDeps.reviewStore.isReviewActive(workspaceId)
@@ -130,7 +138,7 @@ export function createSubmitReviewTool(deps: HostDependencies, reviewDeps: Revie
             experiments: {
               subagentRole: "reviewer",
               toolPolicy: {
-                disabledTools: deniedToolsFor("reviewer"),
+                disabledTools: deniedToolsResult.value,
               },
             },
           },

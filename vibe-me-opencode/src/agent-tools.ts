@@ -1,3 +1,4 @@
+import { ok, type Result } from 'engine';
 import {
   type AgentRole,
   type EffectivePolicy,
@@ -18,28 +19,31 @@ export function mergeTools(
   return merged;
 }
 
-function resolvePolicy(agent: AgentRole | string): EffectivePolicy {
-  if (typeof agent === 'string') {
-    const result = getEffectivePolicyFromString(agent);
-    if (result._tag === 'Err') throw new Error(result.error);
-    return result.value;
-  }
-  return getEffectivePolicy(agent);
+function resolvePolicy(
+  agent: AgentRole | string,
+): Result<EffectivePolicy, string> {
+  if (typeof agent === 'string') return getEffectivePolicyFromString(agent);
+  return ok(getEffectivePolicy(agent));
 }
 
 export function getAgentPermissionDefaults(
   agent: AgentRole | string,
-): Record<string, string> {
-  const { permissions } = resolvePolicy(agent);
+): Result<Record<string, string>, string> {
+  const policy = resolvePolicy(agent);
+  if (policy._tag === 'Err') return policy;
   const result: Record<string, string> = {};
-  for (const [name, perm] of permissions)
+  for (const [name, perm] of policy.value.permissions)
     result[name] = perm._tag === 'Allow' ? 'allow' : 'deny';
-  return result;
+  return ok(result);
 }
 
-export function getAgentToolDefaults(agent: AgentRole | string): ToolDefaults {
-  const { tools } = resolvePolicy(agent);
+export function getAgentToolDefaults(
+  agent: AgentRole | string,
+): Result<ToolDefaults, string> {
+  const policy = resolvePolicy(agent);
+  if (policy._tag === 'Err') return policy;
   const result: Record<string, boolean> = {};
-  for (const [name, perm] of tools) result[name] = perm._tag === 'Allow';
-  return result;
+  for (const [name, perm] of policy.value.tools)
+    result[name] = perm._tag === 'Allow';
+  return ok(result);
 }

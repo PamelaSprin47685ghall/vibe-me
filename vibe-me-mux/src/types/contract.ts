@@ -1,3 +1,5 @@
+import type { Result } from "engine";
+import { ok, err } from "engine";
 import type { PluginToolConfiguration } from "./tool.js";
 
 export type JsonSchema = {
@@ -38,9 +40,9 @@ export interface ToolWrapper {
 export function requireWorkspaceId(
   config: PluginToolConfiguration,
   toolName: string,
-): string {
+): Result<string, string> {
   if (!config.workspaceId) {
-    throw new Error(`${toolName} requires workspaceId`);
+    return err(`${toolName} requires workspaceId`);
   }
-  return config.workspaceId;
+  return ok(config.workspaceId);
 }

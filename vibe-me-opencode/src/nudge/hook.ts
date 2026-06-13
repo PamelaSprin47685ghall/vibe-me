@@ -14,6 +14,7 @@ import {
   isNudgePrompt,
 } from 'engine/util';
 import { createEventHandlers, matchCompositeHandler } from './event-handlers';
+import { createStateHolder, type StateHolder } from './state-holder';
 
 type ToolExecuteAfterInput = {
   tool: string;
@@ -126,8 +127,7 @@ export function createNudgeCoordinatorHook(
   partialDeps: Partial<Deps> = {},
 ) {
   const deps = { ...defaultDeps, ...partialDeps };
-  let state: NudgeShellState = emptyNudgeShellState;
-  let pending = Promise.resolve();
+  const holder = createStateHolder(emptyNudgeShellState);
 
   return {
     tool: {},
@@ -145,23 +145,25 @@ export function createNudgeCoordinatorHook(
       handleMessagesTransform(_output);
     },
 
-    handleChatMessage: (input: ChatMessageInput): void => {
-      state = handleChatMessage(input, state, deps);
+    handleChatMessage: (input: ChatMessageInput): Promise<void> => {
+      return holder.enqueue((state) => handleChatMessage(input, state, deps));
     },
 
     handleCommandExecuteBefore: async (
       input: CommandExecuteBeforeInput,
       _output: { parts: Array<{ type: string; text?: string }> },
     ): Promise<void> => {
-      state = handleCommandExecuteBefore(input, state, deps);
+      await holder.enqueue((state) =>
+        handleCommandExecuteBefore(input, state, deps),
+      );
     },
 
     handleEvent: async (input: EventInput): Promise<void> => {
-      const run = async (): Promise<void> => {
-        state = await handleEvent(input, state, deps, ctx, reviewStore);
-      };
-      pending = pending.then(run, run);
-      await pending;
+      await holder.enqueue((state) =>
+        handleEvent(input, state, deps, ctx, reviewStore),
+      );
     },
   };
 }
+
+export { createStateHolder, type StateHolder };

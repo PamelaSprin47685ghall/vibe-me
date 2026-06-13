@@ -33,8 +33,12 @@ export function createWebsearchTool(_deps: HostDependencies): ToolDefinition {
     description: TOOL_COPY.websearch.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const query = requireString(args, 'query');
-      const numResults = optionalNumber(args, 'numResults');
+      const queryResult = requireString(args, 'query');
+      if (queryResult._tag === 'Err') return queryResult.error;
+      const numResultsResult = optionalNumber(args, 'numResults');
+      if (numResultsResult._tag === 'Err') return numResultsResult.error;
+      const query = queryResult.value;
+      const numResults = numResultsResult.value;
       try {
         const data = (await ollamaPost("web_search", {
           query,

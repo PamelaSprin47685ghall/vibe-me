@@ -19,8 +19,10 @@ export function createExecutorTool(deps: HostDependencies, executorDeps: Executo
     parameters: parameters as JsonSchema,
     execute: async (config, args) => {
       const validated = validateExecutorArgs(args);
-      if (validated._tag === 'Err') throw new Error(validated.error);
-      const workspaceId = requireWorkspaceId(config, 'executor');
+      if (validated._tag === 'Err') return validated.error;
+      const workspaceIdResult = requireWorkspaceId(config, 'executor');
+      if (workspaceIdResult._tag === 'Err') return workspaceIdResult.error;
+      const workspaceId = workspaceIdResult.value;
 
       const execResult = await executorDeps.execute(
         buildExecutorOptions(validated.value, config.cwd),

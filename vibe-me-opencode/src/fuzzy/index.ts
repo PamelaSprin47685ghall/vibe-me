@@ -34,7 +34,7 @@ export function createFuzzyFindTool(): ToolDefinition {
     execute: async (args, context) => {
       const activeCwd = context.directory;
       const scopeId = context.sessionID;
-      if (!scopeId) throw new Error("fuzzy_find requires an active session");
+      if (!scopeId) return "Error: fuzzy_find requires an active session";
       const cleanArgs = {
         pattern: args.pattern ?? undefined,
         path: args.path ?? undefined,
@@ -89,7 +89,7 @@ export function createFuzzyGrepTool(): ToolDefinition {
     execute: async (args, context) => {
       const activeCwd = context.directory;
       const scopeId = context.sessionID;
-      if (!scopeId) throw new Error("fuzzy_grep requires an active session");
+      if (!scopeId) return "Error: fuzzy_grep requires an active session";
       const cleanArgs = {
         pattern: args.pattern ?? undefined,
         path: args.path ?? undefined,

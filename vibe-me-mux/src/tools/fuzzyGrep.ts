@@ -46,22 +46,29 @@ export function createFuzzyGrepTool(_deps: HostDependencies): ToolDefinition {
     description: TOOL_COPY.fuzzy_grep.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const pattern = optionalString(args, 'pattern');
-      const path = optionalString(args, 'path');
-      const exclude = optionalString(args, 'exclude');
-      const caseSensitive = optionalBoolean(args, 'caseSensitive');
-      const context = optionalNumber(args, 'context');
-      const limit = optionalNumber(args, 'limit');
-      const iterator = optionalString(args, 'iterator');
+      const patternResult = optionalString(args, 'pattern');
+      if (patternResult._tag === 'Err') return patternResult.error;
+      const pathResult = optionalString(args, 'path');
+      if (pathResult._tag === 'Err') return pathResult.error;
+      const excludeResult = optionalString(args, 'exclude');
+      if (excludeResult._tag === 'Err') return excludeResult.error;
+      const caseSensitiveResult = optionalBoolean(args, 'caseSensitive');
+      if (caseSensitiveResult._tag === 'Err') return caseSensitiveResult.error;
+      const contextResult = optionalNumber(args, 'context');
+      if (contextResult._tag === 'Err') return contextResult.error;
+      const limitResult = optionalNumber(args, 'limit');
+      if (limitResult._tag === 'Err') return limitResult.error;
+      const iteratorResult = optionalString(args, 'iterator');
+      if (iteratorResult._tag === 'Err') return iteratorResult.error;
       const result = await fuzzyGrep(
         {
-          pattern,
-          path,
-          exclude,
-          caseSensitive,
-          context,
-          limit,
-          iterator,
+          pattern: patternResult.value,
+          path: pathResult.value,
+          exclude: excludeResult.value,
+          caseSensitive: caseSensitiveResult.value,
+          context: contextResult.value,
+          limit: limitResult.value,
+          iterator: iteratorResult.value,
         },
         { cwd: config.cwd, scopeId: config.workspaceId ?? "global" }
       );

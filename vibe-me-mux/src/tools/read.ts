@@ -108,9 +108,15 @@ export function createReadTool(
       "If path is a directory, returns a formatted directory listing (equivalent to ls -la). Use this instead of running `ls` via runner.",
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const filePath = requireString(args, 'path');
-      const offset = optionalNumber(args, 'offset');
-      const limit = optionalNumber(args, 'limit');
+      const filePathResult = requireString(args, 'path');
+      if (filePathResult._tag === 'Err') return filePathResult.error;
+      const offsetResult = optionalNumber(args, 'offset');
+      if (offsetResult._tag === 'Err') return offsetResult.error;
+      const limitResult = optionalNumber(args, 'limit');
+      if (limitResult._tag === 'Err') return limitResult.error;
+      const filePath = filePathResult.value;
+      const offset = offsetResult.value;
+      const limit = limitResult.value;
       const resolved = path.resolve(config.cwd, filePath);
 
       let stat;

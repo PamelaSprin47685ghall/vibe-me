@@ -17,7 +17,9 @@ export async function fuzzyGrep(
 
   let { searchState } = stateResult;
   const externalBasePath = searchState.externalBasePath;
-  const finder = await acquireFinder(externalBasePath, options.cwd, deps);
+  const finderResult = await acquireFinder(externalBasePath, options.cwd, deps);
+  if (finderResult._tag === 'Err') return { output: finderResult.error, isError: true };
+  const finder = finderResult.value;
   try {
     const execResult = executeGrepSearch(finder, searchState);
     if (execResult._tag === 'Err') return { output: execResult.error, isError: true };

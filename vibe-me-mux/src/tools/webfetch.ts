@@ -40,11 +40,21 @@ export function createWebfetchTool(_deps: HostDependencies): ToolDefinition {
     description: TOOL_COPY.webfetch.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const url = requireString(args, 'url');
-      const extract_main = optionalBoolean(args, 'extract_main');
-      const prefer_llms_txt = optionalString(args, 'prefer_llms_txt');
-      const prompt = optionalString(args, 'prompt');
-      const timeout = optionalNumber(args, 'timeout');
+      const urlResult = requireString(args, 'url');
+      if (urlResult._tag === 'Err') return urlResult.error;
+      const extractMainResult = optionalBoolean(args, 'extract_main');
+      if (extractMainResult._tag === 'Err') return extractMainResult.error;
+      const preferLlmsTxtResult = optionalString(args, 'prefer_llms_txt');
+      if (preferLlmsTxtResult._tag === 'Err') return preferLlmsTxtResult.error;
+      const promptResult = optionalString(args, 'prompt');
+      if (promptResult._tag === 'Err') return promptResult.error;
+      const timeoutResult = optionalNumber(args, 'timeout');
+      if (timeoutResult._tag === 'Err') return timeoutResult.error;
+      const url = urlResult.value;
+      const extract_main = extractMainResult.value;
+      const prefer_llms_txt = preferLlmsTxtResult.value;
+      const prompt = promptResult.value;
+      const timeout = timeoutResult.value;
       const urlError = await validateFetchUrl(url);
       if (urlError) return JSON.stringify({ success: false, error: urlError });
 

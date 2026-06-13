@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GrepCursor } from '@ff-labs/fff-node';
+import { ok } from '../types/general.js';
 import { fuzzyGrep, type CoordinatorDeps, type FinderLike } from './coordinator.js';
 import type { FindResultLike, GrepResultLike } from './format.js';
 import { createIteratorStore, storeIterator, consumeIterator } from '../util/iterator.js';
@@ -27,8 +28,8 @@ function makeFakeFinder(
 
 function baseDeps(overrides: Partial<CoordinatorDeps> = {}): CoordinatorDeps {
   return {
-    createFinder: async () => makeFakeFinder({}),
-    getCachedFinder: async () => makeFakeFinder({}),
+    createFinder: async () => ok(makeFakeFinder({})),
+    getCachedFinder: async () => ok(makeFakeFinder({})),
     buildQuery: (_fpath, pattern) => `query:${String(pattern)}`,
     resolveFuzzySearchPath: (_path, cwd) => ({ basePath: cwd ?? '/cwd', pathConstraint: null, external: false }),
     formatGrepOutput: (result) => `formatted:${result?.items?.length ?? 0}`,
@@ -64,7 +65,7 @@ describe('fuzzyGrep', () => {
     const finder = makeFakeFinder({
       plain: { items: [{ relativePath: 'a.ts', lineNumber: 1, lineContent: 'x' }] },
     });
-    const deps = baseDeps({ getCachedFinder: async () => finder });
+    const deps = baseDeps({ getCachedFinder: async () => ok(finder) });
 
     await fuzzyGrep({ iterator: id }, { cwd: '/cwd', scopeId: 'scope', store }, deps);
     const second = await fuzzyGrep({ iterator: id }, { cwd: '/cwd', scopeId: 'scope', store }, deps);
@@ -78,7 +79,7 @@ describe('fuzzyGrep', () => {
     const finder = makeFakeFinder({
       plain: { items: [{ relativePath: 'a.ts', lineNumber: 1, lineContent: 'foo' }], totalMatched: 1 },
     });
-    const deps = baseDeps({ getCachedFinder: async () => finder });
+    const deps = baseDeps({ getCachedFinder: async () => ok(finder) });
 
     const res = await fuzzyGrep({ pattern: 'foo' }, { cwd: '/cwd', scopeId: 'scope', store }, deps);
 
@@ -95,7 +96,7 @@ describe('fuzzyGrep', () => {
         regexFallbackError: 'bad regex',
       },
     });
-    const deps = baseDeps({ getCachedFinder: async () => finder });
+    const deps = baseDeps({ getCachedFinder: async () => ok(finder) });
 
     const res = await fuzzyGrep({ pattern: 'a.*b' }, { cwd: '/cwd', scopeId: 'scope', store }, deps);
 
@@ -120,7 +121,7 @@ describe('fuzzyGrep', () => {
       plain: { items: [] },
       fuzzy: { items: [{ relativePath: 'c.ts', lineNumber: 3, lineContent: 'bar' }], totalMatched: 1 },
     });
-    const deps = baseDeps({ getCachedFinder: async () => finder });
+    const deps = baseDeps({ getCachedFinder: async () => ok(finder) });
 
     const res = await fuzzyGrep({ pattern: 'bar' }, { cwd: '/cwd', scopeId: 'scope', store }, deps);
 
@@ -133,7 +134,7 @@ describe('fuzzyGrep', () => {
     const finder = makeFakeFinder({
       plain: { items: [{ relativePath: 'd.ts', lineNumber: 1, lineContent: 'x' }], nextCursor: 'cursor-1' },
     });
-    const deps = baseDeps({ getCachedFinder: async () => finder });
+    const deps = baseDeps({ getCachedFinder: async () => ok(finder) });
 
     const res = await fuzzyGrep({ pattern: 'x' }, { cwd: '/cwd', scopeId: 'scope', store }, deps);
 

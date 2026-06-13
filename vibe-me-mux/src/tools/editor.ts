@@ -33,7 +33,9 @@ export function createEditorTool(deps: HostDependencies): ToolDefinition {
     description: TOOL_COPY.editor.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const intents = requireIntentTuples(args, 'intents');
+      const intentsResult = requireIntentTuples(args, 'intents');
+      if (intentsResult._tag === 'Err') return intentsResult.error;
+      const intents = intentsResult.value;
 
       if (intents.length === 0) {
         return "Error: `intents` must be a non-empty array.";

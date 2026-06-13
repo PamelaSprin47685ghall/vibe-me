@@ -59,7 +59,7 @@ describe('createNudgeCoordinatorHook', () => {
     expect(numericOutput.output).toBe(123);
   });
 
-  test('chatMessage remembers agent and resumes session, skipping nudge prompts', () => {
+  test('chatMessage remembers agent and resumes session, skipping nudge prompts', async () => {
     const remembered: Array<{ sessionID: string; agent: unknown }> = [];
     const resumed: string[] = [];
     const hook = createNudgeCoordinatorHook(fakeCtx(), fakeReviewStore(), {
@@ -87,7 +87,7 @@ describe('createNudgeCoordinatorHook', () => {
       },
     });
 
-    hook.handleChatMessage({
+    await hook.handleChatMessage({
       sessionID: 's1',
       agent: 'editor',
       parts: [{ type: 'text', text: 'work on this' }],
@@ -96,7 +96,7 @@ describe('createNudgeCoordinatorHook', () => {
     expect(remembered).toEqual([{ sessionID: 's1', agent: 'editor' }]);
     expect(resumed).toEqual(['s1']);
 
-    hook.handleChatMessage({
+    await hook.handleChatMessage({
       sessionID: 's2',
       agent: 'explorer',
       parts: [{ type: 'text', text: 'nudge-prompt' }],

@@ -1,4 +1,4 @@
-import type { Result } from 'engine';
+import type { Result } from '../../types/general.js';
 import type { FindResultLike } from '../format.js';
 import type { FinderLike } from './types.js';
 import type { FuzzyFindState } from './find-state.js';

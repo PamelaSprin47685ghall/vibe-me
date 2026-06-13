@@ -25,7 +25,9 @@ export function createGreperTool(deps: HostDependencies): ToolDefinition {
     description: TOOL_COPY.greper.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const intents = requireStringArray(args, 'intents');
+      const intentsResult = requireStringArray(args, 'intents');
+      if (intentsResult._tag === 'Err') return intentsResult.error;
+      const intents = intentsResult.value;
 
       if (intents.length === 0) {
         return "Error: `intents` must be a non-empty array.";

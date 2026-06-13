@@ -5,7 +5,7 @@ export type NudgeCoordinator = {
     sessionID: string;
     agent: string;
     parts: unknown[];
-  }): void;
+  }): Promise<void>;
   handleMessagesTransform(output: { messages: unknown[] }): Promise<void>;
   handleToolExecuteAfter(
     input: { tool: string; sessionID?: string; callID: string },

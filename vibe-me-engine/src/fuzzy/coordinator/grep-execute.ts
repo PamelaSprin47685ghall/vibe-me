@@ -1,4 +1,4 @@
-import type { Result } from 'engine';
+import type { Result } from '../../types/general.js';
 import type { GrepOptions } from '@ff-labs/fff-node';
 import type { GrepResultLike } from '../format.js';
 import type { FinderLike, FinderResult, FuzzyGrepParams } from './types.js';

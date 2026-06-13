@@ -30,6 +30,7 @@ export function resolveChatTools(
 ): Record<string, boolean> | undefined {
   if (agentRoleFromString(agent)._tag !== 'Ok') return undefined;
   const defaults = getAgentToolDefaults(agent);
-  const merged = mergeTools(existingTools, defaults);
+  if (defaults._tag !== 'Ok') return undefined;
+  const merged = mergeTools(existingTools, defaults.value);
   return applyStealthBrowserRestrictions(merged, agent, existingTools);
 }

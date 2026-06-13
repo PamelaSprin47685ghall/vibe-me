@@ -1,5 +1,6 @@
 import type { IteratorStore } from '../../util/iterator.js';
 import { globalIteratorStore, storeIterator, consumeIterator } from '../../util/iterator.js';
+import type { Result } from '../../types/general.js';
 import { createFinder } from '../finder.js';
 import { getCachedFinder } from '../finder-registry.js';
 import { buildQuery, resolveFuzzySearchPath } from '../query.js';
@@ -8,8 +9,8 @@ import { formatGrepOutput, fileAnnotation } from '../format.js';
 import type { FinderLike } from './types.js';
 
 export interface CoordinatorDeps {
-  createFinder: (basePath: string) => Promise<FinderLike>;
-  getCachedFinder: (cwd: string) => Promise<FinderLike>;
+  createFinder: (basePath: string) => Promise<Result<FinderLike, string>>;
+  getCachedFinder: (cwd: string) => Promise<Result<FinderLike, string>>;
   buildQuery: (
     fpath: string | undefined | null,
     pattern: string,

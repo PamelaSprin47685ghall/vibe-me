@@ -33,8 +33,12 @@ export function createReverieTool(deps: HostDependencies): ToolDefinition {
     description: TOOL_COPY.reverie.description,
     parameters,
     execute: async (config, args: Record<string, unknown>) => {
-      const intent = requireString(args, 'intent');
-      const files = requireStringArray(args, 'files');
+      const intentResult = requireString(args, 'intent');
+      if (intentResult._tag === 'Err') return intentResult.error;
+      const filesResult = requireStringArray(args, 'files');
+      if (filesResult._tag === 'Err') return filesResult.error;
+      const intent = intentResult.value;
+      const files = filesResult.value;
       const readResults = await readReverieFiles(config.cwd, files);
       const sections = files.map((file, i) => ({ file, content: readResults[i]?.content }));
       const prompt = buildReveriePrompt(sections, intent);
