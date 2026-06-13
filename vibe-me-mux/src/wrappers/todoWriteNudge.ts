@@ -1,24 +1,6 @@
-import type { ToolLike, ToolWrapper } from "../types/contract.js";
+import type { ToolWrapper } from "../types/contract.js";
 import { REVERIE_NUDGE } from "engine/todo";
-
-function wrapTodoWrite(baseTool: ToolLike): ToolLike {
-  const originalExecute = baseTool.execute;
-  if (typeof originalExecute !== "function") return baseTool;
-
-  return {
-    ...baseTool,
-    execute: ((
-      args: Record<string, unknown>,
-      options?: { readonly abortSignal?: AbortSignal },
-    ) => {
-      const result = originalExecute.call(baseTool, args, options);
-      if (result instanceof Promise) {
-        return result.then((resolved: unknown) => appendReverieNudge(resolved));
-      }
-      return appendReverieNudge(result);
-    }) as ToolLike["execute"],
-  };
-}
+import { mapResult, wrapExecute, type ToolMiddleware } from "./middleware.js";
 
 function appendReverieNudge(result: unknown): unknown {
   if (typeof result === "string") {
@@ -37,9 +19,13 @@ function appendReverieNudge(result: unknown): unknown {
   return result;
 }
 
+export function createTodoWriteMiddleware(): ToolMiddleware {
+  return mapResult((result) => appendReverieNudge(result));
+}
+
 export function createTodoWriteNudgeWrapper(): ToolWrapper {
   return {
     targetTool: "todo_write",
-    wrapper: (tool) => wrapTodoWrite(tool),
+    wrapper: (tool) => wrapExecute(tool, createTodoWriteMiddleware()),
   };
 }

@@ -1,47 +1,16 @@
-import { extractFilePath, isFileEditTool, readAndCheckSyntax } from "engine/tree-sitter";
+import { extractFilePath, readAndCheckSyntax } from "engine/tree-sitter";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type { LoggerLike } from "../types/deps.js";
-import type { ToolLike, ToolWrapper } from "../types/contract.js";
-
-function wrapFileEditTool(
-  toolName: string,
-  baseTool: ToolLike,
-  config: PluginToolConfiguration,
-  log: LoggerLike,
-): ToolLike {
-  const originalExecute = baseTool.execute;
-  if (typeof originalExecute !== "function") return baseTool;
-
-  return {
-    ...baseTool,
-    execute: ((
-      args: Record<string, unknown>,
-      options?: { readonly abortSignal?: AbortSignal },
-    ) => {
-      const result = originalExecute.call(baseTool, args, options);
-
-      if (result instanceof Promise) {
-        return result.then((resolved: unknown) =>
-          appendSyntaxCheck(resolved, toolName, args, config, log),
-        );
-      }
-      return appendSyntaxCheck(result, toolName, args, config, log);
-    }) as ToolLike["execute"],
-  };
-}
+import type { ToolWrapper } from "../types/contract.js";
+import { mapResult, wrapExecute, type ToolMiddleware } from "./middleware.js";
 
 async function appendSyntaxCheck(
   result: unknown,
-  toolName: string,
   args: Record<string, unknown>,
   config: PluginToolConfiguration,
   log: LoggerLike,
 ): Promise<unknown> {
-  if (!isFileEditTool(toolName)) return result;
-
-  const filePath = extractFilePath(
-    args as Record<string, unknown> | null | undefined,
-  );
+  const filePath = extractFilePath(args);
   if (!filePath) return result;
 
   try {
@@ -65,15 +34,24 @@ async function appendSyntaxCheck(
   return result;
 }
 
+export function createSyntaxCheckMiddleware(
+  config: PluginToolConfiguration,
+  log: LoggerLike,
+): ToolMiddleware {
+  return mapResult((result, args) =>
+    appendSyntaxCheck(result, args[0] as Record<string, unknown>, config, log)
+  );
+}
+
 export function createSyntaxCheckWrappers(log: LoggerLike): ToolWrapper[] {
   return [
     {
       targetTool: "file_edit_replace_string",
-      wrapper: (tool, config) => wrapFileEditTool("file_edit_replace_string", tool, config, log),
+      wrapper: (tool, config) => wrapExecute(tool, createSyntaxCheckMiddleware(config, log)),
     },
     {
       targetTool: "file_edit_insert",
-      wrapper: (tool, config) => wrapFileEditTool("file_edit_insert", tool, config, log),
+      wrapper: (tool, config) => wrapExecute(tool, createSyntaxCheckMiddleware(config, log)),
     },
   ];
 }

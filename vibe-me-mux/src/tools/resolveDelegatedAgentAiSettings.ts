@@ -29,22 +29,24 @@ export function createResolveDelegatedAgentAiSettings(deps: HostDependencies) {
       agentId === "exec" ? resolveWorkspaceExecFallback(workspace) : undefined,
     ];
 
-    return {
-      modelString: firstField(sources, "modelString"),
-      thinkingLevel: firstField(sources, "thinkingLevel"),
-    };
+    return mergeNamedSettings(sources);
   };
 }
 
-function firstField(
+function mergeNamedSettings(
   sources: readonly (NamedSettings | undefined)[],
-  key: "modelString" | "thinkingLevel",
-): string | undefined {
-  for (const s of sources) {
-    const v = s?.[key];
-    if (v != null) return v;
+): NamedSettings {
+  let modelString: string | undefined;
+  let thinkingLevel: string | undefined;
+  for (const source of sources) {
+    if (modelString == null && source?.modelString != null) {
+      modelString = source.modelString;
+    }
+    if (thinkingLevel == null && source?.thinkingLevel != null) {
+      thinkingLevel = source.thinkingLevel;
+    }
   }
-  return undefined;
+  return { modelString, thinkingLevel };
 }
 
 async function resolveDescriptorAiSettings(
@@ -93,7 +95,8 @@ function resolveWorkspaceExecFallback(
       }
     | undefined,
 ): NamedSettings | undefined {
-  if (!workspace?.aiSettingsByAgent) return undefined;
-  const exec = workspace.aiSettingsByAgent["exec"] ?? Object.values(workspace.aiSettingsByAgent)[0];
-  return exec ? { modelString: exec.model, thinkingLevel: exec.thinkingLevel } : undefined;
+  const settings = workspace?.aiSettingsByAgent?.["exec"];
+  return settings
+    ? { modelString: settings.model, thinkingLevel: settings.thinkingLevel }
+    : undefined;
 }

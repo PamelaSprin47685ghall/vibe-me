@@ -3,6 +3,12 @@ import { isAbortError } from 'engine/util';
 
 export { isAbortError };
 
+export class AbortError extends DOMException {
+  constructor() {
+    super('Aborted', 'AbortError');
+  }
+}
+
 export function getAbortSignal(context: unknown): AbortSignal | undefined {
   if (typeof context !== 'object' || context === null) return undefined;
   const maybeSignal = (context as Record<string, unknown>).abort;
@@ -18,21 +24,13 @@ export function getAbortSignal(context: unknown): AbortSignal | undefined {
   return undefined;
 }
 
-/**
- * Call `client.session.prompt` with optional abort signal support.
- *
- * - If the signal is already aborted, throws immediately.
- * - If no signal is provided, calls prompt directly.
- * - If a signal is provided, races the prompt against the abort signal and
- *   guarantees exactly one resolve/reject — no dangling unhandled rejections.
- */
 export async function promptWithAbort(
   client: PluginInput['client'],
   args: Parameters<PluginInput['client']['session']['prompt']>[0],
   signal?: AbortSignal,
 ): Promise<void> {
   if (signal?.aborted) {
-    throw new DOMException('Aborted', 'AbortError');
+    throw new AbortError();
   }
   if (!signal) {
     await client.session.prompt(args);
@@ -45,7 +43,7 @@ export async function promptWithAbort(
     const onAbort = () => {
       if (settled) return;
       settled = true;
-      reject(new DOMException('Aborted', 'AbortError'));
+      reject(new AbortError());
     };
 
     signal.addEventListener('abort', onAbort);
