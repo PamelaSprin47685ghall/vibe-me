@@ -1,22 +1,14 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  spyOn,
-} from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SyntaxError as SyntaxErrorInfo } from './checker';
 import * as checkerModule from './checker';
 import { createSyntaxCheckHook } from './index';
 import { createMockCtx, createOutput } from './test-helpers';
 
 function mockCheckSyntax(errors: SyntaxErrorInfo[]) {
-  spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
+  vi.spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
     ok: true,
     lang: 'typescript',
     errors,
@@ -32,7 +24,7 @@ describe('skip / noop scenarios', () => {
 
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   it('skips when there are no syntax errors', async () => {
@@ -52,7 +44,7 @@ describe('skip / noop scenarios', () => {
 
   it('skips when checkSyntax returns empty errors (unsupported language)', async () => {
     writeFileSync(join(tmpDir, 'binary.bin'), '\x00\x01\x02');
-    spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
+    vi.spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
       ok: true,
       lang: '',
       errors: [],

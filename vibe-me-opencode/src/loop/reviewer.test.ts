@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
 import { createReviewStore } from 'engine/review';
+import { describe, expect, test } from 'vitest';
 import { getReviewerConfig } from './index';
 
 describe('reviewSessions state', () => {

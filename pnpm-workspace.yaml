@@ -1,0 +1,11 @@
+packages:
+  - 'vibe-me-engine'
+  - 'vibe-me-mux'
+  - 'vibe-me-opencode'
+
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - '@ff-labs/fff-node'
+  - '@kreuzberg/tree-sitter-language-pack'
+  - 'esbuild'
+  - 'msgpackr-extract'

@@ -1,14 +1,14 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, vi, test } from 'vitest';
 import { createSubmitReviewTool, isPassingReviewReport, type ReviewDeps } from "./submitReview.js";
 import type { ReviewStore } from "engine/review";
 
 function createMockReviewDeps() {
-  const mockDeactivateReview = mock(() => undefined);
-  const mockGetReviewTask = mock(() => "original task");
-  const mockIsReviewActive = mock(() => true);
-  const mockTryLockReview = mock(() => true);
-  const mockUnlockReview = mock(() => undefined);
-  const mockDelegateToSubAgent = mock(() => Promise.resolve("PASS"));
+  const mockDeactivateReview = vi.fn(() => undefined);
+  const mockGetReviewTask = vi.fn(() => "original task");
+  const mockIsReviewActive = vi.fn(() => true);
+  const mockTryLockReview = vi.fn(() => true);
+  const mockUnlockReview = vi.fn(() => undefined);
+  const mockDelegateToSubAgent = vi.fn(() => Promise.resolve("PASS"));
 
   const reviewStore = {
     tryLockReview: mockTryLockReview,
@@ -16,12 +16,12 @@ function createMockReviewDeps() {
     getReviewTask: mockGetReviewTask,
     deactivateReview: mockDeactivateReview,
     unlockReview: mockUnlockReview,
-    activateReview: mock(() => undefined),
-    clearReviewSessions: mock(() => undefined),
-    setPendingReview: mock(() => undefined),
-    resolvePendingReview: mock(() => false),
-    addChild: mock(() => undefined),
-    getReviewState: mock(() => undefined),
+    activateReview: vi.fn(() => undefined),
+    clearReviewSessions: vi.fn(() => undefined),
+    setPendingReview: vi.fn(() => undefined),
+    resolvePendingReview: vi.fn(() => false),
+    addChild: vi.fn(() => undefined),
+    getReviewState: vi.fn(() => undefined),
   } satisfies ReviewStore;
 
   return {

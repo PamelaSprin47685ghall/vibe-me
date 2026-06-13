@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { AGENT_ROLES } from '../types/agent-policy.js';
 import { getEffectivePolicy } from '../agent-policy/index.js';
 import { subagentToolPolicy } from './index.js';

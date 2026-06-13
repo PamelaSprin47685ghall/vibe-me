@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { editorRole, reverieRole } from '../types/agent-policy.js';
 import type { AgentRole } from '../types/agent-policy.js';
 import {

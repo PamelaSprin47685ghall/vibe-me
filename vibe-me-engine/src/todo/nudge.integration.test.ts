@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from 'vitest';
 import { decideNudge } from "./nudge.js";
 import type { NudgeContext } from "../types/nudge.js";
 

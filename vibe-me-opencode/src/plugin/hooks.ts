@@ -1,110 +1,37 @@
 import type { PluginInput } from '@opencode-ai/plugin';
-import { agentRoleFromString } from 'engine/agent-policy';
-import { getAgentToolDefaults, mergeTools } from '../agent-tools.js';
 import { createCapsMessagesInjector } from '../caps/index.js';
 import { createToolOutputDeduper } from '../dedup/index.js';
-import type { createLoopCommandManager } from '../loop/index.js';
-import type { createNudgeCoordinatorHook } from '../nudge/index.js';
 import { createSyntaxCheckHook } from '../tree-sitter/index.js';
-import { lookupChildAgent } from '../utils/child-agent.js';
-
-type NudgeCoordinator = ReturnType<typeof createNudgeCoordinatorHook>;
-type LoopCommandManager = ReturnType<typeof createLoopCommandManager>;
-
-type CapsInjector = {
-  handleMessagesTransform(output: { messages: unknown[] }): Promise<void>;
-};
-
-type ToolOutputDeduper = {
-  handleMessagesTransform(output: { messages: unknown[] }): Promise<void>;
-};
-
-type SyntaxCheckHook = {
-  'tool.execute.after'(
-    input: { tool: string; sessionID?: string; callID: string },
-    output: {
-      output?: unknown;
-      title?: string;
-      metadata?: Record<string, unknown>;
-    },
-  ): Promise<void>;
-};
-
-type HookFactories = {
-  createCapsMessagesInjector: (
-    directory: string,
-    excludedAgents: string[],
-  ) => CapsInjector;
-  createToolOutputDeduper: () => ToolOutputDeduper;
-  createSyntaxCheckHook: (ctx: PluginInput) => SyntaxCheckHook;
-};
+import { runCommandExecuteBefore } from './hooks/command-execute.js';
+import { createEventHandler } from './hooks/event.js';
+import { runMessagesTransform } from './hooks/messages-transform.js';
+import { resolveAgent, resolveChatTools } from './hooks/resolve-agent.js';
+import {
+  shouldStripUiParameter,
+  stripUiParameter,
+} from './hooks/tool-definition.js';
+import { transformToolExecuteBefore } from './hooks/tool-execute.js';
+import { runToolExecuteAfter } from './hooks/tool-execute-after.js';
+import type {
+  CapsInjector,
+  ChatMessageInput,
+  ChatMessageOutput,
+  CommandExecuteBeforeInput,
+  CommandExecuteBeforeOutput,
+  HookFactories,
+  LoopCommandManager,
+  NudgeCoordinator,
+  SyntaxCheckHook,
+  ToolDefinitionInput,
+  ToolDefinitionOutput,
+  ToolExecuteAfterInput,
+  ToolExecuteAfterOutput,
+  ToolExecuteBeforeInput,
+  ToolExecuteBeforeOutput,
+  ToolOutputDeduper,
+} from './hooks/types.js';
 
 const DEFAULT_EXCLUDED_AGENTS = ['browser', 'greper', 'executor', 'title'];
-
-type ChatMessageInput = { agent?: string; sessionID: string };
-type ChatMessageOutput = {
-  parts: unknown[];
-  message: { tools?: Record<string, unknown> };
-};
-
-type MessagesTransformOutput = { messages: unknown[] };
-
-type ToolDefinitionInput = {
-  toolID: string;
-};
-type ToolDefinitionOutput = {
-  description: string;
-  parameters: Record<string, unknown>;
-};
-
-type ToolExecuteBeforeInput = {
-  tool: string;
-  sessionID: string;
-  callID: string;
-};
-type ToolExecuteBeforeOutput = { args: { intents?: unknown; _ui?: string } };
-
-type ToolExecuteAfterInput = {
-  tool: string;
-  sessionID?: string;
-  callID: string;
-};
-type ToolExecuteAfterOutput = {
-  output?: unknown;
-  title?: string;
-  metadata?: Record<string, unknown>;
-};
-
-type CommandExecuteBeforeInput = {
-  command: string;
-  sessionID: string;
-  arguments: string;
-};
-type CommandExecuteBeforeOutput = {
-  parts: Array<{ type: string; text?: string }>;
-};
-
-type EventInput = {
-  event: { type: string; properties?: Record<string, unknown> };
-};
-
-function resolveAgent(input: ChatMessageInput): string {
-  return input.agent ?? lookupChildAgent(input.sessionID) ?? 'orchestrator';
-}
-
-function applyStealthBrowserRestrictions(
-  tools: Record<string, boolean>,
-  agent: string,
-  existingTools: Record<string, unknown> | undefined,
-): void {
-  if (agent === 'browser') return;
-  if (existingTools) {
-    for (const key of Object.keys(existingTools)) {
-      if (key.startsWith('stealth-browser-mcp_')) tools[key] = false;
-    }
-  }
-  tools['stealth-browser-mcp_*'] = false;
-}
 
 function createChatMessageHandler(nudgeHook: NudgeCoordinator) {
   return async (
@@ -117,11 +44,9 @@ function createChatMessageHandler(nudgeHook: NudgeCoordinator) {
       agent,
       parts: output.parts,
     });
-    if (agentRoleFromString(agent)._tag !== 'Ok') return;
-    const defaults = getAgentToolDefaults(agent);
-    const tools = mergeTools(output.message.tools, defaults);
-    applyStealthBrowserRestrictions(tools, agent, output.message.tools);
-    output.message.tools = tools;
+
+    const tools = resolveChatTools(agent, output.message.tools);
+    if (tools) output.message.tools = tools;
   };
 }
 
@@ -132,11 +57,14 @@ function createMessagesTransformHandler(
 ) {
   return async (
     _input: Record<string, never>,
-    output: MessagesTransformOutput,
+    output: { messages: unknown[] },
   ): Promise<void> => {
-    await capsInjector.handleMessagesTransform(output);
-    await toolOutputDeduper.handleMessagesTransform(output);
-    await nudgeHook.handleMessagesTransform({ messages: output.messages });
+    await runMessagesTransform(
+      capsInjector,
+      toolOutputDeduper,
+      nudgeHook,
+      output,
+    );
   };
 }
 
@@ -145,19 +73,10 @@ function createToolDefinitionHandler() {
     input: ToolDefinitionInput,
     output: ToolDefinitionOutput,
   ): Promise<void> => {
-    if (input.toolID !== 'editor' && input.toolID !== 'greper') return;
-
-    const properties = output.parameters?.properties;
-    if (!properties || typeof properties !== 'object') return;
-
-    const nextProperties = { ...properties } as Record<string, unknown>;
-    delete nextProperties._ui;
-    output.parameters.properties = nextProperties;
-
-    const required = output.parameters?.required;
-    if (Array.isArray(required)) {
-      output.parameters.required = required.filter((key) => key !== '_ui');
-    }
+    if (!shouldStripUiParameter(input)) return;
+    const next = stripUiParameter(output.parameters);
+    output.parameters.properties = next.properties;
+    output.parameters.required = next.required;
   };
 }
 
@@ -166,28 +85,9 @@ function createToolExecuteBeforeHandler() {
     input: ToolExecuteBeforeInput,
     output: ToolExecuteBeforeOutput,
   ): Promise<void> => {
-    const rawUi = output.args?._ui;
-    if (rawUi !== undefined && typeof rawUi !== 'string') {
-      throw new Error(
-        `Invalid LLM input for ${input.tool}: _ui must be a string, received ${typeof rawUi}`,
-      );
-    }
-
-    const intents = output.args?.intents;
-    if (!Array.isArray(intents)) return;
-
-    if (input.tool === 'editor') {
-      output.args._ui = intents
-        .map((intent) => (Array.isArray(intent) ? intent[0] : intent))
-        .join('; ');
-    } else if (input.tool === 'greper') {
-      if (!intents.every((intent) => typeof intent === 'string')) {
-        throw new Error(
-          `Invalid LLM input for greper: intents must be an array of strings`,
-        );
-      }
-      output.args._ui = (intents as string[]).join('; ');
-    }
+    const result = transformToolExecuteBefore(input, output.args);
+    if (result._tag === 'Err') throw new Error(result.error);
+    if (result.value._ui !== undefined) output.args._ui = result.value._ui;
   };
 }
 
@@ -199,8 +99,7 @@ function createToolExecuteAfterHandler(
     input: ToolExecuteAfterInput,
     output: ToolExecuteAfterOutput,
   ): Promise<void> => {
-    await syntaxCheckHook['tool.execute.after'](input, output);
-    await nudgeHook.handleToolExecuteAfter(input, output);
+    await runToolExecuteAfter(syntaxCheckHook, nudgeHook, input, output);
   };
 }
 
@@ -212,14 +111,7 @@ function createCommandExecuteBeforeHandler(
     input: CommandExecuteBeforeInput,
     output: CommandExecuteBeforeOutput,
   ): Promise<void> => {
-    await loopCommandManager.handleCommandExecuteBefore(input, output);
-    await nudgeHook.handleCommandExecuteBefore(input, output);
-  };
-}
-
-function createEventHandler(nudgeHook: NudgeCoordinator) {
-  return async (input: EventInput): Promise<void> => {
-    await nudgeHook.handleEvent(input);
+    await runCommandExecuteBefore(loopCommandManager, nudgeHook, input, output);
   };
 }
 

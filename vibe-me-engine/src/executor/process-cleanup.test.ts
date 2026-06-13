@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { killTree } from './process.js';
 import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';

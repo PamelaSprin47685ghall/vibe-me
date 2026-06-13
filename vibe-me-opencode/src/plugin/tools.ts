@@ -1,4 +1,4 @@
-import type { PluginInput } from '@opencode-ai/plugin';
+import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import type { ReviewStore } from 'engine/review';
 import { createBrowserTool } from '../browser/index.js';
 import { createEditorTool } from '../editor/index.js';
@@ -19,7 +19,7 @@ export function createTools(
   ctx: PluginInput,
   reviewStore: ReviewStore,
   nudgeTool: Record<string, unknown>,
-) {
+): Record<string, ToolDefinition> {
   return {
     ...nudgeTool,
     editor: createEditorTool(ctx),

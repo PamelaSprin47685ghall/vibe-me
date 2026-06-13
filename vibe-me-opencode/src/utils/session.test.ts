@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { promptWithAbort } from './abort-signal';
 import {
   registerChildAgent,
@@ -10,16 +10,16 @@ import { runSubagent } from './subagent';
 function createMockClient() {
   return {
     session: {
-      create: mock(() => Promise.resolve({ data: { id: 'child-session' } })),
-      messages: mock(() => Promise.resolve({ data: [] })),
-      abort: mock(() => Promise.resolve()),
-      prompt: mock(() => Promise.resolve()),
+      create: vi.fn(() => Promise.resolve({ data: { id: 'child-session' } })),
+      messages: vi.fn(() => Promise.resolve({ data: [] })),
+      abort: vi.fn(() => Promise.resolve()),
+      prompt: vi.fn(() => Promise.resolve()),
     },
   } as any;
 }
 
 afterEach(() => {
-  mock.restore();
+  vi.restoreAllMocks();
   unregisterChildAgent('root-session');
   unregisterChildAgent('child-session');
   unregisterChildAgent('grandchild-session');
@@ -45,7 +45,7 @@ describe('promptWithAbort', () => {
 
   test('propagates abort error through Promise.race', async () => {
     const client = createMockClient();
-    client.session.prompt = mock(
+    client.session.prompt = vi.fn(
       () =>
         new Promise(() => {
           // Never resolves so abort signal wins the race
@@ -67,7 +67,7 @@ describe('promptWithAbort', () => {
   test('handles late prompt rejection after abort to avoid unhandled rejection', async () => {
     const client = createMockClient();
     let rejectPromptRef: ((reason?: unknown) => void) | undefined;
-    client.session.prompt = mock(
+    client.session.prompt = vi.fn(
       () =>
         new Promise((_, reject) => {
           rejectPromptRef = reject;
@@ -91,7 +91,7 @@ describe('promptWithAbort', () => {
 
   test('propagates non-abort errors through Promise.race', async () => {
     const client = createMockClient();
-    client.session.prompt = mock(() =>
+    client.session.prompt = vi.fn(() =>
       Promise.reject(new Error('Prompt failed')),
     );
 
@@ -125,11 +125,11 @@ describe('runSubagent', () => {
   test('creates child sessions under the flattened root parent', async () => {
     const client = createMockClient();
     registerChildAgent('child-session', 'editor', 'root-session');
-    client.session.create = mock(() =>
+    client.session.create = vi.fn(() =>
       Promise.resolve({ data: { id: 'grandchild-session' } }),
     );
-    client.session.prompt = mock(() => Promise.resolve());
-    client.session.messages = mock(() =>
+    client.session.prompt = vi.fn(() => Promise.resolve());
+    client.session.messages = vi.fn(() =>
       Promise.resolve({
         data: [
           {

@@ -1,5 +1,5 @@
-import { describe, expect, it, mock } from 'bun:test';
 import type { PluginInput } from '@opencode-ai/plugin';
+import { describe, expect, it, vi } from 'vitest';
 import { createHooks } from './hooks.js';
 
 type NudgeCoordinator = Parameters<typeof createHooks>[1];
@@ -9,26 +9,26 @@ type HookFactories = NonNullable<Parameters<typeof createHooks>[3]>;
 function makeFakes() {
   const nudgeHook = {
     tool: {},
-    handleChatMessage: mock(() => {}),
-    handleMessagesTransform: mock(async () => {}),
-    handleToolExecuteAfter: mock(async () => {}),
-    handleCommandExecuteBefore: mock(async () => {}),
-    handleEvent: mock(async () => {}),
+    handleChatMessage: vi.fn(() => {}),
+    handleMessagesTransform: vi.fn(async () => {}),
+    handleToolExecuteAfter: vi.fn(async () => {}),
+    handleCommandExecuteBefore: vi.fn(async () => {}),
+    handleEvent: vi.fn(async () => {}),
   } as unknown as NudgeCoordinator;
 
   const loopCommandManager = {
-    registerCommand: mock(() => {}),
-    handleCommandExecuteBefore: mock(async () => {}),
+    registerCommand: vi.fn(() => {}),
+    handleCommandExecuteBefore: vi.fn(async () => {}),
   } as unknown as LoopCommandManager;
 
-  const capsInjector = { handleMessagesTransform: mock(async () => {}) };
-  const toolOutputDeduper = { handleMessagesTransform: mock(async () => {}) };
-  const syntaxCheckHook = { 'tool.execute.after': mock(async () => {}) };
+  const capsInjector = { handleMessagesTransform: vi.fn(async () => {}) };
+  const toolOutputDeduper = { handleMessagesTransform: vi.fn(async () => {}) };
+  const syntaxCheckHook = { 'tool.execute.after': vi.fn(async () => {}) };
 
   const factories = {
-    createCapsMessagesInjector: mock(() => capsInjector),
-    createToolOutputDeduper: mock(() => toolOutputDeduper),
-    createSyntaxCheckHook: mock(() => syntaxCheckHook),
+    createCapsMessagesInjector: vi.fn(() => capsInjector),
+    createToolOutputDeduper: vi.fn(() => toolOutputDeduper),
+    createSyntaxCheckHook: vi.fn(() => syntaxCheckHook),
   } as unknown as HookFactories;
 
   return {

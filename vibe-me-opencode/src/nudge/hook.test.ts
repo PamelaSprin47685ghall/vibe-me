@@ -1,6 +1,6 @@
-import { describe, expect, test } from 'bun:test';
 import type { PluginInput } from '@opencode-ai/plugin';
 import type { ReviewStore } from 'engine/review';
+import { describe, expect, test } from 'vitest';
 import type { EventHandler } from './event-handlers';
 import { createNudgeCoordinatorHook } from './hook';
 

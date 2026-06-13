@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from 'vitest';
 import { createEventHook } from "../eventHook.js";
 import { createMockDeps } from "./test-helpers.js";
 import type { PluginEvent } from "../types/tool.js";

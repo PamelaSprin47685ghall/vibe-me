@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, vi, test } from 'vitest';
 import type { ReviewStore } from "engine/review";
 import {
   createLoopReviewCommand,
@@ -9,17 +9,17 @@ import type { DelegateOptions } from "../tools/delegate.js";
 
 function createFakeReviewStore(overrides: Partial<ReviewStore> = {}): ReviewStore {
   return {
-    activateReview: mock(() => undefined),
-    deactivateReview: mock(() => undefined),
-    clearReviewSessions: mock(() => undefined),
-    tryLockReview: mock(() => true),
-    unlockReview: mock(() => undefined),
-    setPendingReview: mock(() => undefined),
-    resolvePendingReview: mock(() => false),
-    getReviewTask: mock(() => undefined),
-    getReviewState: mock(() => undefined),
-    isReviewActive: mock(() => false),
-    addChild: mock(() => undefined),
+    activateReview: vi.fn(() => undefined),
+    deactivateReview: vi.fn(() => undefined),
+    clearReviewSessions: vi.fn(() => undefined),
+    tryLockReview: vi.fn(() => true),
+    unlockReview: vi.fn(() => undefined),
+    setPendingReview: vi.fn(() => undefined),
+    resolvePendingReview: vi.fn(() => false),
+    getReviewTask: vi.fn(() => undefined),
+    getReviewState: vi.fn(() => undefined),
+    isReviewActive: vi.fn(() => false),
+    addChild: vi.fn(() => undefined),
     ...overrides,
   } satisfies ReviewStore;
 }
@@ -33,7 +33,7 @@ function createFakeDelegate(
   title: string,
   options?: DelegateOptions,
 ) => Promise<string> {
-  return mock(() => Promise.resolve(result));
+  return vi.fn(() => Promise.resolve(result));
 }
 
 function createFakeDeps(overrides: Partial<LoopReviewDeps> = {}): LoopReviewDeps {
@@ -59,7 +59,7 @@ describe("loop-review", () => {
 
   test("already active returns message", async () => {
     const reviewStore = createFakeReviewStore({
-      isReviewActive: mock(() => true),
+      isReviewActive: vi.fn(() => true),
     });
     const command = createLoopReviewCommand(createFakeDeps(), reviewStore);
 
@@ -135,7 +135,7 @@ describe("loop-review", () => {
   test("pre-review timeout resolves to PASS", async () => {
     const reviewStore = createFakeReviewStore();
     let releaseDelegate: (value: string) => void = () => undefined;
-    const delegateToSubAgent = mock(
+    const delegateToSubAgent = vi.fn(
       () =>
         new Promise<string>((resolve) => {
           releaseDelegate = resolve;
@@ -161,7 +161,7 @@ describe("loop-review", () => {
 
   test("pre-review error resolves to PASS", async () => {
     const reviewStore = createFakeReviewStore();
-    const delegateToSubAgent = mock(() =>
+    const delegateToSubAgent = vi.fn(() =>
       Promise.reject(new Error("subagent failed")),
     );
     const command = createLoopReviewCommand(

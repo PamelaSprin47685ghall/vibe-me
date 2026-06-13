@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, vi, test } from 'vitest';
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -9,7 +9,7 @@ import type { PluginToolConfiguration } from "../types/tool.js";
 import type { ToolLike } from "../types/contract.js";
 
 function createMockLogger() {
-  return { debug: mock() } satisfies LoggerLike;
+  return { debug: vi.fn() } satisfies LoggerLike;
 }
 
 function createMockConfig(cwd: string): PluginToolConfiguration {

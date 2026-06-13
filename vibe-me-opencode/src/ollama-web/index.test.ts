@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createOllamaWebFetchTool, createOllamaWebSearchTool } from './index';
 
-mock.module('./key', () => ({
+vi.mock('./key', () => ({
   OLLAMA_API_KEY: process.env.OLLAMA_API_KEY ?? '',
 }));
 
@@ -48,7 +48,7 @@ describe('createOllamaWebFetchTool', () => {
   });
 
   test('accepts valid https URL and calls API', async () => {
-    global.fetch = mock(
+    global.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -78,7 +78,7 @@ describe('createOllamaWebFetchTool', () => {
   });
 
   test('accepts valid http URL', async () => {
-    global.fetch = mock(
+    global.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -103,7 +103,7 @@ describe('createOllamaWebFetchTool', () => {
   });
 
   test('handles API error response', async () => {
-    global.fetch = mock(
+    global.fetch = vi.fn(
       async () =>
         new Response('Bad Gateway', { status: 502, statusText: 'Bad Gateway' }),
     ) as any;
@@ -118,7 +118,7 @@ describe('createOllamaWebFetchTool', () => {
 
   test('handles aborted request', async () => {
     const controller = new AbortController();
-    global.fetch = mock(async () => {
+    global.fetch = vi.fn(async () => {
       controller.abort();
       throw new DOMException('Aborted', 'AbortError');
     }) as any;
@@ -134,7 +134,7 @@ describe('createOllamaWebFetchTool', () => {
 
 describe('createOllamaWebSearchTool', () => {
   test('sends query to API and returns results', async () => {
-    global.fetch = mock(
+    global.fetch = vi.fn(
       async () =>
         new Response(
           JSON.stringify({
@@ -159,7 +159,7 @@ describe('createOllamaWebSearchTool', () => {
   });
 
   test('handles API error', async () => {
-    global.fetch = mock(
+    global.fetch = vi.fn(
       async () =>
         new Response('Unauthorized', {
           status: 401,
@@ -177,7 +177,7 @@ describe('createOllamaWebSearchTool', () => {
 
   test('handles abort', async () => {
     const controller = new AbortController();
-    global.fetch = mock(async () => {
+    global.fetch = vi.fn(async () => {
       controller.abort();
       throw new DOMException('Aborted', 'AbortError');
     }) as any;

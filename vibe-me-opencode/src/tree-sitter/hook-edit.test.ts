@@ -1,22 +1,14 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  spyOn,
-} from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SyntaxError as SyntaxErrorInfo } from './checker';
 import * as checkerModule from './checker';
 import { createSyntaxCheckHook } from './index';
 import { createMockCtx, createOutput } from './test-helpers';
 
 function mockCheckSyntax(errors: SyntaxErrorInfo[]) {
-  spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
+  vi.spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
     ok: true,
     lang: 'typescript',
     errors,
@@ -32,7 +24,7 @@ describe('edit tool', () => {
 
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   it('appends syntax errors to edit tool output', async () => {
@@ -63,7 +55,7 @@ describe('edit tool', () => {
 
   it('appends syntax check failures to edit tool output', async () => {
     writeFileSync(join(tmpDir, 'test.ts'), 'const x = 1\n');
-    spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
+    vi.spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
       ok: false,
       lang: 'typescript',
       reason: 'parser returned undefined',

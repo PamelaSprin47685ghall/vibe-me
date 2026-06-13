@@ -27,8 +27,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "bun test src/",
-    "prepublishOnly": "bun run typecheck && bun run test"
+    "test": "vitest run src/ --testTimeout 30000",
+    "prepublishOnly": "pnpm run typecheck && pnpm run test"
   },
   "files": [
     "src"
@@ -47,7 +47,7 @@
   ],
   "devDependencies": {
     "@types/node": "^25.9.1",
-    "bun-types": "^1.3.14",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^3.0.0"
   }
 }

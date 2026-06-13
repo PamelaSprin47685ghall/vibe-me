@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'bun:test';
+import { afterAll, describe, expect, it } from 'vitest';
 import { execute, shouldSummarize } from './execute.js';
 import {
   EXECUTOR_SUMMARY_THRESHOLD_BYTES,
@@ -99,9 +99,7 @@ describe('execute', () => {
       { runProgram: fakeRunProgram({ stdout: 'file content', code: 0 }) },
     );
     expect(result._tag).toBe('Completed');
-    expect(result.output).toStartWith(
-      '// 绝对禁止使用 executor 工具仅仅用于查找或者读写文件，请使用专门工具例如 read/greper/editor 代替！',
-    );
+    expect(result.output).toMatch(/^\/\/ 绝对禁止使用 executor 工具仅仅用于查找或者读写文件，请使用专门工具例如 read\/greper\/editor 代替！/);
     expect(result.output).toContain('file content');
   });
 

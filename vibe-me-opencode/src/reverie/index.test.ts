@@ -1,7 +1,7 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { createReverieTool, getReverieConfig } from './index';
 
 describe('getReverieConfig', () => {
@@ -29,9 +29,9 @@ describe('createReverieTool', () => {
       directory: '/test',
       client: {
         session: {
-          create: mock(async () => ({ data: { id: 'reverie-child-1' } })),
-          prompt: mock(async () => ({})),
-          messages: mock(async () => ({
+          create: vi.fn(async () => ({ data: { id: 'reverie-child-1' } })),
+          prompt: vi.fn(async () => ({})),
+          messages: vi.fn(async () => ({
             data: [
               {
                 info: { role: 'assistant' },
@@ -44,7 +44,7 @@ describe('createReverieTool', () => {
               },
             ],
           })),
-          abort: mock(async () => ({})),
+          abort: vi.fn(async () => ({})),
         },
       },
     } as any;
@@ -115,10 +115,10 @@ describe('reverie path sandbox', () => {
       directory,
       client: {
         session: {
-          create: mock(async () => ({ data: { id: 'reverie-sandbox-1' } })),
-          prompt: mock(async () => ({})),
-          messages: mock(async () => ({ data: [] })),
-          abort: mock(async () => ({})),
+          create: vi.fn(async () => ({ data: { id: 'reverie-sandbox-1' } })),
+          prompt: vi.fn(async () => ({})),
+          messages: vi.fn(async () => ({ data: [] })),
+          abort: vi.fn(async () => ({})),
         },
       },
     } as any;

@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, test } from 'bun:test';
 import { createReviewStore } from 'engine/review';
+import { afterEach, describe, expect, test } from 'vitest';
 import { createLoopCommandManager } from './index';
 import { createMockContext, createOutput } from './test-utils';
 

@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, test } from 'bun:test';
 import { createReviewStore } from 'engine/review';
+import { afterEach, describe, expect, test } from 'vitest';
 import { createNudgeCoordinatorHook } from './index';
 import { cleanupAfterEach, createMockContext } from './test-utils';
 

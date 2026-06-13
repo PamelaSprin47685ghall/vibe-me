@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { resolveFuzzySearchPath } from './query.js';
 

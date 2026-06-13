@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect } from 'vitest';
 import {
   createLRUStore, lruSet, lruGet, lruConsume, lruPeek, lruDelete, lruClear,
   createScopedLRUStore, scopedStore, scopedConsume, scopedPeek, scopedClearScope, scopedClear,

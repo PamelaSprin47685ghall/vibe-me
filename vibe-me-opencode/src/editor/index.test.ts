@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, test, vi } from 'vitest';
 import { createEditorTool, getEditorConfig } from './index';
 
 describe('getEditorConfig', () => {
@@ -25,9 +25,9 @@ describe('createEditorTool', () => {
     return {
       client: {
         session: {
-          create: mock(async () => ({ data: { id: 'editor-child-1' } })),
-          prompt: mock(async () => ({})),
-          messages: mock(async () => ({
+          create: vi.fn(async () => ({ data: { id: 'editor-child-1' } })),
+          prompt: vi.fn(async () => ({})),
+          messages: vi.fn(async () => ({
             data: [
               {
                 info: { role: 'assistant' },
@@ -40,7 +40,7 @@ describe('createEditorTool', () => {
               },
             ],
           })),
-          abort: mock(async () => ({})),
+          abort: vi.fn(async () => ({})),
         },
       },
     } as any;

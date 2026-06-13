@@ -1,15 +1,7 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  spyOn,
-} from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as checkerModule from './checker';
 import { createSyntaxCheckHook } from './index';
@@ -24,13 +16,13 @@ describe('apply_patch tool', () => {
 
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   it('appends syntax errors to apply_patch output', async () => {
     writeFileSync(join(tmpDir, 'one.ts'), 'const one = 1\n');
     writeFileSync(join(tmpDir, 'two.ts'), 'const two = 2\n');
-    spyOn(checkerModule, 'checkSyntax')
+    vi.spyOn(checkerModule, 'checkSyntax')
       .mockResolvedValueOnce({
         ok: true,
         lang: 'typescript',

@@ -1,4 +1,4 @@
-import { describe, expect, test, mock } from "bun:test";
+import { describe, expect, test, vi } from 'vitest';
 import { createTodoWriteNudgeWrapper } from "./todoWriteNudge.js";
 import type { ToolLike } from "../types/contract.js";
 
@@ -8,7 +8,7 @@ function makeBaseTool(executeResult: unknown): ToolLike {
   return {
     name: "todo_write",
     description: "todo_write tool",
-    execute: mock(() => executeResult) as ToolLike["execute"],
+    execute: vi.fn(() => executeResult) as ToolLike["execute"],
   };
 }
 
@@ -55,7 +55,7 @@ describe("createTodoWriteNudgeWrapper", () => {
     const wrapped = wrapper.wrapper(base, config);
     const exec = wrapped.execute as (...args: readonly unknown[]) => Promise<unknown>;
     const first = (await exec({} as Record<string, unknown>)) as { nudge: string };
-    base.execute = mock(() => first) as ToolLike["execute"];
+    base.execute = vi.fn(() => first) as ToolLike["execute"];
 
     const second = (await exec({} as Record<string, unknown>)) as { nudge: string };
     expect(second.nudge).toBe(NUDGE);
@@ -89,7 +89,7 @@ describe("createTodoWriteNudgeWrapper", () => {
 
   test("forwards args and options to the original tool", async () => {
     const wrapper = createTodoWriteNudgeWrapper();
-    const original = mock(() => ({ success: true as const, count: 0 }));
+    const original = vi.fn(() => ({ success: true as const, count: 0 }));
     const base: ToolLike = { name: "todo_write", execute: original as ToolLike["execute"] };
 
     const wrapped = wrapper.wrapper(base, config);

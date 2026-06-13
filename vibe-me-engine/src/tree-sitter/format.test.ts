@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from 'vitest';
 import { formatSyntaxDiagnostics, SYNTAX_CHECK_MARKER } from "./hook.js";
 import type { SyntaxCheckResult } from "../util/types.js";
 

@@ -1,30 +1,30 @@
-import { mock } from "bun:test";
+import { vi } from 'vitest';
 import type { ReviewStore } from "engine/review";
 import type { EventHookDeps } from "../eventHook.js";
 
 export function createMockDeps() {
-  const mockDeactivateReview = mock(() => undefined);
-  const mockSuppress = mock(() => undefined);
-  const mockShouldNudge = mock<(
+  const mockDeactivateReview = vi.fn(() => undefined);
+  const mockSuppress = vi.fn(() => undefined);
+  const mockShouldNudge = vi.fn<(
     sessionId: string,
     context: unknown,
     now: number,
   ) => string>(() => "none");
-  const mockIsReviewActive = mock(() => false);
-  const mockClearIteratorScope = mock(() => undefined);
+  const mockIsReviewActive = vi.fn(() => false);
+  const mockClearIteratorScope = vi.fn(() => undefined);
 
   const mockReviewStore = {
-    activateReview: mock(() => undefined),
+    activateReview: vi.fn(() => undefined),
     deactivateReview: mockDeactivateReview,
-    clearReviewSessions: mock(() => undefined),
-    tryLockReview: mock(() => false),
-    unlockReview: mock(() => undefined),
-    setPendingReview: mock(() => undefined),
-    resolvePendingReview: mock(() => false),
-    getReviewTask: mock(() => undefined),
-    getReviewState: mock(() => undefined),
+    clearReviewSessions: vi.fn(() => undefined),
+    tryLockReview: vi.fn(() => false),
+    unlockReview: vi.fn(() => undefined),
+    setPendingReview: vi.fn(() => undefined),
+    resolvePendingReview: vi.fn(() => false),
+    getReviewTask: vi.fn(() => undefined),
+    getReviewState: vi.fn(() => undefined),
     isReviewActive: mockIsReviewActive,
-    addChild: mock(() => undefined),
+    addChild: vi.fn(() => undefined),
   } satisfies ReviewStore;
 
   return {
@@ -44,10 +44,10 @@ export function createMockDeps() {
 }
 
 export function makeHelpers() {
-  const nudge = mock<(workspaceId: string, message: string) => Promise<boolean>>(() =>
+  const nudge = vi.fn<(workspaceId: string, message: string) => Promise<boolean>>(() =>
     Promise.resolve(true),
   );
-  const getTodos = mock<(workspaceId: string) => Promise<readonly string[]>>(() =>
+  const getTodos = vi.fn<(workspaceId: string) => Promise<readonly string[]>>(() =>
     Promise.resolve(["pending"]),
   );
   return { helpers: { nudge, getTodos }, nudge, getTodos };

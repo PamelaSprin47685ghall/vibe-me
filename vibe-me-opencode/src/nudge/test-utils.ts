@@ -1,15 +1,15 @@
-import { mock } from 'bun:test';
 import type { PluginInput } from '@opencode-ai/plugin';
 import { defaultCoordinator } from 'engine/todo';
+import { vi } from 'vitest';
 
 export function createMockContext() {
   return {
     directory: '/tmp/test-project',
     client: {
       session: {
-        create: mock(() => ({ data: { id: 'reviewer-1' } })),
-        prompt: mock(() => {}),
-        messages: mock(() => ({
+        create: vi.fn(() => ({ data: { id: 'reviewer-1' } })),
+        prompt: vi.fn(() => {}),
+        messages: vi.fn(() => ({
           data: [
             {
               info: { role: 'assistant' },
@@ -17,7 +17,7 @@ export function createMockContext() {
             },
           ],
         })),
-        todo: mock(() => ({
+        todo: vi.fn(() => ({
           data: [
             {
               id: 'todo-1',

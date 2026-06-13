@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, vi, test } from 'vitest';
 import { createExecutorTool, type ExecutorToolDeps } from "./executor.js";
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type {
@@ -15,10 +15,10 @@ const SHORT_TEXT = "ok";
 const LONG_TEXT = "x".repeat(9_000);
 
 function makeExecutorDeps(execResult: ExecuteResult) {
-  const execute = mock<(options: unknown, sessionId: string) => Promise<ExecuteResult>>(() =>
+  const execute = vi.fn<(options: unknown, sessionId: string) => Promise<ExecuteResult>>(() =>
     Promise.resolve(execResult),
   );
-  const resolveAiSettings = mock<NonNullable<ExecutorToolDeps["resolveAiSettings"]>>(() =>
+  const resolveAiSettings = vi.fn<NonNullable<ExecutorToolDeps["resolveAiSettings"]>>(() =>
     Promise.resolve({ modelString: "anthropic:claude-explore", thinkingLevel: "medium" }),
   );
   return { execute, resolveAiSettings, deps: { execute, resolveAiSettings } satisfies ExecutorToolDeps };
@@ -49,23 +49,23 @@ function createConfigFile(): ConfigFile {
 }
 
 const mockTaskService: {
-  readonly create: ReturnType<typeof mock<(input: TaskCreateInput) => Promise<TaskCreateResult>>>;
+  readonly create: ReturnType<typeof vi.fn<(input: TaskCreateInput) => Promise<TaskCreateResult>>>;
   readonly waitForAgentReport: ReturnType<
-    typeof mock<(taskId: string, opts: TaskWaitOptions) => Promise<TaskWaitResult>>
+    typeof vi.fn<(taskId: string, opts: TaskWaitOptions) => Promise<TaskWaitResult>>
   >;
 } = {
-  create: mock<(input: TaskCreateInput) => Promise<TaskCreateResult>>(),
-  waitForAgentReport: mock<(taskId: string, opts: TaskWaitOptions) => Promise<TaskWaitResult>>(),
+  create: vi.fn<(input: TaskCreateInput) => Promise<TaskCreateResult>>(),
+  waitForAgentReport: vi.fn<(taskId: string, opts: TaskWaitOptions) => Promise<TaskWaitResult>>(),
 };
 
-const mockLoadConfigOrDefault = mock<() => ConfigFile>(createConfigFile);
-const mockReadAgentDefinition = mock<HostDependencies["readAgentDefinition"]>(
+const mockLoadConfigOrDefault = vi.fn<() => ConfigFile>(createConfigFile);
+const mockReadAgentDefinition = vi.fn<HostDependencies["readAgentDefinition"]>(
   async (_runtime, _workspacePath, agentId) => ({ id: agentId, scope: "built-in", frontmatter: { name: agentId }, body: "" }),
 );
-const mockResolveAgentInheritanceChain = mock<HostDependencies["resolveAgentInheritanceChain"]>(
+const mockResolveAgentInheritanceChain = vi.fn<HostDependencies["resolveAgentInheritanceChain"]>(
   () => Promise.resolve([{ id: "explore" }, { id: "exec" }]),
 );
-const mockResolveAgentFrontmatter = mock<HostDependencies["resolveAgentFrontmatter"]>(
+const mockResolveAgentFrontmatter = vi.fn<HostDependencies["resolveAgentFrontmatter"]>(
   () => Promise.resolve({ name: "explore" }),
 );
 
@@ -162,7 +162,7 @@ describe("executor tool", () => {
 
   test("rejects unknown timeout_type", async () => {
     const { deps } = makeExecutorDeps({ _tag: "Completed", output: SHORT_TEXT });
-    expect(
+    await expect(
       createExecutorTool(mockDeps, deps).execute(createToolConfig(), {
         language: "shell",
         program: "echo x",

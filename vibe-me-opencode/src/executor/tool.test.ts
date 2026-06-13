@@ -1,16 +1,16 @@
-import { describe, expect, mock, test } from 'bun:test';
 import type { PluginInput } from '@opencode-ai/plugin';
 import {
   EXECUTOR_SUMMARIZER_SYSTEM_PROMPT,
   type ExecuteOptions,
   type ExecuteResult,
 } from 'engine/executor';
+import { describe, expect, test, vi } from 'vitest';
 import { isAbortError } from '../utils/abort-signal';
 import { extractToolContext } from '../utils/tool-context';
 import { type CreateExecutorToolDeps, createExecutorTool } from './tool';
 
 function createFakeClient() {
-  const abortMock = mock(async () => undefined);
+  const abortMock = vi.fn(async () => undefined);
   return {
     abortMock,
     client: {
@@ -26,13 +26,13 @@ function createPluginInput(client: PluginInput['client']): PluginInput {
 }
 
 function createFakeDeps(overrides?: Partial<CreateExecutorToolDeps>) {
-  const executeMock = mock(
+  const executeMock = vi.fn(
     async (): Promise<ExecuteResult> => ({
       _tag: 'Completed',
       output: 'small output',
     }),
   );
-  const createSummarizerSessionMock = mock(
+  const createSummarizerSessionMock = vi.fn(
     async (
       _client: unknown,
       sessionID: string | undefined,
@@ -41,10 +41,10 @@ function createFakeDeps(overrides?: Partial<CreateExecutorToolDeps>) {
       parentID: sessionID,
     }),
   );
-  const awaitSummarizerReportMock = mock(
+  const awaitSummarizerReportMock = vi.fn(
     async (): Promise<string> => 'summary report',
   );
-  const resolveSubsessionParentIDMock = mock(
+  const resolveSubsessionParentIDMock = vi.fn(
     (sessionID?: string): string | undefined => sessionID,
   );
 
@@ -118,7 +118,7 @@ describe('createExecutorTool', () => {
     const { client, abortMock } = createFakeClient();
     const ctx = createPluginInput(client);
     const largeOutput = 'x'.repeat(9000);
-    const executeMock = mock(
+    const executeMock = vi.fn(
       async (): Promise<ExecuteResult> => ({
         _tag: 'Completed',
         output: largeOutput,
@@ -166,7 +166,7 @@ describe('createExecutorTool', () => {
   test('aborts summarizer session after report', async () => {
     const { client, abortMock } = createFakeClient();
     const ctx = createPluginInput(client);
-    const executeMock = mock(
+    const executeMock = vi.fn(
       async (): Promise<ExecuteResult> => ({
         _tag: 'Completed',
         output: 'x'.repeat(9000),
@@ -187,13 +187,13 @@ describe('createExecutorTool', () => {
   test('returns "(aborted)" on abort error', async () => {
     const { client, abortMock } = createFakeClient();
     const ctx = createPluginInput(client);
-    const executeMock = mock(
+    const executeMock = vi.fn(
       async (): Promise<ExecuteResult> => ({
         _tag: 'Completed',
         output: 'x'.repeat(9000),
       }),
     );
-    const awaitSummarizerReportMock = mock(async () => {
+    const awaitSummarizerReportMock = vi.fn(async () => {
       throw new DOMException('Aborted', 'AbortError');
     });
     const { deps } = createFakeDeps({
@@ -214,7 +214,7 @@ describe('createExecutorTool', () => {
   test('rethrows non-abort errors', async () => {
     const { client } = createFakeClient();
     const ctx = createPluginInput(client);
-    const executeMock = mock(async () => {
+    const executeMock = vi.fn(async () => {
       throw new Error('execution failed');
     });
     const { deps } = createFakeDeps({ execute: executeMock });

@@ -1,10 +1,10 @@
-import { describe, expect, mock, test } from 'bun:test';
 import {
   accepted,
   createReviewStore,
   rejected,
   terminated,
 } from 'engine/review';
+import { describe, expect, test, vi } from 'vitest';
 import { handleLoopReview, type LoopReviewDeps } from './command-loop-review';
 import { createMockContext, createOutput } from './test-utils';
 
@@ -12,13 +12,13 @@ function createFakeDeps(
   overrides: Partial<LoopReviewDeps> = {},
 ): LoopReviewDeps {
   return {
-    createSession: mock(() => Promise.resolve({ data: { id: 'child-1' } })),
-    runReviewerWithNudge: mock(() => Promise.resolve(accepted)),
-    registerChildAgent: mock(() => {}),
-    resolveSubsessionParentID: mock((id?: string) => id),
+    createSession: vi.fn(() => Promise.resolve({ data: { id: 'child-1' } })),
+    runReviewerWithNudge: vi.fn(() => Promise.resolve(accepted)),
+    registerChildAgent: vi.fn(() => {}),
+    resolveSubsessionParentID: vi.fn((id?: string) => id),
     loopReviewCommandName: 'loop-review',
     reviewInstructions: 'review instructions',
-    now: mock(() => 42),
+    now: vi.fn(() => 42),
     ...overrides,
   };
 }
@@ -81,7 +81,7 @@ describe('handleLoopReview', () => {
   test('session creation failure returns error', async () => {
     const reviewStore = createReviewStore();
     const deps = createFakeDeps({
-      createSession: mock(() => Promise.resolve({ data: { id: undefined } })),
+      createSession: vi.fn(() => Promise.resolve({ data: { id: undefined } })),
     });
     const { output } = await execute(
       reviewStore,
@@ -99,7 +99,7 @@ describe('handleLoopReview', () => {
   test('accepted result returns pass message', async () => {
     const reviewStore = createReviewStore();
     const deps = createFakeDeps({
-      runReviewerWithNudge: mock(() => Promise.resolve(accepted)),
+      runReviewerWithNudge: vi.fn(() => Promise.resolve(accepted)),
     });
     const { output } = await execute(
       reviewStore,
@@ -121,7 +121,7 @@ describe('handleLoopReview', () => {
   test('terminated result returns terminated message', async () => {
     const reviewStore = createReviewStore();
     const deps = createFakeDeps({
-      runReviewerWithNudge: mock(() => Promise.resolve(terminated)),
+      runReviewerWithNudge: vi.fn(() => Promise.resolve(terminated)),
     });
     const { output } = await execute(
       reviewStore,
@@ -136,7 +136,7 @@ describe('handleLoopReview', () => {
   test('feedback result activates review and returns formatted feedback', async () => {
     const reviewStore = createReviewStore();
     const deps = createFakeDeps({
-      runReviewerWithNudge: mock(() =>
+      runReviewerWithNudge: vi.fn(() =>
         Promise.resolve(rejected('fix the bug')),
       ),
     });

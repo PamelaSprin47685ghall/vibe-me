@@ -1,6 +1,6 @@
-import { afterEach, describe, expect, mock, test } from 'bun:test';
 import { createReviewStore } from 'engine/review';
 import { LOOP_NUDGE_PROMPT } from 'engine/todo';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { createNudgeCoordinatorHook } from './index';
 import { cleanupAfterEach, createMockContext } from './test-utils';
 
@@ -9,7 +9,7 @@ afterEach(cleanupAfterEach);
 describe('loop nudge state machine', () => {
   test('nudges loop when assistant completes without idle event', async () => {
     const ctx = createMockContext();
-    ctx.client.session.todo = mock(() => ({ data: [] }));
+    ctx.client.session.todo = vi.fn(() => ({ data: [] }));
     const reviewStore = createReviewStore();
     reviewStore.activateReview('ses-1', 'task', 0);
     const hook = createNudgeCoordinatorHook(ctx, reviewStore);
@@ -37,7 +37,7 @@ describe('loop nudge state machine', () => {
 
   test('does not duplicate silent-finish loop nudge on later idle', async () => {
     const ctx = createMockContext();
-    ctx.client.session.todo = mock(() => ({ data: [] }));
+    ctx.client.session.todo = vi.fn(() => ({ data: [] }));
     const reviewStore = createReviewStore();
     reviewStore.activateReview('ses-1', 'task', 0);
     const hook = createNudgeCoordinatorHook(ctx, reviewStore);
@@ -60,8 +60,8 @@ describe('loop nudge state machine', () => {
 
   test('retries silent-finish loop nudge on idle when session is still busy', async () => {
     const ctx = createMockContext();
-    ctx.client.session.todo = mock(() => ({ data: [] }));
-    ctx.client.session.prompt = mock(() => {
+    ctx.client.session.todo = vi.fn(() => ({ data: [] }));
+    ctx.client.session.prompt = vi.fn(() => {
       if (ctx.client.session.prompt.mock.calls.length === 1) {
         throw { _tag: 'SessionBusyError' };
       }
@@ -88,7 +88,7 @@ describe('loop nudge state machine', () => {
 
   test('does not duplicate nudge when multiple events arrive concurrently', async () => {
     const ctx = createMockContext();
-    ctx.client.session.todo = mock(() => ({ data: [] }));
+    ctx.client.session.todo = vi.fn(() => ({ data: [] }));
     const reviewStore = createReviewStore();
     reviewStore.activateReview('ses-1', 'task', 0);
     const hook = createNudgeCoordinatorHook(ctx, reviewStore);

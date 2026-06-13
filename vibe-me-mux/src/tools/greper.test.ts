@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, vi, test } from 'vitest';
 import type { PluginToolConfiguration } from "../types/tool.js";
 import { GREPER_TOOLS } from "engine/agent-policy";
 import { FOREGROUND_WAIT_BACKGROUNDED_ERROR_NAME } from "./submitReview.js";
@@ -21,10 +21,10 @@ class ForegroundWaitBackgroundedError extends Error {
 
 const mockTaskService: {
   create: ReturnType<
-    typeof mock<(input: TaskCreateInput) => Promise<TaskCreateResult>>
+    typeof vi.fn<(input: TaskCreateInput) => Promise<TaskCreateResult>>
   >;
   waitForAgentReport: ReturnType<
-    typeof mock<
+    typeof vi.fn<
       (
         taskId: string,
         opts: TaskWaitOptions,
@@ -32,10 +32,10 @@ const mockTaskService: {
     >
   >;
 } = {
-  create: mock<
+  create: vi.fn<
     (input: TaskCreateInput) => Promise<TaskCreateResult>
   >(),
-  waitForAgentReport: mock<
+  waitForAgentReport: vi.fn<
     (
       taskId: string,
       opts: TaskWaitOptions,

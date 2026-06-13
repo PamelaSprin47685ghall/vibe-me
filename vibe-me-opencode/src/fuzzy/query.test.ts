@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { buildQuery, normalizeExcludes, normalizePathConstraint } from 'engine/fuzzy';
 
 describe('normalizePathConstraint', () => {

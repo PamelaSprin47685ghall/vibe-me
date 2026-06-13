@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { buildExecutorSummaryPrompt, EXECUTOR_SUMMARIZER_SYSTEM_PROMPT } from './prompts.js';
 import type { ExecuteResult } from './types.js';
 

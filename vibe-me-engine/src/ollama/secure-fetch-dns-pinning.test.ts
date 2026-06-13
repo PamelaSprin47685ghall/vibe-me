@@ -1,18 +1,18 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, vi, test } from 'vitest';
 import { isIpBlocked, validateHostname, secureFetch } from './secure-fetch-dns-pinning.js';
 
 let resolve4Result: string[] = [];
 let resolve6Result: string[] = [];
 
-mock.module('node:dns/promises', () => ({
-  resolve4: mock(async () => resolve4Result),
-  resolve6: mock(async () => resolve6Result),
+vi.mock('node:dns/promises', () => ({
+  resolve4: vi.fn(async () => resolve4Result),
+  resolve6: vi.fn(async () => resolve6Result),
 }));
 
 const originalFetch = global.fetch;
 
 beforeEach(() => {
-  global.fetch = mock(async () => new Response('ok', { status: 200 })) as unknown as typeof fetch;
+  global.fetch = vi.fn(async () => new Response('ok', { status: 200 })) as unknown as typeof fetch;
   resolve4Result = [];
   resolve6Result = [];
 });

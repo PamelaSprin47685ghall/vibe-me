@@ -1,22 +1,14 @@
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  mock,
-  spyOn,
-} from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SyntaxError as SyntaxErrorInfo } from './checker';
 import * as checkerModule from './checker';
 import { createSyntaxCheckHook } from './index';
 import { createMockCtx, createOutput } from './test-helpers';
 
 function mockCheckSyntax(errors: SyntaxErrorInfo[]) {
-  spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
+  vi.spyOn(checkerModule, 'checkSyntax').mockResolvedValue({
     ok: true,
     lang: 'typescript',
     errors,
@@ -32,7 +24,7 @@ describe('Write tool', () => {
 
   afterEach(() => {
     rmSync(tmpDir, { recursive: true, force: true });
-    mock.restore();
+    vi.restoreAllMocks();
   });
 
   it('appends syntax errors to Write tool output', async () => {

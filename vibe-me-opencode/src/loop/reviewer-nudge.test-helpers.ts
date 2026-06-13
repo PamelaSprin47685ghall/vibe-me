@@ -1,5 +1,5 @@
-import { mock } from 'bun:test';
 import type { ReviewResult, ReviewStore } from 'engine/review';
+import { vi } from 'vitest';
 import type { Clock } from './reviewer';
 
 export interface PromptCall {
@@ -99,7 +99,7 @@ export async function mockPromptWithAbort(
 }
 
 export function makeReviewStore() {
-  const deactivateReview = mock(() => {});
+  const deactivateReview = vi.fn(() => {});
   const store: ReviewStore = {
     activateReview() {},
     deactivateReview,

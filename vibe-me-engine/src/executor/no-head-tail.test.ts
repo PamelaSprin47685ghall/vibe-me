@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { stripHeadTailPipes } from './no-head-tail.js';
 
 describe('stripHeadTailPipes', () => {

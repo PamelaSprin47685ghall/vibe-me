@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from 'vitest';
 import { createMockDeps, createToolConfig } from "./resolveDelegatedAgentAiSettings.test-utils.js";
 
 describe("resolveDelegatedAgentAiSettings for explore agent", () => {

@@ -1,5 +1,5 @@
-import { describe, expect, mock, test } from 'bun:test';
 import { createReviewStore } from 'engine/review';
+import { describe, expect, test, vi } from 'vitest';
 import {
   createDeferred,
   createSubmitReviewResultTool,
@@ -99,7 +99,9 @@ describe('createSubmitReviewTool', () => {
     reviewStore.activateReview('ses-1', 'task', 0);
 
     const ctx = createMockContext();
-    ctx.client.session.create = mock(async () => ({ data: { id: undefined } }));
+    ctx.client.session.create = vi.fn(async () => ({
+      data: { id: undefined },
+    }));
 
     const tool = createSubmitReviewTool(ctx, reviewStore);
     const result = await (tool as any).execute(
@@ -117,7 +119,7 @@ describe('createSubmitReviewTool', () => {
     reviewStore.activateReview('ses-1', 'task', 0);
 
     const ctx = createMockContext();
-    ctx.client.session.create = mock(async () => {
+    ctx.client.session.create = vi.fn(async () => {
       throw new Error('Session creation network error');
     });
 

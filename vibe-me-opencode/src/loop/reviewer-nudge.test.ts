@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'bun:test';
 import { accepted, REVIEWER_NUDGE_PROMPT, terminated } from 'engine/review';
+import { describe, expect, it } from 'vitest';
 import { runReviewerWithNudge } from './reviewer';
 import {
   childID,

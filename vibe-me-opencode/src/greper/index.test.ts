@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from 'bun:test';
+import { describe, expect, test, vi } from 'vitest';
 import { createGreperTool, getGreperConfig } from './index';
 
 describe('getGreperConfig', () => {
@@ -30,9 +30,9 @@ describe('createGreperTool', () => {
     return {
       client: {
         session: {
-          create: mock(async () => ({ data: { id: 'greper-child-1' } })),
-          prompt: mock(async () => ({})),
-          messages: mock(async () => ({
+          create: vi.fn(async () => ({ data: { id: 'greper-child-1' } })),
+          prompt: vi.fn(async () => ({})),
+          messages: vi.fn(async () => ({
             data: [
               {
                 info: { role: 'assistant' },
@@ -45,7 +45,7 @@ describe('createGreperTool', () => {
               },
             ],
           })),
-          abort: mock(async () => ({})),
+          abort: vi.fn(async () => ({})),
         },
       },
     } as any;

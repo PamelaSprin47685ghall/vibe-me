@@ -1,6 +1,7 @@
 export * from './types/general.js';
 export * from './types/agent-policy.js';
 export * from './types/nudge.js';
+export * from './types/boundary.js';
 export type {
   Inactive, ActiveReview, LockedReview, AcceptedReview, RejectedReview, ReviewState,
   ActivateCommand, SubmitCommand, LockCommand, UnlockCommand, AcceptCommand, RejectCommand, ReviewCommand,

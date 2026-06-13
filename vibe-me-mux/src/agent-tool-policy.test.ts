@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from 'vitest';
 import { getPluginToolPolicy } from "./agent-tool-policy.js";
 
 const SAMPLE_TOOL_NAMES = [

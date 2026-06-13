@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it } from 'vitest';
 import { globalIteratorStore, storeIterator, consumeIterator } from 'engine/util';
 
 describe('iterator store', () => {

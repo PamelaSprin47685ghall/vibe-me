@@ -1,4 +1,3 @@
-import { describe, expect, mock, test } from 'bun:test';
 import type { PluginInput } from '@opencode-ai/plugin';
 import {
   accepted,
@@ -6,6 +5,7 @@ import {
   rejected,
   terminated,
 } from 'engine/review';
+import { describe, expect, test, vi } from 'vitest';
 import {
   createSubmitReviewTool,
   type SubmitReviewDeps,
@@ -16,7 +16,7 @@ function createFakeClient(
 ): PluginInput['client'] {
   return {
     session: {
-      create: mock(() => Promise.resolve({ data: { id: childID } })),
+      create: vi.fn(() => Promise.resolve({ data: { id: childID } })),
     },
   } as unknown as PluginInput['client'];
 }
@@ -32,11 +32,11 @@ function createFakeDeps(
   overrides: Partial<SubmitReviewDeps> = {},
 ): SubmitReviewDeps {
   return {
-    createSession: mock(() => Promise.resolve({ data: { id: 'child-1' } })),
-    runReviewerWithNudge: mock(() => Promise.resolve(accepted)),
-    registerChildAgent: mock(() => {}),
-    resolveSubsessionParentID: mock((id?: string) => id),
-    extractToolContext: mock((_context, fallbackDirectory) => ({
+    createSession: vi.fn(() => Promise.resolve({ data: { id: 'child-1' } })),
+    runReviewerWithNudge: vi.fn(() => Promise.resolve(accepted)),
+    registerChildAgent: vi.fn(() => {}),
+    resolveSubsessionParentID: vi.fn((id?: string) => id),
+    extractToolContext: vi.fn((_context, fallbackDirectory) => ({
       directory: fallbackDirectory,
       sessionID: 'ses-1',
       abortSignal: undefined,
@@ -95,7 +95,7 @@ describe('createSubmitReviewTool', () => {
 
     const ctx = createMockPluginInput();
     const deps = createFakeDeps({
-      runReviewerWithNudge: mock(() => Promise.resolve(accepted)),
+      runReviewerWithNudge: vi.fn(() => Promise.resolve(accepted)),
     });
     const tool = createSubmitReviewTool(ctx, reviewStore, deps);
 
@@ -114,7 +114,7 @@ describe('createSubmitReviewTool', () => {
 
     const ctx = createMockPluginInput();
     const deps = createFakeDeps({
-      runReviewerWithNudge: mock(() => Promise.resolve(terminated)),
+      runReviewerWithNudge: vi.fn(() => Promise.resolve(terminated)),
     });
     const tool = createSubmitReviewTool(ctx, reviewStore, deps);
 
@@ -133,7 +133,7 @@ describe('createSubmitReviewTool', () => {
 
     const ctx = createMockPluginInput();
     const deps = createFakeDeps({
-      runReviewerWithNudge: mock(() =>
+      runReviewerWithNudge: vi.fn(() =>
         Promise.resolve(rejected('fix the bug')),
       ),
     });
@@ -155,7 +155,7 @@ describe('createSubmitReviewTool', () => {
 
     const ctx = createMockPluginInput();
     const deps = createFakeDeps({
-      createSession: mock(() => Promise.resolve({ data: { id: undefined } })),
+      createSession: vi.fn(() => Promise.resolve({ data: { id: undefined } })),
     });
     const tool = createSubmitReviewTool(ctx, reviewStore, deps);
 

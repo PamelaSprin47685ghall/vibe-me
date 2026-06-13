@@ -1,4 +1,4 @@
-import { mock } from "bun:test";
+import { vi } from 'vitest';
 import type { PluginToolConfiguration } from "../types/tool.js";
 import type {
   HostDependencies,
@@ -21,12 +21,12 @@ function findWorkspaceEntry(
 }
 
 export function createMockDeps() {
-  const loadConfigOrDefault = mock<() => ConfigFile>(() => ({
+  const loadConfigOrDefault = vi.fn<() => ConfigFile>(() => ({
     projects: new Map(),
     agentAiDefaults: {},
     subagentAiDefaults: {},
   }));
-  const readAgentDefinition = mock<
+  const readAgentDefinition = vi.fn<
     (
       runtime: unknown,
       workspacePath: string,
@@ -40,14 +40,14 @@ export function createMockDeps() {
       body: "",
     }),
   );
-  const resolveAgentFrontmatter = mock<
+  const resolveAgentFrontmatter = vi.fn<
     (
       runtime: unknown,
       workspacePath: string,
       agentId: string,
     ) => Promise<AgentFrontmatterPackage>
   >(() => Promise.resolve({ name: "" }));
-  const resolveAgentInheritanceChain = mock<
+  const resolveAgentInheritanceChain = vi.fn<
     (_args: unknown) => Promise<never>
   >(() => {
     throw new Error("resolveAgentInheritanceChain should not be called");
