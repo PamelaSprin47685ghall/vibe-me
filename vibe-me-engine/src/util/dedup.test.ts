@@ -20,13 +20,13 @@ describe('createTextOutputDeduper', () => {
     );
   });
 
-  test('keeps exact duplicates', () => {
+  test('replaces exact duplicates', () => {
     const dedupeOutput = createTextOutputDeduper();
     const output = 'same output';
 
     dedupeOutput(output);
 
-    expect(dedupeOutput(output)).toBe(output);
+    expect(dedupeOutput(output)).toBe(DEDUP_MARKER);
   });
 
   test('keeps short increments that do not save the marker cost', () => {

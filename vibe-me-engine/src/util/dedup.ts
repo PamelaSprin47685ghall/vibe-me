@@ -12,9 +12,9 @@ export function deduplicateTextOutput(
   const repeatedOutput = seenOutputs.find(
     (seenOutput) =>
       seenOutput.length > 0 &&
-      output !== seenOutput &&
       output.includes(seenOutput) &&
-      output.length - seenOutput.length > DEDUP_MARKER.length,
+      (output === seenOutput ||
+        output.length - seenOutput.length > DEDUP_MARKER.length),
   );
 
   if (repeatedOutput) return { output: DEDUP_MARKER, seenOutputs };
