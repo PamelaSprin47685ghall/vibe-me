@@ -56,7 +56,7 @@ function stableFingerprint(capsFiles: CapsFileInfo[]): string {
   return hash.digest('hex').slice(0, 16);
 }
 
-function hasExistingCapsMessages(messages: readonly Message[]): boolean {
+function hasExistingCapsMessages(messages: Message[]): boolean {
   return (
     messages.length >= 2 &&
     typeof messages[0].info.id === 'string' &&
@@ -137,46 +137,6 @@ function buildAssistantMessage(
   };
 }
 
-export async function buildCapsMessages(
-  messages: readonly Message[],
-  projectRoot: string,
-  excludedAgents: readonly string[],
-  findCapsFiles: FindCapsFiles = defaultFindCapsFiles,
-): Promise<Message[]> {
-  if (messages.length === 0) return messages.slice();
-
-  const existingStripped = hasExistingCapsMessages(messages)
-    ? messages.slice(2)
-    : messages.slice();
-
-  if (existingStripped.length === 0) return messages.slice();
-
-  if (excludedAgents.includes(existingStripped[0].info.agent as string)) {
-    return existingStripped;
-  }
-
-  const capsFiles = await findCapsFiles(projectRoot);
-  if (capsFiles.length === 0) return existingStripped;
-
-  const sessionID = existingStripped[0].info.sessionID as string | undefined;
-  const fp = stableFingerprint(capsFiles);
-  const userId = `${CAPS_USER_PREFIX}${fp}`;
-  const assistantId = `${CAPS_ASSISTANT_PREFIX}${fp}`;
-  const toolParts = buildToolParts(capsFiles, fp, sessionID, assistantId);
-
-  return [
-    buildUserMessage(userId, sessionID),
-    buildAssistantMessage(
-      assistantId,
-      userId,
-      sessionID,
-      projectRoot,
-      toolParts,
-    ),
-    ...existingStripped,
-  ];
-}
-
 export function createCapsMessagesInjector(
   projectRoot: string,
   excludedAgents: string[] = [],
@@ -186,11 +146,36 @@ export function createCapsMessagesInjector(
     async handleMessagesTransform(output: {
       messages: unknown[];
     }): Promise<void> {
-      output.messages = await buildCapsMessages(
-        output.messages as Message[],
-        projectRoot,
-        excludedAgents,
-        findCapsFiles,
+      const messages = output.messages as Message[];
+      if (messages.length === 0) return;
+
+      if (hasExistingCapsMessages(messages)) messages.splice(0, 2);
+
+      if (
+        messages.length > 0 &&
+        excludedAgents.includes(messages[0].info.agent as string)
+      ) {
+        return;
+      }
+
+      const capsFiles = await findCapsFiles(projectRoot);
+      if (capsFiles.length === 0) return;
+
+      const sessionID = messages[0].info.sessionID as string | undefined;
+      const fp = stableFingerprint(capsFiles);
+      const userId = `${CAPS_USER_PREFIX}${fp}`;
+      const assistantId = `${CAPS_ASSISTANT_PREFIX}${fp}`;
+      const toolParts = buildToolParts(capsFiles, fp, sessionID, assistantId);
+
+      messages.unshift(
+        buildUserMessage(userId, sessionID),
+        buildAssistantMessage(
+          assistantId,
+          userId,
+          sessionID,
+          projectRoot,
+          toolParts,
+        ),
       );
     },
   };

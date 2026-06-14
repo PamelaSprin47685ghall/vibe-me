@@ -53,26 +53,6 @@ describe('createCapsMessagesInjector', () => {
     expect(output.messages[2]).toBe(original);
   });
 
-  test('caps-only messages are preserved unchanged', async () => {
-    const findCapsFiles: FindCapsFiles = async () => [];
-    const injector = createCapsMessagesInjector('/root', [], findCapsFiles);
-    const userMessage = {
-      info: { id: 'caps-synth-user-only', agent: 'orchestrator' },
-      parts: [],
-    };
-    const assistantMessage = {
-      info: { id: 'caps-synth-assistant-only', agent: 'orchestrator' },
-      parts: [],
-    };
-    const output = {
-      messages: [userMessage, assistantMessage],
-    };
-    await injector.handleMessagesTransform(output);
-    expect(output.messages.length).toBe(2);
-    expect(output.messages[0]).toBe(userMessage);
-    expect(output.messages[1]).toBe(assistantMessage);
-  });
-
   test('excluded agent skips injection', async () => {
     const findCapsFiles: FindCapsFiles = async () => [
       { filePath: '/caps/a.md', content: 'hi' },
@@ -137,5 +117,40 @@ describe('createCapsMessagesInjector', () => {
     const output3 = { messages: [makeMessage()] };
     await differentInjector.handleMessagesTransform(output3);
     expect(output3.messages[0].info.id).not.toBe(output1.messages[0].info.id);
+  });
+
+  test('mutates output.messages array in place, never reassigns it', async () => {
+    const findCapsFiles: FindCapsFiles = async () => [
+      { filePath: '/caps/a.md', content: 'hi' },
+    ];
+    const injector = createCapsMessagesInjector('/root', [], findCapsFiles);
+
+    const fresh = { messages: [makeMessage()] };
+    const freshRef = fresh.messages;
+    await injector.handleMessagesTransform(fresh);
+    expect(fresh.messages).toBe(freshRef);
+
+    const withOld = {
+      messages: [
+        {
+          info: { id: 'caps-synth-user-stale', agent: 'orchestrator' },
+          parts: [],
+        },
+        {
+          info: { id: 'caps-synth-assistant-stale', agent: 'orchestrator' },
+          parts: [],
+        },
+        makeMessage(),
+      ],
+    };
+    const withOldRef = withOld.messages;
+    await injector.handleMessagesTransform(withOld);
+    expect(withOld.messages).toBe(withOldRef);
+
+    const noCaps = { messages: [makeMessage()] };
+    const noCapsRef = noCaps.messages;
+    const noCapsInjector = createCapsMessagesInjector('/root', [], async () => []);
+    await noCapsInjector.handleMessagesTransform(noCaps);
+    expect(noCaps.messages).toBe(noCapsRef);
   });
 });
